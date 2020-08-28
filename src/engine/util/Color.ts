@@ -1,5 +1,5 @@
 // tslint:disable:no-bitwise
-import math from './math'
+import math from './maths'
 
 export default class Color {
   private _r: number

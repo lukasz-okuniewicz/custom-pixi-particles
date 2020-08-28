@@ -1,5 +1,4 @@
 // tslint:disable:prefer-for-of
-
 import engine from '../../engine'
 import { Emitter } from '../../engine/emitter'
 import Particle from '../../engine/Particle'

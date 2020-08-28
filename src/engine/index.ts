@@ -6,7 +6,7 @@ import ParticlePool from './ParticlePool'
 import { Duration, Emitter } from './emitter'
 import { Color, Point, Random } from './util'
 
-const customPixiParticles = {
+const cpp = {
   Particle,
   ParticlePool,
   parser,
@@ -19,4 +19,4 @@ const customPixiParticles = {
   Emitter,
 }
 
-export default customPixiParticles
+export default cpp

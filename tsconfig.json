@@ -1,18 +1,21 @@
 {
     "compilerOptions": {
-        "outDir": "./dist/",
-        "sourceMap": true,
-        "noImplicitAny": false,
         "module": "commonjs",
+        "noImplicitAny": true,
         "target": "es5",
-        "lib": ["es5", "es6", "dom"]
+        "sourceMap": true,
+        "lib": ["es6", "es5", "dom"],
+        "strictNullChecks": true,
+        "outDir": "./dist",
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "noUnusedLocals": false,
+        "declaration": true,
+        "esModuleInterop": true
     },
-    "include": [
-        "./src/**/*"
+    "exclude": [
+        "node_modules",
+        "dist"
     ],
-    "awesomeTypescriptLoaderOptions": {
-        "reportFiles": [
-            "./src/**/*"
-        ]
-    }
+    "types": ["pixi.js"]
 }

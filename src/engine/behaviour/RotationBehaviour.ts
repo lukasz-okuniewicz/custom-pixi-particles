@@ -1,5 +1,5 @@
 import { Behaviour, BehaviourNames } from './index'
-import math from '../util/math'
+import math from '../util/maths'
 import Particle from '../Particle'
 
 export default class RotationBehaviour extends Behaviour {

@@ -1,6 +1,6 @@
 import Behaviour from './Behaviour'
 import BehaviourNames from './BehaviourNames'
-import math from '../util/math'
+import math from '../util/maths'
 import Particle from '../Particle'
 
 let _tmp = 0

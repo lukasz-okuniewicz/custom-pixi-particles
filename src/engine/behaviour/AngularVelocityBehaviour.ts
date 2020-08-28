@@ -1,5 +1,5 @@
 import Behaviour from './Behaviour'
-import math from '../util/math'
+import math from '../util/maths'
 import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 
