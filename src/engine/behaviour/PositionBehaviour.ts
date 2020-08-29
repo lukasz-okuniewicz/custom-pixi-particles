@@ -3,6 +3,7 @@ import { Behaviour, BehaviourNames } from './index'
 import Particle from '../Particle'
 
 export default class PositionBehaviour extends Behaviour {
+  enabled = false
   priority = 100
   position = new Point()
   positionVariance = new Point()
@@ -12,6 +13,7 @@ export default class PositionBehaviour extends Behaviour {
   accelerationVariance = new Point()
 
   init = (particle: Particle) => {
+    if (!this.enabled) return
     particle.movement.x = this.calculate(this.position.x, this.positionVariance.x)
     particle.movement.y = this.calculate(this.position.y, this.positionVariance.y)
 
@@ -30,6 +32,7 @@ export default class PositionBehaviour extends Behaviour {
   }
 
   apply = (particle: Particle, deltaTime: number) => {
+    if (!this.enabled) return
     particle.velocity.x += particle.acceleration.x * deltaTime
     particle.velocity.y += particle.acceleration.y * deltaTime
 
@@ -42,5 +45,37 @@ export default class PositionBehaviour extends Behaviour {
 
   getName() {
     return BehaviourNames.POSITION_BEHAVIOUR
+  }
+
+  getProps() {
+    return {
+      enabled: this.enabled,
+      priority: this.priority,
+      position: {
+        x: this.position.x,
+        y: this.position.y,
+      },
+      positionVariance: {
+        x: this.position.x,
+        y: this.position.y,
+      },
+      velocity: {
+        x: this.position.x,
+        y: this.position.y,
+      },
+      velocityVariance: {
+        x: this.position.x,
+        y: this.position.y,
+      },
+      acceleration: {
+        x: this.position.x,
+        y: this.position.y,
+      },
+      accelerationVariance: {
+        x: this.position.x,
+        y: this.position.y,
+      },
+      name: this.getName(),
+    }
   }
 }

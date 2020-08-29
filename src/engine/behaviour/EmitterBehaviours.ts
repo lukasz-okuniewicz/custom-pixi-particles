@@ -6,7 +6,9 @@ export default class EmitterBehaviours {
   behaviours: any = []
 
   getAll = () => {
-    return this.behaviours
+    return this.behaviours.filter((behaviour: any) => {
+      return behaviour.enabled
+    })
   }
 
   isEmpty = () => {

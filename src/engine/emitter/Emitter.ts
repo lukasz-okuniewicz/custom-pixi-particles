@@ -84,6 +84,10 @@ export default class Emitter extends eventemitter3 {
     return new EmitterParser(this)
   }
 
+  createBehaviourProps(name: string) {
+    return this.getParser().createBehaviourProps(name)
+  }
+
   play() {
     this._play = true
     this.emit(Emitter.PLAY)

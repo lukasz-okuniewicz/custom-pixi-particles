@@ -4,6 +4,7 @@ import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 
 export default class ColorBehaviour extends Behaviour {
+  enabled = false
   priority = 0
   start = new Color()
   end = new Color()
@@ -12,6 +13,7 @@ export default class ColorBehaviour extends Behaviour {
   sinus = false
 
   init = (particle: Particle) => {
+    if (!this.enabled) return
     particle.colorStart.copyFrom(this.start)
     particle.colorStart.r += this.varianceFrom(this.startVariance.r)
     particle.colorStart.g += this.varianceFrom(this.startVariance.g)
@@ -28,6 +30,7 @@ export default class ColorBehaviour extends Behaviour {
   }
 
   apply = (particle: Particle, deltaTime: number) => {
+    if (!this.enabled) return
     particle.color.copyFrom(particle.colorStart)
 
     particle.color.r += (particle.colorEnd.r - particle.colorStart.r) * particle.lifeProgress
@@ -43,5 +46,38 @@ export default class ColorBehaviour extends Behaviour {
 
   getName() {
     return BehaviourNames.COLOR_BEHAVIOUR
+  }
+
+  getProps() {
+    return {
+      enabled: this.enabled,
+      priority: this.priority,
+      start: {
+        _r: this.start.r,
+        _g: this.start.g,
+        _b: this.start.b,
+        _alpha: this.start.alpha,
+      },
+      end: {
+        _r: this.start.r,
+        _g: this.start.g,
+        _b: this.start.b,
+        _alpha: this.start.alpha,
+      },
+      startVariance: {
+        _r: this.start.r,
+        _g: this.start.g,
+        _b: this.start.b,
+        _alpha: this.start.alpha,
+      },
+      endVariance: {
+        _r: this.start.r,
+        _g: this.start.g,
+        _b: this.start.b,
+        _alpha: this.start.alpha,
+      },
+      sinus: this.sinus,
+      name: this.getName(),
+    }
   }
 }

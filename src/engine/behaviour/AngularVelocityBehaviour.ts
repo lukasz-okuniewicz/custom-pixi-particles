@@ -4,6 +4,7 @@ import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 
 export default class AngularVelocityBehaviour extends Behaviour {
+  private enabled: boolean = false
   private degrees: number = 0
   private degreesVariance: number = 0
   private maxRadius: number = 0
@@ -13,6 +14,7 @@ export default class AngularVelocityBehaviour extends Behaviour {
   protected priority: number = 100
 
   init = (particle: Particle) => {
+    if (!this.enabled) return
     particle.radiansPerSecond = math.degreesToRadians(this.degrees + this.varianceFrom(this.degreesVariance))
     particle.radiusStart = this.maxRadius + this.varianceFrom(this.maxRadiusVariance)
     particle.radiusEnd = this.minRadius + this.varianceFrom(this.minRadiusVariance)
@@ -24,6 +26,7 @@ export default class AngularVelocityBehaviour extends Behaviour {
   }
 
   apply = (particle: Particle, deltaTime: number) => {
+    if (!this.enabled) return
     particle.velocityAngle += particle.radiansPerSecond * deltaTime
     particle.radius = particle.radiusStart + (particle.radiusEnd - particle.radiusStart) * particle.lifeProgress
 
@@ -36,5 +39,19 @@ export default class AngularVelocityBehaviour extends Behaviour {
 
   getName() {
     return BehaviourNames.ANGULAR_BEHAVIOUR
+  }
+
+  getProps() {
+    return {
+      enabled: this.enabled,
+      degrees: this.degrees,
+      degreesVariance: this.degreesVariance,
+      maxRadius: this.maxRadius,
+      maxRadiusVariance: this.maxRadiusVariance,
+      minRadius: this.minRadius,
+      minRadiusVariance: this.minRadiusVariance,
+      priority: this.priority,
+      name: this.getName(),
+    }
   }
 }

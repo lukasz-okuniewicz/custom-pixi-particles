@@ -61,6 +61,11 @@ export default class EmitterParser {
     return new behaviours[name]()
   }
 
+  createBehaviourProps = (name: string) => {
+    // @ts-ignore
+    return new behaviours[name]().getProps()
+  }
+
   createEmitController = (name: string) => {
     // @ts-ignore
     return new emissions[name]()

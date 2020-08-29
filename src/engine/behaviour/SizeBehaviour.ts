@@ -3,6 +3,7 @@ import { Behaviour, BehaviourNames } from './index'
 import Particle from '../Particle'
 
 export default class SizeBehaviour extends Behaviour {
+  enabled = true
   priority = 0
   allowNegativeValues = false
   sizeStart = new Point(1, 1)
@@ -11,6 +12,7 @@ export default class SizeBehaviour extends Behaviour {
   endVariance = 0
 
   init = (particle: Particle) => {
+    if (!this.enabled) return
     let variance = this.varianceFrom(this.startVariance)
     particle.sizeStart.x = this.sizeStart.x + variance
     particle.sizeStart.y = this.sizeStart.y + variance
@@ -30,6 +32,7 @@ export default class SizeBehaviour extends Behaviour {
   }
 
   apply = (particle: Particle, deltaTime: number) => {
+    if (!this.enabled) return
     particle.size.copyFrom(particle.sizeStart)
     particle.size.x += (particle.sizeEnd.x - particle.sizeStart.x) * particle.lifeProgress
     particle.size.y += (particle.sizeEnd.y - particle.sizeStart.y) * particle.lifeProgress
@@ -42,5 +45,24 @@ export default class SizeBehaviour extends Behaviour {
 
   getName() {
     return BehaviourNames.SIZE_BEHAVIOUR
+  }
+
+  getProps() {
+    return {
+      enabled: this.enabled,
+      priority: this.priority,
+      allowNegativeValues: this.allowNegativeValues,
+      sizeStart: {
+        x: this.sizeStart.x,
+        y: this.sizeStart.y,
+      },
+      sizeEnd: {
+        x: this.sizeStart.x,
+        y: this.sizeStart.y,
+      },
+      startVariance: this.startVariance,
+      endVariance: this.endVariance,
+      name: this.getName(),
+    }
   }
 }

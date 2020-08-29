@@ -6,7 +6,6 @@ import Particle from '../../engine/Particle'
 export default class Renderer extends PIXI.Container {
   blendMode: any
   emitter: Emitter
-  private unusedSprites: any[] = []
   private currentTime: number = 0
   private lastTime: number = 0
   private textures: string[]
@@ -25,14 +24,6 @@ export default class Renderer extends PIXI.Container {
     this.emitter.on('emitter/update', this.onUpdate, this)
     this.emitter.on('emitter/remove', this.onRemove, this)
     this.emitter.on('emitter/play', this.onPlay, this)
-  }
-
-  onPause() {
-    this.paused = true
-  }
-
-  onResume() {
-    this.paused = false
   }
 
   updateTransform() {
@@ -54,7 +45,7 @@ export default class Renderer extends PIXI.Container {
   }
 
   onCreate(particle: Particle) {
-    const sprite = this.getOrCreateSprite()
+    const sprite = this.createSprite()
     sprite.visible = true
     if (this.blendMode) {
       sprite.blendMode = this.blendMode
@@ -62,13 +53,9 @@ export default class Renderer extends PIXI.Container {
     particle.sprite = sprite
   }
 
-  getOrCreateSprite() {
-    if (this.unusedSprites.length > 0) {
-      return this.unusedSprites.pop()
-    }
-
+  createSprite() {
     const sprite = new PIXI.Sprite(PIXI.Texture.from(this.getRandomTexture()))
-    sprite.anchor.set(0.5, 0.5)
+    sprite.anchor.set(0.5)
     return this.addChild(sprite)
   }
 
@@ -88,16 +75,12 @@ export default class Renderer extends PIXI.Container {
 
   onRemove(particle: Particle) {
     const sprite = particle.sprite
-    delete particle.sprite
     sprite.visible = false
-    this.unusedSprites.push(sprite)
+    this.removeChild(sprite)
+    delete particle.sprite
   }
 
   updateTexture() {
-    for (let i = 0; i < this.unusedSprites.length; ++i) {
-      this.unusedSprites[i].texture = PIXI.Texture.from(this.getRandomTexture())
-    }
-
     for (let i = 0; i < this.children.length; ++i) {
       // @ts-ignore
       this.children[i].texture = PIXI.Texture.from(this.getRandomTexture())

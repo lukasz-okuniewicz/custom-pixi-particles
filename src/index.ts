@@ -1,5 +1,5 @@
 import Renderer from './renderer/pixi/Renderer'
-import * as PIXI from 'pixi.js-legacy'
+import * as PIXI from 'pixi.js'
 
 const customPixiParticles = {
   Renderer,
