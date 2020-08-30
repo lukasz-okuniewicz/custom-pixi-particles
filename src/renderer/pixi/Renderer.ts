@@ -6,10 +6,11 @@ import Particle from '../../engine/Particle'
 export default class Renderer extends PIXI.Container {
   blendMode: any
   emitter: Emitter
+  _paused: boolean = false
   private currentTime: number = 0
   private lastTime: number = 0
   private textures: string[]
-  private paused: boolean = false
+  private pausedTime: number = 0
 
   constructor(textures: string[], config: any) {
     super()
@@ -26,7 +27,18 @@ export default class Renderer extends PIXI.Container {
     this.emitter.on('emitter/play', this.onPlay, this)
   }
 
+  set paused(paused: boolean) {
+    if (paused) {
+      this.pausedTime = performance.now()
+    } else {
+      this.pausedTime = 0
+      this.lastTime = performance.now() - this.pausedTime
+    }
+    this._paused = paused
+  }
+
   updateTransform() {
+    if (this._paused) return
     this.currentTime = performance.now()
 
     if (this.lastTime === 0) {
