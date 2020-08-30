@@ -1,7 +1,7 @@
 // tslint:disable:prefer-for-of
-import engine from '../../engine'
-import { Emitter } from '../../engine/emitter'
-import Particle from '../../engine/Particle'
+import engine from '../index'
+import { Emitter } from '../emitter'
+import Particle from '../Particle'
 
 export default class Renderer extends PIXI.Container {
   blendMode: any

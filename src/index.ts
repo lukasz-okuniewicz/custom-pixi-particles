@@ -1,4 +1,4 @@
-import Renderer from './renderer/pixi/Renderer'
+import Renderer from './lib/pixi/Renderer'
 import * as PIXI from 'pixi.js'
 
 const customPixiParticles = {
