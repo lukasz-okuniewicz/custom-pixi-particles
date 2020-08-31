@@ -26,7 +26,9 @@ export default class Renderer extends PIXI.Container {
     this.emitter.on('emitter/update', this.onUpdate, this)
     this.emitter.on('emitter/remove', this.onRemove, this)
     this.emitter.on('emitter/play', this.onPlay, this)
-    this.emitter.on(Emitter.COMPLETE, this.onComplete, this)
+    this.emitter.on(Emitter.COMPLETE, () => {
+      this.onComplete()
+    })
   }
 
   set paused(paused: boolean) {
