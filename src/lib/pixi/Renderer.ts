@@ -6,7 +6,8 @@ import Particle from '../Particle'
 export default class Renderer extends PIXI.Container {
   blendMode: any
   emitter: Emitter
-  _paused: boolean = false
+  onComplete: any = () => {}
+  private _paused: boolean = false
   private currentTime: number = 0
   private lastTime: number = 0
   private textures: string[]
@@ -25,6 +26,7 @@ export default class Renderer extends PIXI.Container {
     this.emitter.on('emitter/update', this.onUpdate, this)
     this.emitter.on('emitter/remove', this.onRemove, this)
     this.emitter.on('emitter/play', this.onPlay, this)
+    this.emitter.on(Emitter.COMPLETE, this.onComplete, this)
   }
 
   set paused(paused: boolean) {
