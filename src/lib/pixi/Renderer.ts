@@ -29,16 +29,8 @@ export default class Renderer extends PIXI.Container {
     this.emitter.on(Emitter.COMPLETE, () => {
       this.onComplete()
     })
-  }
 
-  set paused(paused: boolean) {
-    if (paused) {
-      this.pausedTime = performance.now()
-    } else {
-      this.pausedTime = 0
-      this.lastTime = performance.now() - this.pausedTime
-    }
-    this._paused = paused
+    document.addEventListener('visibilitychange', () => this.paused(document.hidden))
   }
 
   updateTransform() {
@@ -122,5 +114,17 @@ export default class Renderer extends PIXI.Container {
 
   private getRandomTexture(): string {
     return this.textures[Math.floor(Math.random() * this.textures.length)]
+  }
+
+  private paused(paused: boolean) {
+    if (paused === this._paused) return
+
+    if (paused) {
+      this.pausedTime = performance.now()
+    } else {
+      this.pausedTime = 0
+      this.lastTime = performance.now() - this.pausedTime
+    }
+    this._paused = paused
   }
 }
