@@ -30,7 +30,7 @@ export default class Emitter extends eventemitter3 {
     this.play()
   }
 
-  update(deltaTime: number) {
+  async update(deltaTime: number) {
     if (!this._play) return
 
     this.emitParticles(deltaTime)
@@ -39,7 +39,9 @@ export default class Emitter extends eventemitter3 {
 
     if (this.duration.isTimeElapsed() && this.list.isEmpty()) {
       this.stop()
-      this.emit(Emitter.COMPLETE)
+      setTimeout(() => {
+        this.emit(Emitter.COMPLETE)
+      })
     }
   }
 

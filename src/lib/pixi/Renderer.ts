@@ -12,6 +12,7 @@ export default class Renderer extends PIXI.Container {
   private lastTime: number = 0
   private textures: string[]
   private pausedTime: number = 0
+  private unusedSprites: any[] = []
 
   constructor(textures: string[], config: any) {
     super()
@@ -42,53 +43,17 @@ export default class Renderer extends PIXI.Container {
     }
 
     this.emitter.update((this.currentTime - this.lastTime) / 1000)
+
     PIXI.Container.prototype.updateTransform.call(this)
 
     this.lastTime = this.currentTime
   }
 
-  onPlay() {
-    this.currentTime = 0
-    this.lastTime = 0
-  }
-
-  onCreate(particle: Particle) {
-    const sprite = this.createSprite()
-    sprite.visible = true
-    if (this.blendMode) {
-      sprite.blendMode = this.blendMode
-    }
-    particle.sprite = sprite
-  }
-
-  createSprite() {
-    const sprite = new PIXI.Sprite(PIXI.Texture.from(this.getRandomTexture()))
-    sprite.anchor.set(0.5)
-    return this.addChild(sprite)
-  }
-
-  onUpdate(particle: Particle) {
-    const sprite = particle.sprite
-
-    sprite.x = particle.x
-    sprite.y = particle.y
-
-    sprite.scale.x = particle.size.x
-    sprite.scale.y = particle.size.y
-
-    sprite.tint = particle.color.hex
-    sprite.alpha = particle.color.alpha
-    sprite.rotation = particle.rotation
-  }
-
-  onRemove(particle: Particle) {
-    const sprite = particle.sprite
-    sprite.visible = false
-    this.removeChild(sprite)
-    delete particle.sprite
-  }
-
   updateTexture() {
+    for (let i = 0; i < this.unusedSprites.length; ++i) {
+      this.unusedSprites[i].texture = PIXI.Texture.from(this.getRandomTexture())
+    }
+
     for (let i = 0; i < this.children.length; ++i) {
       // @ts-ignore
       this.children[i].texture = PIXI.Texture.from(this.getRandomTexture())
@@ -110,6 +75,52 @@ export default class Renderer extends PIXI.Container {
   setTextures(textures: string[]) {
     this.textures = textures
     this.updateTexture()
+  }
+
+  private getOrCreateSprite() {
+    if (this.unusedSprites.length > 0) {
+      return this.unusedSprites.pop()
+    }
+
+    const sprite = new PIXI.Sprite(PIXI.Texture.from(this.getRandomTexture()))
+    sprite.anchor.set(0.5)
+    return this.addChild(sprite)
+  }
+
+  private onPlay() {
+    this.currentTime = 0
+    this.lastTime = 0
+  }
+
+  private onCreate(particle: Particle) {
+    const sprite = this.getOrCreateSprite()
+    sprite.visible = true
+    if (this.blendMode) {
+      sprite.blendMode = this.blendMode
+    }
+    particle.sprite = sprite
+  }
+
+  private onUpdate(particle: Particle) {
+    const sprite = particle.sprite
+
+    sprite.x = particle.x
+    sprite.y = particle.y
+
+    sprite.scale.x = particle.size.x
+    sprite.scale.y = particle.size.y
+
+    sprite.tint = particle.color.hex
+    sprite.alpha = particle.color.alpha
+    sprite.rotation = particle.rotation
+  }
+
+  private onRemove(particle: Particle) {
+    const sprite = particle.sprite
+    sprite.visible = false
+    this.unusedSprites.push(sprite)
+    // this.removeChild(sprite)
+    // delete particle.sprite
   }
 
   private getRandomTexture(): string {
