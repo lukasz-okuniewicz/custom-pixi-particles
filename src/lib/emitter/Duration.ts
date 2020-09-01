@@ -1,5 +1,5 @@
 export default class Duration {
-  private maxTime: number = -1
+  maxTime: number = -1
   private _elapsedTime: number = 0
 
   isTimeElapsed = () => {

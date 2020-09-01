@@ -16,9 +16,9 @@ export default class Emitter extends eventemitter3 {
   static REMOVE = 'emitter/remove'
   static COMPLETE = 'emitter/complete'
   private list: List = new List()
-  private duration: Duration = new Duration()
-  private behaviours: EmitterBehaviours = new EmitterBehaviours()
-  private emitController: any
+  duration: Duration = new Duration()
+  behaviours: EmitterBehaviours = new EmitterBehaviours()
+  emitController: any
   private _play: boolean
 
   constructor() {

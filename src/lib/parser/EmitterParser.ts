@@ -2,9 +2,10 @@
 import CompatibilityHelper from './CompatibilityHelper'
 import * as emissions from '../emission'
 import * as behaviours from '../behaviour'
+import {Emitter} from '../emitter'
 
 export default class EmitterParser {
-  private readonly emitter: any
+  private readonly emitter: Emitter
 
   constructor(emitter: any) {
     this.emitter = emitter
@@ -42,6 +43,26 @@ export default class EmitterParser {
     )
     this.emitter.emitController.getParser().read(config.emitController)
     this.emitter.duration.maxTime = CompatibilityHelper.readDuration(config)
+
+    return this.emitter
+  }
+
+  update = (config: any) => {
+    const behavioursConfig = config.behaviours
+    const existingBehaviours = this.emitter.behaviours.getAll()
+    const alwaysCreate = this.emitter.behaviours.isEmpty()
+
+    this.emitter.behaviours.clear()
+    for (let i = 0; i < behavioursConfig.length; i++) {
+      const name = behavioursConfig[i].name
+      const behaviour = alwaysCreate ? this.createBehaviour(name) : this.getExistingOrCreate(name, existingBehaviours)
+      behaviour.getParser().read(behavioursConfig[i])
+      this.emitter.behaviours.add(behaviour)
+    }
+
+    this.emitter.emitController.getParser().read(config.emitController)
+    this.emitter.duration.maxTime = CompatibilityHelper.readDuration(config)
+    this.emitter.duration.reset()
 
     return this.emitter
   }

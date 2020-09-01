@@ -77,6 +77,10 @@ export default class Renderer extends PIXI.Container {
     this.updateTexture()
   }
 
+  updateConfig(config: any) {
+    this.emitter.getParser().update(config)
+  }
+
   private getOrCreateSprite() {
     if (this.unusedSprites.length > 0) {
       return this.unusedSprites.pop()
