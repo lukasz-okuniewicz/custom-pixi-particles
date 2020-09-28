@@ -1,3 +1,4 @@
+import BehaviourNames from './BehaviourNames'
 import EmitterBehaviours from './EmitterBehaviours'
 import Behaviour from './Behaviour'
 import LifeBehaviour from './LifeBehaviour'
@@ -7,7 +8,7 @@ import SizeBehaviour from './SizeBehaviour'
 import AngularVelocityBehaviour from './AngularVelocityBehaviour'
 import EmitDirectionBehaviour from './EmitDirectionBehaviour'
 import RotationBehaviour from './RotationBehaviour'
-import BehaviourNames from './BehaviourNames'
+import TurbulenceBehaviour from './TurbulenceBehaviour'
 
 export {
   EmitterBehaviours,
@@ -19,5 +20,6 @@ export {
   AngularVelocityBehaviour,
   EmitDirectionBehaviour,
   RotationBehaviour,
+  TurbulenceBehaviour,
   BehaviourNames,
 }

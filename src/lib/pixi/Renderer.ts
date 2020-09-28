@@ -1,11 +1,14 @@
 // tslint:disable:prefer-for-of
 import engine from '../index'
 import { Emitter } from '../emitter'
+import turbulencePool from '../util/turbulencePool'
 import Particle from '../Particle'
+import BehaviourNames from '../behaviour/BehaviourNames'
 
-export default class Renderer extends PIXI.Container {
+export default class Renderer extends PIXI.ParticleContainer {
   blendMode: any
   emitter: Emitter
+  turbulenceEmitter: Emitter
   onComplete: any = () => {}
   private _paused: boolean = false
   private currentTime: number = 0
@@ -15,21 +18,41 @@ export default class Renderer extends PIXI.Container {
   private unusedSprites: any[] = []
 
   constructor(textures: string[], config: any) {
-    super()
+    super(200000, {
+      vertices: true,
+      position: true,
+      rotation: true,
+      uvs: false,
+      tint: true,
+    })
     PIXI.Container.call(this)
+    this.textures = textures
+
+    const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
+    if (turbulenceConfigIndex !== -1) {
+      const turbulenceConfig = config.behaviours[turbulenceConfigIndex]
+      if (turbulenceConfig.enabled === true) {
+        this.turbulenceEmitter = new engine.Emitter()
+        this.turbulenceEmitter.getParser().read(this.buildTurbulenceConfig(turbulenceConfig))
+        this.turbulenceEmitter.on(Emitter.CREATE, this.onCreateTurbulence, this)
+        this.turbulenceEmitter.on(Emitter.UPDATE, this.onUpdateTurbulence, this)
+        this.turbulenceEmitter.on(Emitter.REMOVE, this.onRemoveTurbulence, this)
+        // this.turbulenceEmitter.on(Emitter.PLAY, this.onPlayTurbulence, this)
+      }
+    }
 
     this.emitter = new engine.Emitter()
     this.emitter.getParser().read(config)
-
-    this.textures = textures
-
-    this.emitter.on('emitter/create', this.onCreate, this)
-    this.emitter.on('emitter/update', this.onUpdate, this)
-    this.emitter.on('emitter/remove', this.onRemove, this)
-    this.emitter.on('emitter/play', this.onPlay, this)
+    this.emitter.on(Emitter.CREATE, this.onCreate, this)
+    this.emitter.on(Emitter.UPDATE, this.onUpdate, this)
+    this.emitter.on(Emitter.REMOVE, this.onRemove, this)
+    this.emitter.on(Emitter.PLAY, this.onPlay, this)
     this.emitter.on(Emitter.COMPLETE, () => {
       this.onComplete()
     })
+    if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
+      turbulencePool.list = this.turbulenceEmitter.list
+    }
 
     document.addEventListener('visibilitychange', () => this.paused(document.hidden))
   }
@@ -43,8 +66,11 @@ export default class Renderer extends PIXI.Container {
     }
 
     this.emitter.update((this.currentTime - this.lastTime) / 1000)
+    if (this.turbulenceEmitter) {
+      this.turbulenceEmitter.update((this.currentTime - this.lastTime) / 1000)
+    }
 
-    PIXI.Container.prototype.updateTransform.call(this)
+    PIXI.ParticleContainer.prototype.updateTransform.call(this)
 
     this.lastTime = this.currentTime
   }
@@ -62,14 +88,23 @@ export default class Renderer extends PIXI.Container {
 
   playEmitter() {
     this.emitter.play()
+    if (this.turbulenceEmitter) {
+      this.turbulenceEmitter.play()
+    }
   }
 
   stopEmitter() {
     this.emitter.stop()
+    if (this.turbulenceEmitter) {
+      this.turbulenceEmitter.stop()
+    }
   }
 
   resetEmitter() {
     this.emitter.reset()
+    if (this.turbulenceEmitter) {
+      this.turbulenceEmitter.reset()
+    }
   }
 
   setTextures(textures: string[]) {
@@ -79,6 +114,15 @@ export default class Renderer extends PIXI.Container {
 
   updateConfig(config: any) {
     this.emitter.getParser().update(config)
+    if (this.turbulenceEmitter) {
+      const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
+      if (turbulenceConfigIndex !== -1) {
+        const turbulenceConfig = config.behaviours[turbulenceConfigIndex]
+        if (turbulenceConfig.enabled === true) {
+          this.turbulenceEmitter.getParser().update(this.buildTurbulenceConfig(turbulenceConfig))
+        }
+      }
+    }
   }
 
   private getOrCreateSprite() {
@@ -105,7 +149,33 @@ export default class Renderer extends PIXI.Container {
     particle.sprite = sprite
   }
 
+  private onCreateTurbulence(particle: Particle) {
+    const sprite = new PIXI.Sprite(PIXI.Texture.from('vortex'))
+    sprite.anchor.set(0.5)
+    this.addChild(sprite)
+    sprite.visible = true
+    // sprite.blendMode = this.blendMode
+    particle.sprite = sprite
+    if (!particle.showVortices && sprite) {
+      sprite.visible = false
+    }
+  }
+
   private onUpdate(particle: Particle) {
+    const sprite = particle.sprite
+
+    sprite.x = particle.x
+    sprite.y = particle.y
+
+    sprite.scale.x = particle.size.x
+    sprite.scale.y = particle.size.y
+
+    sprite.tint = particle.color.hex
+    sprite.alpha = particle.color.alpha
+    sprite.rotation = particle.rotation
+  }
+
+  private onUpdateTurbulence(particle: Particle) {
     const sprite = particle.sprite
 
     sprite.x = particle.x
@@ -121,10 +191,22 @@ export default class Renderer extends PIXI.Container {
 
   private onRemove(particle: Particle) {
     const sprite = particle.sprite
-    sprite.visible = false
+    if (!particle.showVortices && sprite) {
+      sprite.visible = false
+    }
     this.unusedSprites.push(sprite)
-    // this.removeChild(sprite)
+    // this.particlesContainer.removeChild(sprite)
     // delete particle.sprite
+  }
+
+  private onRemoveTurbulence(particle: Particle) {
+    const sprite = particle.sprite
+    if (!particle.showVortices && sprite) {
+      sprite.visible = false
+    }
+    // this.unusedSprites.push(sprite)
+    this.removeChild(sprite)
+    delete particle.sprite
   }
 
   private getRandomTexture(): string {
@@ -141,5 +223,96 @@ export default class Renderer extends PIXI.Container {
       this.lastTime = performance.now() - this.pausedTime
     }
     this._paused = paused
+  }
+
+  private getConfigIndexByName(name: string, config: any) {
+    let index = -1
+    config.behaviours.forEach((behaviour: any, i: number) => {
+      if (behaviour.name === name) {
+        index = i
+      }
+    })
+    return index
+  }
+
+  private buildTurbulenceConfig(turbulenceConfig: any) {
+    const config = {
+      behaviours: [
+        {
+          enabled: true,
+          priority: 10000,
+          maxLifeTime: turbulenceConfig.maxLifeTime || 2,
+          timeVariance: turbulenceConfig.maxLifeTimeVariance || 0,
+          name: 'LifeBehaviour',
+        },
+        {
+          enabled: true,
+          priority: 100,
+          position: {
+            x: turbulenceConfig.position.x || 0,
+            y: turbulenceConfig.position.y || 0,
+          },
+          positionVariance: {
+            x: turbulenceConfig.positionVariance.x || 0,
+            y: turbulenceConfig.positionVariance.y || 0,
+          },
+          velocity: {
+            x: turbulenceConfig.velocity.x || 0,
+            y: turbulenceConfig.velocity.y || 0,
+          },
+          velocityVariance: {
+            x: turbulenceConfig.velocityVariance.x || 0,
+            y: turbulenceConfig.velocityVariance.y || 0,
+          },
+          acceleration: {
+            x: turbulenceConfig.acceleration.x || 0,
+            y: turbulenceConfig.acceleration.y || 0,
+          },
+          accelerationVariance: {
+            x: turbulenceConfig.accelerationVariance.x || 0,
+            y: turbulenceConfig.accelerationVariance.y || 0,
+          },
+          name: 'PositionBehaviour',
+        },
+        {
+          enabled: true,
+          priority: 0,
+          sizeStart: {
+            x: turbulenceConfig.sizeStart.x || 1,
+            y: turbulenceConfig.sizeStart.y || 1,
+          },
+          sizeEnd: {
+            x: turbulenceConfig.sizeEnd.x || 1,
+            y: turbulenceConfig.sizeEnd.y || 1,
+          },
+          startVariance: turbulenceConfig.startVariance || 0,
+          endVariance: turbulenceConfig.endVariance || 0,
+          name: 'SizeBehaviour',
+        },
+        {
+          enabled: true,
+          priority: 0,
+          rotation: 12,
+          variance: 0,
+          name: 'RotationBehaviour',
+        },
+        {
+          enabled: true,
+          priority: 0,
+          showVortices: turbulenceConfig.showVortices || false,
+          turbulence: true,
+          name: 'TurbulenceBehaviour',
+        },
+      ],
+      emitController: {
+        _maxParticles: 0,
+        _maxLife: 1,
+        _emitPerSecond: turbulenceConfig.emitPerSecond || 2,
+        _frames: 0,
+        name: 'UniformEmission',
+      },
+      duration: turbulenceConfig.duration || -1,
+    }
+    return config
   }
 }

@@ -6,6 +6,7 @@ import { EmitterParser } from '../parser'
 import List from '../util/List'
 import * as emission from '../emission'
 import Particle from '../Particle'
+import turbulencePool from '../util/turbulencePool'
 
 export default class Emitter extends eventemitter3 {
   static PLAY = 'emitter/play'
@@ -15,7 +16,7 @@ export default class Emitter extends eventemitter3 {
   static UPDATE = 'emitter/update'
   static REMOVE = 'emitter/remove'
   static COMPLETE = 'emitter/complete'
-  private list: List = new List()
+  list: List = new List()
   duration: Duration = new Duration()
   behaviours: EmitterBehaviours = new EmitterBehaviours()
   emitController: any
@@ -54,7 +55,7 @@ export default class Emitter extends eventemitter3 {
   createParticles(deltaTime: number) {
     const particlesToEmit = this.emitController.howMany(deltaTime, this.list.length)
     for (let i = 0; i < particlesToEmit; ++i) {
-      const particle = this.list.add(ParticlePool.global.pop())
+      const particle: Particle = this.list.add(ParticlePool.global.pop())
       this.behaviours.init(particle)
       this.emit(Emitter.CREATE, particle)
     }
@@ -80,6 +81,7 @@ export default class Emitter extends eventemitter3 {
     this.list.remove(particle)
     particle.reset()
     ParticlePool.global.push(particle)
+    turbulencePool.list.remove(particle)
   }
 
   getParser() {
@@ -115,6 +117,9 @@ export default class Emitter extends eventemitter3 {
 
   removeParticles() {
     this.list.forEach((particle: Particle) => {
+      this.removeParticle(particle)
+    })
+    turbulencePool.list.forEach((particle: Particle) => {
       this.removeParticle(particle)
     })
   }

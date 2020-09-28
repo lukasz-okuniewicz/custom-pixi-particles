@@ -6,4 +6,5 @@ export default {
   SIZE_BEHAVIOUR: 'SizeBehaviour',
   EMIT_DIRECTION: 'EmitDirectionBehaviour',
   ROTATION_BEHAVIOUR: 'RotationBehaviour',
+  TURBULENCE_BEHAVIOUR: 'TurbulenceBehaviour',
 }

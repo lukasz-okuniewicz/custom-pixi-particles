@@ -2,7 +2,7 @@
 import CompatibilityHelper from './CompatibilityHelper'
 import * as emissions from '../emission'
 import * as behaviours from '../behaviour'
-import {Emitter} from '../emitter'
+import { Emitter } from '../emitter'
 
 export default class EmitterParser {
   private readonly emitter: Emitter

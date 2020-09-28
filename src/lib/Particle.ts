@@ -30,6 +30,8 @@ export default class Particle {
   rotationDelta: number
   angle: number
   sprite: PIXI.Sprite
+  showVortices: boolean
+  turbulence: boolean
 
   constructor() {
     this.reset()
@@ -55,6 +57,9 @@ export default class Particle {
     this.directionCos = 1
     this.directionSin = 0
 
+    this.showVortices = false
+    this.turbulence = false
+
     this.rotation = 0
     this.rotationDelta = 0
 
@@ -69,5 +74,11 @@ export default class Particle {
 
   isDead() {
     return this.lifeTime >= this.maxLifeTime
+  }
+
+  hide() {
+    if (!this.sprite) return
+    if (!this.sprite.visible) return
+    this.sprite.visible = false
   }
 }
