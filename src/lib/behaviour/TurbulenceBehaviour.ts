@@ -7,6 +7,7 @@ import turbulencePool from '../util/turbulencePool'
 export default class TurbulenceBehaviour extends Behaviour {
   private enabled: boolean = false
   private showVortices: boolean = false
+  private effect: number = 0
   private turbulence: boolean = false
   private vortexOrgSize: number = 128
   position = new Point()
@@ -34,16 +35,45 @@ export default class TurbulenceBehaviour extends Behaviour {
     if (particle.turbulence) return
 
     turbulencePool.list.forEach((vortex: Particle) => {
+      let vx = 0, vy = 0, factor = 0
+
       const dx = particle.x - vortex.x
       const dy = particle.y - vortex.y
 
       if (dx > this.vortexOrgSize * vortex.size.x) return
       if (dy > this.vortexOrgSize * vortex.size.x) return
 
-      const vx = -dy + vortex.velocity.x
-      const vy = dx + vortex.velocity.y
+      if (this.effect === 0 || this.effect === 1) {
+        if (!this.effect) {
+          vx = -dy + vortex.velocity.x
+          vy = dx + vortex.velocity.y
+        } else {
+          vx = dy + vortex.velocity.x
+          vy = -dx + vortex.velocity.y
+        }
 
-      let factor = 1 / (1 + (dx * dx + dy * dy) / (this.vortexOrgSize * vortex.size.x))
+        factor = 1 / (1 + (dx * dx + dy * dy) / (this.vortexOrgSize * vortex.size.x))
+      } else if (this.effect === 2) {
+        vx = dx + vortex.velocity.x
+        vy = dy + vortex.velocity.y
+
+        factor = 1 / (1 + (dx * dx + dy * dy) / (this.vortexOrgSize * vortex.size.x))
+      } else if (this.effect === 3) {
+        vx = dx - vortex.velocity.x
+        vy = dy - vortex.velocity.y
+
+        factor = 1 / (1 + (dx * dx + dy * dy) / (this.vortexOrgSize * vortex.size.x))
+      } else if (this.effect === 4) {
+        vx = -dx + vortex.velocity.x
+        vy = -dy + vortex.velocity.y
+
+        factor = 1 / (1 + (dx * dx + dy * dy) / (this.vortexOrgSize * vortex.size.x))
+      } else if (this.effect === 5) {
+        vx = -dx - vortex.velocity.x
+        vy = -dy - vortex.velocity.y
+
+        factor = 1 / (1 + (dx * dx + dy * dy) / (this.vortexOrgSize * vortex.size.x))
+      }
 
       particle.velocity.x += (vx - particle.velocity.x) * factor
       particle.velocity.y += (vy - particle.velocity.y) * factor
@@ -95,6 +125,7 @@ export default class TurbulenceBehaviour extends Behaviour {
       emitPerSecond: this.emitPerSecond,
       duration: this.duration,
       maxLifeTime: this.maxLifeTime,
+      version: this.effect,
       name: this.getName(),
     }
   }

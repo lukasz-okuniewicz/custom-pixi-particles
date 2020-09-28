@@ -18,14 +18,13 @@ export default class Renderer extends PIXI.ParticleContainer {
   private unusedSprites: any[] = []
 
   constructor(textures: string[], config: any) {
-    super(200000, {
+    super(1500, {
       vertices: true,
       position: true,
       rotation: true,
       uvs: false,
       tint: true,
     })
-    PIXI.Container.call(this)
     this.textures = textures
 
     const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
@@ -37,7 +36,6 @@ export default class Renderer extends PIXI.ParticleContainer {
         this.turbulenceEmitter.on(Emitter.CREATE, this.onCreateTurbulence, this)
         this.turbulenceEmitter.on(Emitter.UPDATE, this.onUpdateTurbulence, this)
         this.turbulenceEmitter.on(Emitter.REMOVE, this.onRemoveTurbulence, this)
-        // this.turbulenceEmitter.on(Emitter.PLAY, this.onPlayTurbulence, this)
       }
     }
 
@@ -143,6 +141,7 @@ export default class Renderer extends PIXI.ParticleContainer {
   private onCreate(particle: Particle) {
     const sprite = this.getOrCreateSprite()
     sprite.visible = true
+    sprite.alpha = 1
     if (this.blendMode) {
       sprite.blendMode = this.blendMode
     }
@@ -150,14 +149,15 @@ export default class Renderer extends PIXI.ParticleContainer {
   }
 
   private onCreateTurbulence(particle: Particle) {
-    const sprite = new PIXI.Sprite(PIXI.Texture.from('vortex'))
+    const sprite = new PIXI.Sprite(PIXI.Texture.from('vortex.png'))
     sprite.anchor.set(0.5)
     this.addChild(sprite)
-    sprite.visible = true
-    // sprite.blendMode = this.blendMode
+    sprite.visible = false
+    sprite.alpha = 0
     particle.sprite = sprite
-    if (!particle.showVortices && sprite) {
-      sprite.visible = false
+    if (particle.showVortices && sprite) {
+      sprite.visible = true
+      sprite.alpha = 1
     }
   }
 
@@ -181,21 +181,24 @@ export default class Renderer extends PIXI.ParticleContainer {
     sprite.x = particle.x
     sprite.y = particle.y
 
-    sprite.scale.x = particle.size.x
-    sprite.scale.y = particle.size.y
+    if (particle.showVortices && sprite) {
+      sprite.scale.x = particle.size.x
+      sprite.scale.y = particle.size.y
 
-    sprite.tint = particle.color.hex
-    sprite.alpha = particle.color.alpha
-    sprite.rotation = particle.rotation
+      sprite.tint = particle.color.hex
+      sprite.alpha = particle.color.alpha
+      sprite.rotation = particle.rotation
+    }
   }
 
   private onRemove(particle: Particle) {
     const sprite = particle.sprite
     if (!particle.showVortices && sprite) {
       sprite.visible = false
+      sprite.alpha = 0
     }
     this.unusedSprites.push(sprite)
-    // this.particlesContainer.removeChild(sprite)
+    // this.removeChild(sprite)
     // delete particle.sprite
   }
 
@@ -203,8 +206,8 @@ export default class Renderer extends PIXI.ParticleContainer {
     const sprite = particle.sprite
     if (!particle.showVortices && sprite) {
       sprite.visible = false
+      sprite.alpha = 0
     }
-    // this.unusedSprites.push(sprite)
     this.removeChild(sprite)
     delete particle.sprite
   }

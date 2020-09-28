@@ -15,7 +15,7 @@
     "typescript": "3.9.7"
   },
   "dependencies": {
-    "eventemitter3": "4.0.5"
+    "eventemitter3": "^4.0.5"
   },
   "files": [
     "dist"
@@ -37,5 +37,5 @@
     "build": "npm run clean-dist && tsc",
     "clean-dist": "rimraf dist/*"
   },
-  "version": "1.0.16"
+  "version": "1.0.17"
 }
