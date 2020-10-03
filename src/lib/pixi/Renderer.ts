@@ -14,18 +14,22 @@ export default class Renderer extends PIXI.ParticleContainer {
   private currentTime: number = 0
   private lastTime: number = 0
   private textures: string[]
+  private finishingTextureNames: string[]
   private pausedTime: number = 0
   private unusedSprites: any[] = []
+  private animatedSprite: boolean = false
 
-  constructor(textures: string[], config: any) {
-    super(1500, {
+  constructor(textures: string[], config: any, animatedSprite: boolean = false, finishingTextureNames: string[]) {
+    super(100000, {
       vertices: true,
       position: true,
       rotation: true,
-      uvs: false,
+      uvs: (!!(animatedSprite || (finishingTextureNames && finishingTextureNames.length))),
       tint: true,
     })
+    this.animatedSprite = animatedSprite
     this.textures = textures
+    this.finishingTextureNames = finishingTextureNames
 
     const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
     if (turbulenceConfigIndex !== -1) {
@@ -43,6 +47,7 @@ export default class Renderer extends PIXI.ParticleContainer {
     this.emitter.getParser().read(config)
     this.emitter.on(Emitter.CREATE, this.onCreate, this)
     this.emitter.on(Emitter.UPDATE, this.onUpdate, this)
+    this.emitter.on(Emitter.FINISHING, this.onFinishing, this)
     this.emitter.on(Emitter.REMOVE, this.onRemove, this)
     this.emitter.on(Emitter.PLAY, this.onPlay, this)
     this.emitter.on(Emitter.COMPLETE, () => {
@@ -125,12 +130,74 @@ export default class Renderer extends PIXI.ParticleContainer {
 
   private getOrCreateSprite() {
     if (this.unusedSprites.length > 0) {
-      return this.unusedSprites.pop()
+      const sprite = this.unusedSprites.pop()
+      if (this.finishingTextureNames && this.finishingTextureNames.length) {
+        sprite.texture = PIXI.Texture.from(this.getRandomTexture())
+      }
+      return sprite
+    }
+
+    if (this.animatedSprite) {
+      const textures: PIXI.Texture[] = this.createFrameAnimationByName(this.textures[0], 2)
+      if (textures.length) {
+        const animation: PIXI.AnimatedSprite = new PIXI.AnimatedSprite(textures)
+        animation.anchor.set(0.5)
+        animation.loop = true
+        animation.play()
+        animation.animationSpeed = 15 / 60
+        return this.addChild(animation)
+      }
     }
 
     const sprite = new PIXI.Sprite(PIXI.Texture.from(this.getRandomTexture()))
     sprite.anchor.set(0.5)
     return this.addChild(sprite)
+  }
+
+  private createFrameAnimationByName(
+    prefix: string,
+    zeroPad: number = 0,
+    imageFileExtension: string = 'png',
+  ): PIXI.Texture[] {
+    const textures: PIXI.Texture[] = []
+    let frame: string = ''
+    let indexFrame: number = 0
+    let padding: number = 0
+    let texture: PIXI.Texture | null
+    const sheets = []
+    const resources = PIXI.Loader.shared.resources
+    for (const key in resources) {
+      if (resources[key].extension === 'json') {
+        sheets.push(resources[key].spritesheet)
+      }
+    }
+
+    do {
+      frame = indexFrame.toString()
+      padding = zeroPad - frame.length
+      if (padding > 0) {
+        frame = '0'.repeat(padding) + frame
+      }
+
+      try {
+        let found = false
+        for (const sheet of sheets) {
+          if (sheet && sheet.textures[`${prefix}_${frame}.${imageFileExtension}`]) {
+            found = true
+          }
+        }
+        if (found) {
+          texture = PIXI.Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
+          textures.push(texture)
+          indexFrame += 1
+        } else {
+          texture = null
+        }
+      } catch (e) {
+        texture = null
+      }
+    } while (texture)
+    return textures
   }
 
   private onPlay() {
@@ -191,12 +258,22 @@ export default class Renderer extends PIXI.ParticleContainer {
     }
   }
 
+  private onFinishing(particle: Particle) {
+    if (!this.finishingTextureNames || !this.finishingTextureNames.length) return
+    const sprite = particle.sprite
+    if (particle.finishingTexture < this.finishingTextureNames.length - 1) {
+      sprite.texture = PIXI.Texture.from(this.finishingTextureNames[particle.finishingTexture])
+      particle.finishingTexture++
+    }
+  }
+
   private onRemove(particle: Particle) {
     const sprite = particle.sprite
     if (!particle.showVortices && sprite) {
       sprite.visible = false
       sprite.alpha = 0
     }
+    particle.finishingTexture = 0
     this.unusedSprites.push(sprite)
     // this.removeChild(sprite)
     // delete particle.sprite

@@ -15,6 +15,7 @@ export default class Emitter extends eventemitter3 {
   static CREATE = 'emitter/create'
   static UPDATE = 'emitter/update'
   static REMOVE = 'emitter/remove'
+  static FINISHING = 'emitter/finishing'
   static COMPLETE = 'emitter/complete'
   list: List = new List()
   duration: Duration = new Duration()
@@ -70,6 +71,10 @@ export default class Emitter extends eventemitter3 {
   updateParticle(particle: Particle, deltaTime: number) {
     if (particle.isDead()) {
       this.removeParticle(particle)
+    } else if (particle.isAlmostDead()) {
+      this.behaviours.apply(particle, deltaTime)
+      this.emit(Emitter.FINISHING, particle)
+      this.emit(Emitter.UPDATE, particle)
     } else {
       this.behaviours.apply(particle, deltaTime)
       this.emit(Emitter.UPDATE, particle)

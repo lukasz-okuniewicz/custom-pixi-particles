@@ -32,6 +32,7 @@ export default class Particle {
   sprite: PIXI.Sprite
   showVortices: boolean
   turbulence: boolean
+  finishingTexture: number
 
   constructor() {
     this.reset()
@@ -57,6 +58,8 @@ export default class Particle {
     this.directionCos = 1
     this.directionSin = 0
 
+    this.finishingTexture = 0
+
     this.showVortices = false
     this.turbulence = false
 
@@ -70,6 +73,10 @@ export default class Particle {
     this.color.set(255, 255, 255, 1)
     this.colorStart.set(0, 0, 0, 1)
     this.colorEnd.set(0, 0, 0, 1)
+  }
+
+  isAlmostDead() {
+    return this.lifeTime >= this.maxLifeTime - 0.1
   }
 
   isDead() {

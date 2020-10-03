@@ -4,10 +4,6 @@ export default class CompatibilityHelper {
       return config.duration
     }
 
-    if (config.emitController && config.emitController._durationGuard) {
-      return config.emitController._durationGuard.maxTime
-    }
-
     return -1
   }
 }
