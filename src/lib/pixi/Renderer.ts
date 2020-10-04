@@ -261,7 +261,7 @@ export default class Renderer extends PIXI.ParticleContainer {
   private onFinishing(particle: Particle) {
     if (!this.finishingTextureNames || !this.finishingTextureNames.length) return
     const sprite = particle.sprite
-    if (particle.finishingTexture < this.finishingTextureNames.length - 1) {
+    if (particle.finishingTexture <= this.finishingTextureNames.length - 1) {
       sprite.texture = PIXI.Texture.from(this.finishingTextureNames[particle.finishingTexture])
       particle.finishingTexture++
     }
