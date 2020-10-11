@@ -19,7 +19,7 @@ export default class Renderer extends PIXI.ParticleContainer {
   private unusedSprites: any[] = []
   private animatedSprite: boolean = false
 
-  constructor(textures: string[], config: any, animatedSprite: boolean = false, finishingTextureNames: string[]) {
+  constructor(textures: string[], config: any, animatedSprite: boolean = false, finishingTextureNames: string[] = []) {
     super(100000, {
       vertices: true,
       position: true,
