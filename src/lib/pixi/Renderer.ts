@@ -192,6 +192,13 @@ export default class Renderer extends PIXI.ParticleContainer {
           indexFrame += 1
         } else {
           texture = null
+          for (const key in resources) {
+            if (key === `${prefix}_${frame}.${imageFileExtension}`) {
+              texture = PIXI.Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
+              textures.push(texture)
+              indexFrame += 1
+            }
+          }
         }
       } catch (e) {
         texture = null
