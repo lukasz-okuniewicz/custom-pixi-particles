@@ -11,6 +11,8 @@ export default class Particle {
   size = new Point()
   sizeStart = new Point()
   sizeEnd = new Point()
+  sinXVal = new Point()
+  sinYVal = new Point()
   color = new Color()
   colorStart = new Color()
   colorEnd = new Color()
@@ -48,6 +50,8 @@ export default class Particle {
     this.movement.set(0, 0)
     this.acceleration.set(0, 0)
     this.velocity.set(0, 0)
+    this.sinXVal.set(0, 0)
+    this.sinYVal.set(0, 0)
 
     this.velocityAngle = 0
     this.radiansPerSecond = 0

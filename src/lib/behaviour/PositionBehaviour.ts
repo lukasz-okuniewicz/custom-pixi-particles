@@ -7,6 +7,12 @@ export default class PositionBehaviour extends Behaviour {
   priority = 100
   spawnType: string = 'Rectangle'
   radius: number = 0
+  sinX: boolean = false
+  sinY: boolean = false
+  sinXVal = new Point()
+  sinYVal = new Point()
+  sinXValVariance = new Point()
+  sinYValVariance = new Point()
   position = new Point()
   positionVariance = new Point()
   velocity = new Point()
@@ -44,6 +50,11 @@ export default class PositionBehaviour extends Behaviour {
     particle.acceleration.x = this.calculate(this.acceleration.x, this.accelerationVariance.x)
     particle.acceleration.y = this.calculate(this.acceleration.y, this.accelerationVariance.y)
 
+    particle.sinXVal.x = this.calculate(this.sinXVal.x, this.sinXValVariance.x)
+    particle.sinXVal.y = this.calculate(this.sinXVal.y, this.sinXValVariance.y)
+    particle.sinYVal.x = this.calculate(this.sinYVal.x, this.sinYValVariance.x)
+    particle.sinYVal.y = this.calculate(this.sinYVal.y, this.sinYValVariance.y)
+
     particle.x = particle.movement.x
     particle.y = particle.movement.y
   }
@@ -60,8 +71,17 @@ export default class PositionBehaviour extends Behaviour {
     particle.movement.x += particle.velocity.x * deltaTime
     particle.movement.y += particle.velocity.y * deltaTime
 
-    particle.x = particle.movement.x
-    particle.y = particle.movement.y
+    if (this.sinX) {
+      particle.x = particle.movement.x + Math.sin(Math.PI * (particle.movement.y / particle.sinXVal.x)) * particle.sinXVal.y
+    } else {
+      particle.x = particle.movement.x
+    }
+
+    if (this.sinY) {
+      particle.y = particle.movement.y + Math.sin(Math.PI * (particle.movement.x / particle.sinYVal.x)) * particle.sinYVal.y
+    } else {
+      particle.y = particle.movement.y
+    }
   }
 
   getName() {
@@ -74,6 +94,12 @@ export default class PositionBehaviour extends Behaviour {
       priority: this.priority,
       spawnType: this.spawnType,
       radius: this.radius,
+      sinX: this.sinX,
+      sinY: this.sinY,
+      sinXVal: this.sinXVal,
+      sinYVal: this.sinYVal,
+      sinXValVariance: this.sinXValVariance,
+      sinYValVariance: this.sinYValVariance,
       position: {
         x: this.position.x,
         y: this.position.y,
