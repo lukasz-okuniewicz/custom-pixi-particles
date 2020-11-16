@@ -4,6 +4,8 @@ import { Emitter } from '../emitter'
 import turbulencePool from '../util/turbulencePool'
 import Particle from '../Particle'
 import BehaviourNames from '../behaviour/BehaviourNames'
+import List from '../util/List'
+import ParticlePool from '../ParticlePool'
 
 export default class Renderer extends PIXI.ParticleContainer {
   blendMode: any
@@ -53,6 +55,14 @@ export default class Renderer extends PIXI.ParticleContainer {
     this.emitter.on(Emitter.COMPLETE, () => {
       this.onComplete()
       this.removeChildren()
+      this.unusedSprites = []
+      if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
+        turbulencePool.list.reset()
+        turbulencePool.list = new List()
+      }
+      this.emitter.list.reset()
+      this.emitter.list = new List()
+      ParticlePool.global.reset()
     })
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       turbulencePool.list = this.turbulenceEmitter.list
@@ -91,9 +101,9 @@ export default class Renderer extends PIXI.ParticleContainer {
   }
 
   playEmitter() {
-    this.emitter.play()
+    this.emitter.resetAndPlay()
     if (this.turbulenceEmitter) {
-      this.turbulenceEmitter.play()
+      this.turbulenceEmitter.resetAndPlay()
     }
   }
 
@@ -107,7 +117,7 @@ export default class Renderer extends PIXI.ParticleContainer {
   stopEmitter() {
     this.emitter.stopWithoutKilling()
     if (this.turbulenceEmitter) {
-      this.turbulenceEmitter.stopWithoutKilling()
+      this.turbulenceEmitter.stop()
     }
   }
 

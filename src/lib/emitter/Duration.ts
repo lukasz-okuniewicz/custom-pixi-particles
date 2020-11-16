@@ -12,8 +12,8 @@ export default class Duration {
   }
 
   reset = () => {
-    this._elapsedTime = 0
     this._stop = false
+    this._elapsedTime = 0
   }
 
   stop = () => {

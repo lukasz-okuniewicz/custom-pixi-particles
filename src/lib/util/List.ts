@@ -43,4 +43,9 @@ export default class List {
     item.next = null
     this.length--
   }
+
+  reset() {
+    this.first = null
+    this.length = 0
+  }
 }

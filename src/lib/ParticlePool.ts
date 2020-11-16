@@ -21,4 +21,9 @@ export default class ParticlePool {
     particle.next = this.first
     this.first = particle
   }
+
+  reset() {
+    this.first = null
+    ParticlePool.global = new ParticlePool()
+  }
 }
