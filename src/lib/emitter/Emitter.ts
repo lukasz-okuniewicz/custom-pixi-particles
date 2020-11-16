@@ -98,6 +98,7 @@ export default class Emitter extends eventemitter3 {
   }
 
   play() {
+    this.duration.start()
     this._play = true
     this.emit(Emitter.PLAY)
   }
@@ -118,6 +119,10 @@ export default class Emitter extends eventemitter3 {
     this._play = false
     this.removeParticles()
     this.emit(Emitter.STOP)
+  }
+
+  stopWithoutKilling() {
+    this.duration.stop()
   }
 
   removeParticles() {

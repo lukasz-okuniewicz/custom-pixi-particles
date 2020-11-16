@@ -52,6 +52,7 @@ export default class Renderer extends PIXI.ParticleContainer {
     this.emitter.on(Emitter.PLAY, this.onPlay, this)
     this.emitter.on(Emitter.COMPLETE, () => {
       this.onComplete()
+      this.removeChildren()
     })
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       turbulencePool.list = this.turbulenceEmitter.list
@@ -96,10 +97,17 @@ export default class Renderer extends PIXI.ParticleContainer {
     }
   }
 
-  stopEmitter() {
+  stop() {
     this.emitter.stop()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.stop()
+    }
+  }
+
+  stopEmitter() {
+    this.emitter.stopWithoutKilling()
+    if (this.turbulenceEmitter) {
+      this.turbulenceEmitter.stopWithoutKilling()
     }
   }
 
