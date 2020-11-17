@@ -6,6 +6,7 @@ import Particle from '../Particle'
 import BehaviourNames from '../behaviour/BehaviourNames'
 import List from '../util/List'
 import ParticlePool from '../ParticlePool'
+import {ICustomPixiParticlesSettings} from '../customPixiParticlesSettingsInterface'
 
 export default class Renderer extends PIXI.ParticleContainer {
   blendMode: any
@@ -20,22 +21,29 @@ export default class Renderer extends PIXI.ParticleContainer {
   private pausedTime: number = 0
   private unusedSprites: any[] = []
   private animatedSprite: boolean = false
+  private animatedSpriteFrameRate: number = 15 / 60
+  private animatedSpriteLoop: boolean = true
 
-  constructor(textures: string[], config: any, animatedSprite: boolean = false, finishingTextureNames: string[] = []) {
+  constructor(settings: ICustomPixiParticlesSettings) {
     super(100000, {
       vertices: true,
       position: true,
       rotation: true,
-      uvs: (!!(animatedSprite || (finishingTextureNames && finishingTextureNames.length))),
+      uvs: (!!(settings.animatedSprite || (settings.finishingTextures && settings.finishingTextures.length))),
       tint: true,
     })
-    this.animatedSprite = animatedSprite
+    const {
+      textures, emitterConfig, animatedSprite, finishingTextures, animatedSpriteFrameRate, animatedSpriteLoop
+    } = settings
+    this.animatedSprite = animatedSprite!
+    this.animatedSpriteFrameRate = Number.isNaN(animatedSpriteFrameRate) ? 15 / 60 : animatedSpriteFrameRate!
+    this.animatedSpriteLoop = animatedSpriteLoop!
     this.textures = textures
-    this.finishingTextureNames = finishingTextureNames
+    this.finishingTextureNames = finishingTextures!
 
-    const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
+    const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, emitterConfig)
     if (turbulenceConfigIndex !== -1) {
-      const turbulenceConfig = config.behaviours[turbulenceConfigIndex]
+      const turbulenceConfig = emitterConfig.behaviours[turbulenceConfigIndex]
       if (turbulenceConfig.enabled === true) {
         this.turbulenceEmitter = new engine.Emitter()
         this.turbulenceEmitter.getParser().read(this.buildTurbulenceConfig(turbulenceConfig))
@@ -46,7 +54,7 @@ export default class Renderer extends PIXI.ParticleContainer {
     }
 
     this.emitter = new engine.Emitter()
-    this.emitter.getParser().read(config)
+    this.emitter.getParser().read(emitterConfig)
     this.emitter.on(Emitter.CREATE, this.onCreate, this)
     this.emitter.on(Emitter.UPDATE, this.onUpdate, this)
     this.emitter.on(Emitter.FINISHING, this.onFinishing, this)
@@ -160,9 +168,9 @@ export default class Renderer extends PIXI.ParticleContainer {
       if (textures.length) {
         const animation: PIXI.AnimatedSprite = new PIXI.AnimatedSprite(textures)
         animation.anchor.set(0.5)
-        animation.loop = true
+        animation.loop = this.animatedSpriteLoop
         animation.play()
-        animation.animationSpeed = 15 / 60
+        animation.animationSpeed = this.animatedSpriteFrameRate
         return this.addChild(animation)
       }
     }

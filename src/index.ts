@@ -1,10 +1,14 @@
 import Renderer from './lib/pixi/Renderer'
 import * as PIXI from 'pixi.js'
+import { ICustomPixiParticlesSettings } from './lib/customPixiParticlesSettingsInterface'
 
 const customPixiParticles = {
-  create(textureNames: string[], config: any, animatedSprite?: boolean, finishingTextureNames?: string[]) {
-    return new Renderer(textureNames, config, animatedSprite, finishingTextureNames)
+  create(settings: ICustomPixiParticlesSettings) {
+    const {
+      textures, emitterConfig, animatedSprite = false, finishingTextures = [], animatedSpriteFrameRate = 15 / 60, animatedSpriteLoop = true
+    } = settings
+    return new Renderer({textures, emitterConfig, animatedSprite, finishingTextures, animatedSpriteFrameRate, animatedSpriteLoop})
   },
 }
 
-export { Renderer, customPixiParticles }
+export { Renderer, customPixiParticles, ICustomPixiParticlesSettings }
