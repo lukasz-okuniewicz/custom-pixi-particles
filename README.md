@@ -21,7 +21,7 @@ const textures = ['texture1.png', 'texture2.png']
 // Define generated emiter config
 const emitterConfig = {...}
 // Create particles
-this.particles = customParticles.create(textures, emitterConfig)
+this.particles = customParticles.create({ textures, emitterConfig })
 // Add particles to PIXI container
 container.addChild(this.particles)
 ```
