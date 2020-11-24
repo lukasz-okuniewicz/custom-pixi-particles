@@ -22,6 +22,15 @@ export default class EmitterParser {
 
     config.emitController = this.emitter.emitController.getParser().write()
     config.duration = this.emitter.duration.maxTime
+    if (typeof this.emitter.alpha !== 'undefined') {
+      config.alpha = this.emitter.alpha
+    }
+    if (typeof this.emitter.blendMode !== 'undefined') {
+      config.blendMode = this.emitter.blendMode
+    }
+    if (typeof this.emitter.animatedSprite !== 'undefined') {
+      config.animatedSprite = this.emitter.animatedSprite
+    }
     return config
   }
 
@@ -43,6 +52,15 @@ export default class EmitterParser {
     )
     this.emitter.emitController.getParser().read(config.emitController)
     this.emitter.duration.maxTime = CompatibilityHelper.readDuration(config)
+    if (typeof config.alpha !== 'undefined') {
+      this.emitter.alpha = config.alpha
+    }
+    if (typeof config.blendMode !== 'undefined') {
+      this.emitter.blendMode = config.blendMode
+    }
+    if (typeof config.animatedSprite !== 'undefined') {
+      this.emitter.animatedSprite = config.animatedSprite
+    }
 
     return this.emitter
   }
@@ -63,6 +81,16 @@ export default class EmitterParser {
     this.emitter.emitController.getParser().read(config.emitController)
     this.emitter.duration.maxTime = CompatibilityHelper.readDuration(config)
     this.emitter.duration.reset()
+
+    if (typeof config.alpha !== 'undefined') {
+      this.emitter.alpha = config.alpha
+    }
+    if (typeof config.blendMode !== 'undefined') {
+      this.emitter.blendMode = config.blendMode
+    }
+    if (typeof config.animatedSprite !== 'undefined') {
+      this.emitter.animatedSprite = config.animatedSprite
+    }
 
     return this.emitter
   }

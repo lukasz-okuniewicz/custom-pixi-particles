@@ -20,24 +20,20 @@ export default class Renderer extends PIXI.ParticleContainer {
   private finishingTextureNames: string[]
   private pausedTime: number = 0
   private unusedSprites: any[] = []
-  private animatedSprite: boolean = false
-  private animatedSpriteFrameRate: number = 15 / 60
-  private animatedSpriteLoop: boolean = true
 
   constructor(settings: ICustomPixiParticlesSettings) {
     super(100000, {
       vertices: true,
       position: true,
       rotation: true,
-      uvs: (!!(settings.animatedSprite || (settings.finishingTextures && settings.finishingTextures.length))),
+      uvs: (!!(settings.emitterConfig.animatedSprite || (settings.finishingTextures && settings.finishingTextures.length))),
       tint: true,
     })
+
     const {
-      textures, emitterConfig, animatedSprite, finishingTextures, animatedSpriteFrameRate, animatedSpriteLoop
+      textures, emitterConfig, finishingTextures
     } = settings
-    this.animatedSprite = animatedSprite!
-    this.animatedSpriteFrameRate = Number.isNaN(animatedSpriteFrameRate) ? 15 / 60 : animatedSpriteFrameRate!
-    this.animatedSpriteLoop = animatedSpriteLoop!
+
     this.textures = textures
     this.finishingTextureNames = finishingTextures!
 
@@ -51,6 +47,14 @@ export default class Renderer extends PIXI.ParticleContainer {
         this.turbulenceEmitter.on(Emitter.UPDATE, this.onUpdateTurbulence, this)
         this.turbulenceEmitter.on(Emitter.REMOVE, this.onRemoveTurbulence, this)
       }
+    }
+
+    if (typeof emitterConfig.alpha !== 'undefined') {
+      this.alpha = emitterConfig.alpha
+    }
+
+    if (typeof emitterConfig.blendMode !== 'undefined') {
+      this.blendMode = emitterConfig.blendMode
     }
 
     this.emitter = new engine.Emitter()
@@ -163,14 +167,14 @@ export default class Renderer extends PIXI.ParticleContainer {
       return sprite
     }
 
-    if (this.animatedSprite) {
+    if (this.emitter.animatedSprite) {
       const textures: PIXI.Texture[] = this.createFrameAnimationByName(this.textures[0], 2)
       if (textures.length) {
         const animation: PIXI.AnimatedSprite = new PIXI.AnimatedSprite(textures)
         animation.anchor.set(0.5)
-        animation.loop = this.animatedSpriteLoop
+        animation.loop = this.emitter.animatedSprite.loop
         animation.play()
-        animation.animationSpeed = this.animatedSpriteFrameRate
+        animation.animationSpeed = this.emitter.animatedSprite.frameRate
         return this.addChild(animation)
       }
     }
