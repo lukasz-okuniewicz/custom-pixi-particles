@@ -112,21 +112,22 @@ export default class Renderer extends PIXI.ParticleContainer {
     }
   }
 
-  playEmitter() {
+  play() {
     this.emitter.resetAndPlay()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.resetAndPlay()
     }
   }
 
-  stop() {
+  stopImmediately() {
     this.emitter.stop()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.stop()
     }
+    this.emitter.emit(Emitter.COMPLETE)
   }
 
-  stopEmitter() {
+  stop() {
     this.emitter.stopWithoutKilling()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.stop()

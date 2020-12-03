@@ -32,8 +32,6 @@ export default class Emitter extends eventemitter3 {
 
     // @ts-ignore
     this.emitController = new emission[emission.EmissionTypes.DEFAULT]()
-
-    this.play()
   }
 
   async update(deltaTime: number) {
