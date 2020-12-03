@@ -22,6 +22,8 @@ const textures = ['texture1.png', 'texture2.png']
 const emitterConfig = {...}
 // Create particles
 this.particles = customParticles.create({ textures, emitterConfig })
+// Start to play
+this.particles.play()
 // Add particles to PIXI container
 container.addChild(this.particles)
 ```
