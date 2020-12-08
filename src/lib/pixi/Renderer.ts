@@ -6,7 +6,8 @@ import Particle from '../Particle'
 import BehaviourNames from '../behaviour/BehaviourNames'
 import List from '../util/List'
 import ParticlePool from '../ParticlePool'
-import {ICustomPixiParticlesSettings} from '../customPixiParticlesSettingsInterface'
+import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
+import { EmitterParser } from '../parser'
 
 export default class Renderer extends PIXI.ParticleContainer {
   blendMode: any
@@ -20,20 +21,25 @@ export default class Renderer extends PIXI.ParticleContainer {
   private finishingTextureNames: string[]
   private pausedTime: number = 0
   private unusedSprites: any[] = []
+  private emitterParser: EmitterParser
+  private turbulenceParser: EmitterParser
+  private config: any
 
   constructor(settings: ICustomPixiParticlesSettings) {
     super(100000, {
       vertices: true,
       position: true,
       rotation: true,
-      uvs: (!!(settings.emitterConfig.animatedSprite || (settings.finishingTextures && settings.finishingTextures.length))),
+      uvs: !!(
+        settings.emitterConfig.animatedSprite ||
+        (settings.finishingTextures && settings.finishingTextures.length)
+      ),
       tint: true,
     })
 
-    const {
-      textures, emitterConfig, finishingTextures
-    } = settings
+    const { textures, emitterConfig, finishingTextures } = settings
 
+    this.config = emitterConfig
     this.textures = textures
     this.finishingTextureNames = finishingTextures!
 
@@ -42,7 +48,8 @@ export default class Renderer extends PIXI.ParticleContainer {
       const turbulenceConfig = emitterConfig.behaviours[turbulenceConfigIndex]
       if (turbulenceConfig.enabled === true) {
         this.turbulenceEmitter = new engine.Emitter()
-        this.turbulenceEmitter.getParser().read(this.buildTurbulenceConfig(turbulenceConfig))
+        this.turbulenceParser = this.turbulenceEmitter.getParser()
+        this.turbulenceParser.read(this.buildTurbulenceConfig(turbulenceConfig))
         this.turbulenceEmitter.on(Emitter.CREATE, this.onCreateTurbulence, this)
         this.turbulenceEmitter.on(Emitter.UPDATE, this.onUpdateTurbulence, this)
         this.turbulenceEmitter.on(Emitter.REMOVE, this.onRemoveTurbulence, this)
@@ -58,7 +65,8 @@ export default class Renderer extends PIXI.ParticleContainer {
     }
 
     this.emitter = new engine.Emitter()
-    this.emitter.getParser().read(emitterConfig)
+    this.emitterParser = this.emitter.getParser()
+    this.emitterParser.read(emitterConfig)
     this.emitter.on(Emitter.CREATE, this.onCreate, this)
     this.emitter.on(Emitter.UPDATE, this.onUpdate, this)
     this.emitter.on(Emitter.FINISHING, this.onFinishing, this)
@@ -147,16 +155,33 @@ export default class Renderer extends PIXI.ParticleContainer {
   }
 
   updateConfig(config: any) {
-    this.emitter.getParser().update(config)
+    this.emitterParser.update(config)
     if (this.turbulenceEmitter) {
       const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
       if (turbulenceConfigIndex !== -1) {
         const turbulenceConfig = config.behaviours[turbulenceConfigIndex]
         if (turbulenceConfig.enabled === true) {
-          this.turbulenceEmitter.getParser().update(this.buildTurbulenceConfig(turbulenceConfig))
+          this.turbulenceParser.update(this.buildTurbulenceConfig(turbulenceConfig))
         }
       }
     }
+  }
+
+  updatePosition(position: { x: number, y: number }) {
+    const positionBehaviour = this.getByName(BehaviourNames.POSITION_BEHAVIOUR)
+    positionBehaviour.position.x = position.x
+    positionBehaviour.position.y = position.y
+    this.emitterParser.update(this.config)
+  }
+
+  private getByName = (name: string) => {
+    for (let i = 0; i < this.config.behaviours.length; ++i) {
+      if (this.config.behaviours[i].name === name) {
+        return this.config.behaviours[i]
+      }
+    }
+
+    return null
   }
 
   private getOrCreateSprite() {
@@ -324,7 +349,7 @@ export default class Renderer extends PIXI.ParticleContainer {
       sprite.alpha = 0
     }
     this.removeChild(sprite)
-    delete particle.sprite
+    delete (particle as any).sprite
   }
 
   private getRandomTexture(): string {
