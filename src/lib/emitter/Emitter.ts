@@ -110,10 +110,21 @@ export default class Emitter extends eventemitter3 {
     this.play()
   }
 
+  resetWithoutRemovingAndPlay() {
+    this.resetWithoutRemoving()
+    this.play()
+  }
+
   reset() {
     this.emitController.reset()
     this.duration.reset()
     this.removeParticles()
+    this.emit(Emitter.RESET)
+  }
+
+  resetWithoutRemoving() {
+    this.emitController.reset()
+    this.duration.reset()
     this.emit(Emitter.RESET)
   }
 

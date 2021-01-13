@@ -120,17 +120,17 @@ export default class Renderer extends PIXI.ParticleContainer {
     }
   }
 
-  play() {
+  start() {
     this.emitter.resetAndPlay()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.resetAndPlay()
     }
   }
 
-  continue() {
-    this.emitter.play()
+  play() {
+    this.emitter.resetWithoutRemovingAndPlay()
     if (this.turbulenceEmitter) {
-      this.turbulenceEmitter.play()
+      this.turbulenceEmitter.resetWithoutRemovingAndPlay()
     }
   }
 
