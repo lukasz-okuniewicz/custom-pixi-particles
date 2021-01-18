@@ -8,8 +8,9 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
+import { AnimatedSprite, Loader, ParticleContainer, Sprite, Texture } from 'pixi.js'
 
-export default class Renderer extends PIXI.ParticleContainer {
+export default class Renderer extends ParticleContainer {
   blendMode: any
   emitter: Emitter
   turbulenceEmitter: Emitter
@@ -104,19 +105,19 @@ export default class Renderer extends PIXI.ParticleContainer {
       this.turbulenceEmitter.update((this.currentTime - this.lastTime) / 1000)
     }
 
-    PIXI.ParticleContainer.prototype.updateTransform.call(this)
+    ParticleContainer.prototype.updateTransform.call(this)
 
     this.lastTime = this.currentTime
   }
 
   updateTexture() {
     for (let i = 0; i < this.unusedSprites.length; ++i) {
-      this.unusedSprites[i].texture = PIXI.Texture.from(this.getRandomTexture())
+      this.unusedSprites[i].texture = Texture.from(this.getRandomTexture())
     }
 
     for (let i = 0; i < this.children.length; ++i) {
       // @ts-ignore
-      this.children[i].texture = PIXI.Texture.from(this.getRandomTexture())
+      this.children[i].texture = Texture.from(this.getRandomTexture())
     }
   }
 
@@ -195,15 +196,15 @@ export default class Renderer extends PIXI.ParticleContainer {
     if (this.unusedSprites.length > 0) {
       const sprite = this.unusedSprites.pop()
       if (this.finishingTextureNames && this.finishingTextureNames.length) {
-        sprite.texture = PIXI.Texture.from(this.getRandomTexture())
+        sprite.texture = Texture.from(this.getRandomTexture())
       }
       return sprite
     }
 
     if (this.emitter.animatedSprite) {
-      const textures: PIXI.Texture[] = this.createFrameAnimationByName(this.textures[0], 2)
+      const textures: Texture[] = this.createFrameAnimationByName(this.textures[0], 2)
       if (textures.length) {
-        const animation: PIXI.AnimatedSprite = new PIXI.AnimatedSprite(textures)
+        const animation: AnimatedSprite = new AnimatedSprite(textures)
         animation.anchor.set(0.5)
         animation.loop = this.emitter.animatedSprite.loop
         animation.play()
@@ -212,7 +213,7 @@ export default class Renderer extends PIXI.ParticleContainer {
       }
     }
 
-    const sprite = new PIXI.Sprite(PIXI.Texture.from(this.getRandomTexture()))
+    const sprite = new Sprite(Texture.from(this.getRandomTexture()))
     sprite.anchor.set(0.5)
     return this.addChild(sprite)
   }
@@ -221,16 +222,17 @@ export default class Renderer extends PIXI.ParticleContainer {
     prefix: string,
     zeroPad: number = 0,
     imageFileExtension: string = 'png',
-  ): PIXI.Texture[] {
-    const textures: PIXI.Texture[] = []
+  ): Texture[] {
+    const textures: Texture[] = []
     let frame: string = ''
     let indexFrame: number = 0
     let padding: number = 0
-    let texture: PIXI.Texture | null
+    let texture: Texture | null
     const sheets = []
-    const resources = PIXI.Loader.shared.resources
+    const resources = Loader.shared.resources
     for (const key in resources) {
       if (resources[key].extension === 'json') {
+        // @ts-ignore
         sheets.push(resources[key].spritesheet)
       }
     }
@@ -250,14 +252,14 @@ export default class Renderer extends PIXI.ParticleContainer {
           }
         }
         if (found) {
-          texture = PIXI.Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
+          texture = Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
           textures.push(texture)
           indexFrame += 1
         } else {
           texture = null
           for (const key in resources) {
             if (key === `${prefix}_${frame}.${imageFileExtension}`) {
-              texture = PIXI.Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
+              texture = Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
               textures.push(texture)
               indexFrame += 1
             }
@@ -286,7 +288,7 @@ export default class Renderer extends PIXI.ParticleContainer {
   }
 
   private onCreateTurbulence(particle: Particle) {
-    const sprite = new PIXI.Sprite(PIXI.Texture.from('vortex.png'))
+    const sprite = new Sprite(Texture.from('vortex.png'))
     sprite.anchor.set(0.5)
     this.addChild(sprite)
     sprite.visible = false
@@ -332,7 +334,7 @@ export default class Renderer extends PIXI.ParticleContainer {
     if (!this.finishingTextureNames || !this.finishingTextureNames.length) return
     const sprite = particle.sprite
     if (particle.finishingTexture <= this.finishingTextureNames.length - 1) {
-      sprite.texture = PIXI.Texture.from(this.finishingTextureNames[particle.finishingTexture])
+      sprite.texture = Texture.from(this.finishingTextureNames[particle.finishingTexture])
       particle.finishingTexture++
     }
   }

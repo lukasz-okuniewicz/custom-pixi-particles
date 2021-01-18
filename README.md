@@ -3,6 +3,8 @@ CustomPIXIParticles by [@lukasz-okuniewicz](http://github.com/lukasz-okuniewicz)
 
 Custom PIXI Particles.
 
+Editor for particles: [custom-pixi-particles-editor](https://github.com/lukasz-okuniewicz/custom-pixi-particles-editor)
+
 How to use:
 ```
 npm install custom-pixi-particles

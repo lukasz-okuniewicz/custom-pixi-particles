@@ -11,7 +11,8 @@
         "emitDecoratorMetadata": true,
         "noUnusedLocals": false,
         "declaration": true,
-        "esModuleInterop": true
+        "esModuleInterop": true,
+        "skipLibCheck": true
     },
     "exclude": [
         "node_modules",
