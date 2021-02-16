@@ -202,7 +202,7 @@ export default class Renderer extends ParticleContainer {
     }
 
     if (this.emitter.animatedSprite) {
-      const textures: Texture[] = this.createFrameAnimationByName(this.textures[0], 2)
+      const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture(), 2)
       if (textures.length) {
         const animation: AnimatedSprite = new AnimatedSprite(textures)
         animation.anchor.set(0.5)
