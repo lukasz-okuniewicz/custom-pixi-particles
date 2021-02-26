@@ -84,7 +84,6 @@ export default class Renderer extends ParticleContainer {
       this.emitter.list.reset()
       this.emitter.list = new List()
       ParticlePool.global.reset()
-      this.resetEmitter()
     })
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       turbulencePool.list = this.turbulenceEmitter.list
