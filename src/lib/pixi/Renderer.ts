@@ -75,15 +75,6 @@ export default class Renderer extends ParticleContainer {
     this.emitter.on(Emitter.PLAY, this.onPlay, this)
     this.emitter.on(Emitter.COMPLETE, () => {
       this.onComplete()
-      this.removeChildren()
-      this.unusedSprites = []
-      if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
-        turbulencePool.list.reset()
-        turbulencePool.list = new List()
-      }
-      this.emitter.list.reset()
-      this.emitter.list = new List()
-      ParticlePool.global.reset()
     })
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       turbulencePool.list = this.turbulenceEmitter.list
@@ -180,6 +171,18 @@ export default class Renderer extends ParticleContainer {
     positionBehaviour.position.x = position.x
     positionBehaviour.position.y = position.y
     this.emitterParser.update(this.config)
+  }
+
+  clearPool() {
+    this.removeChildren()
+    this.unusedSprites = []
+    if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
+      turbulencePool.list.reset()
+      turbulencePool.list = new List()
+    }
+    this.emitter.list.reset()
+    this.emitter.list = new List()
+    ParticlePool.global.reset()
   }
 
   private getByName = (name: string) => {
