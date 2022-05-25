@@ -84,7 +84,10 @@ export default class Renderer {
 
     document.addEventListener('visibilitychange', () => this.paused(document.hidden))
 
-    this.particlesContainer.updateTransform = this.updateTransform.bind(this)
+    const ticker = this.PIXI.Ticker.shared
+    ticker.add(() => {
+      this.updateTransform()
+    })
   }
 
   updateTransform() {
