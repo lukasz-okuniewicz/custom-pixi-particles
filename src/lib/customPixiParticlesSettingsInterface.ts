@@ -1,8 +1,9 @@
 export interface ICustomPixiParticlesSettings {
-  textures: string[]
+  textures: any[]
   emitterConfig: any
   animatedSprite?: boolean
-  finishingTextures?: string[]
+  finishingTextures?: any[]
   animatedSpriteFrameRate?: number
   animatedSpriteLoop?: boolean
+  PIXI: any
 }

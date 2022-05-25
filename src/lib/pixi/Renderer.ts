@@ -8,26 +8,29 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
-import { AnimatedSprite, Loader, ParticleContainer, Sprite, Texture } from 'pixi.js'
 
-export default class Renderer extends ParticleContainer {
+export default class Renderer {
   blendMode: any
   emitter: Emitter
   turbulenceEmitter: Emitter
   onComplete: any = () => {}
+  particlesContainer: any;
   private _paused: boolean = false
   private currentTime: number = 0
   private lastTime: number = 0
-  private textures: string[]
-  private finishingTextureNames: string[]
+  private textures: any[]
+  private finishingTextureNames: any[]
   private pausedTime: number = 0
   private unusedSprites: any[] = []
   private emitterParser: EmitterParser
   private turbulenceParser: EmitterParser
   private config: any
+  private PIXI: any;
 
   constructor(settings: ICustomPixiParticlesSettings) {
-    super(100000, {
+    const { textures, emitterConfig, finishingTextures, PIXI } = settings
+
+    this.particlesContainer = new PIXI.ParticleContainer(100000, {
       vertices: true,
       position: true,
       rotation: true,
@@ -38,8 +41,7 @@ export default class Renderer extends ParticleContainer {
       tint: true,
     })
 
-    const { textures, emitterConfig, finishingTextures } = settings
-
+    this.PIXI = PIXI
     this.config = emitterConfig
     this.textures = textures
     this.finishingTextureNames = finishingTextures!
@@ -58,7 +60,7 @@ export default class Renderer extends ParticleContainer {
     }
 
     if (typeof emitterConfig.alpha !== 'undefined') {
-      this.alpha = emitterConfig.alpha
+      this.particlesContainer.alpha = emitterConfig.alpha
     }
 
     if (typeof emitterConfig.blendMode !== 'undefined') {
@@ -81,6 +83,8 @@ export default class Renderer extends ParticleContainer {
     }
 
     document.addEventListener('visibilitychange', () => this.paused(document.hidden))
+
+    this.particlesContainer.updateTransform = this.updateTransform.bind(this)
   }
 
   updateTransform() {
@@ -96,19 +100,17 @@ export default class Renderer extends ParticleContainer {
       this.turbulenceEmitter.update((this.currentTime - this.lastTime) / 1000)
     }
 
-    ParticleContainer.prototype.updateTransform.call(this)
-
     this.lastTime = this.currentTime
   }
 
   updateTexture() {
     for (let i = 0; i < this.unusedSprites.length; ++i) {
-      this.unusedSprites[i].texture = Texture.from(this.getRandomTexture())
+      this.unusedSprites[i].texture = this.PIXI.Texture.from(this.getRandomTexture())
     }
 
-    for (let i = 0; i < this.children.length; ++i) {
+    for (let i = 0; i < this.particlesContainer.children.length; ++i) {
       // @ts-ignore
-      this.children[i].texture = Texture.from(this.getRandomTexture())
+      this.children[i].texture = this.PIXI.Texture.from(this.getRandomTexture())
     }
   }
 
@@ -148,7 +150,7 @@ export default class Renderer extends ParticleContainer {
     }
   }
 
-  setTextures(textures: string[]) {
+  setTextures(textures: any[]) {
     this.textures = textures
     this.updateTexture()
   }
@@ -174,7 +176,7 @@ export default class Renderer extends ParticleContainer {
   }
 
   clearPool() {
-    this.removeChildren()
+    this.particlesContainer.removeChildren()
     this.unusedSprites = []
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       turbulencePool.list.reset()
@@ -199,40 +201,40 @@ export default class Renderer extends ParticleContainer {
     if (this.unusedSprites.length > 0) {
       const sprite = this.unusedSprites.pop()
       if (this.finishingTextureNames && this.finishingTextureNames.length) {
-        sprite.texture = Texture.from(this.getRandomTexture())
+        sprite.texture = this.PIXI.Texture.from(this.getRandomTexture())
       }
       return sprite
     }
 
     if (this.emitter.animatedSprite) {
-      const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture(), 2)
+      const textures: any[] = this.createFrameAnimationByName(this.getRandomTexture(), 2)
       if (textures.length) {
-        const animation: AnimatedSprite = new AnimatedSprite(textures)
+        const animation: any = new this.PIXI.AnimatedSprite(textures)
         animation.anchor.set(0.5)
         animation.loop = this.emitter.animatedSprite.loop
         animation.play()
         animation.animationSpeed = this.emitter.animatedSprite.frameRate
-        return this.addChild(animation)
+        return this.particlesContainer.addChild(animation)
       }
     }
 
-    const sprite = new Sprite(Texture.from(this.getRandomTexture()))
+    const sprite = new this.PIXI.Sprite(this.PIXI.Texture.from(this.getRandomTexture()))
     sprite.anchor.set(0.5)
-    return this.addChild(sprite)
+    return this.particlesContainer.addChild(sprite)
   }
 
   private createFrameAnimationByName(
-    prefix: string,
+    prefix: any,
     zeroPad: number = 0,
     imageFileExtension: string = 'png',
-  ): Texture[] {
-    const textures: Texture[] = []
+  ): any[] {
+    const textures: any[] = []
     let frame: string = ''
     let indexFrame: number = 0
     let padding: number = 0
-    let texture: Texture | null
+    let texture: any | null
     const sheets = []
-    const resources = Loader.shared.resources
+    const resources = this.PIXI.Loader.shared.resources
     for (const key in resources) {
       if (resources[key].extension === 'json') {
         // @ts-ignore
@@ -255,14 +257,14 @@ export default class Renderer extends ParticleContainer {
           }
         }
         if (found) {
-          texture = Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
+          texture = this.PIXI.Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
           textures.push(texture)
           indexFrame += 1
         } else {
           texture = null
           for (const key in resources) {
             if (key === `${prefix}_${frame}.${imageFileExtension}`) {
-              texture = Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
+              texture = this.PIXI.Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
               textures.push(texture)
               indexFrame += 1
             }
@@ -291,9 +293,11 @@ export default class Renderer extends ParticleContainer {
   }
 
   private onCreateTurbulence(particle: Particle) {
-    const sprite = new Sprite(Texture.from('vortex.png'))
+    const vortexTexture = this.PIXI.Texture.from('vortex.png')
+    if (!vortexTexture) return
+    const sprite = new this.PIXI.Sprite(vortexTexture)
     sprite.anchor.set(0.5)
-    this.addChild(sprite)
+    this.particlesContainer.addChild(sprite)
     sprite.visible = false
     sprite.alpha = 0
     particle.sprite = sprite
@@ -337,7 +341,7 @@ export default class Renderer extends ParticleContainer {
     if (!this.finishingTextureNames || !this.finishingTextureNames.length) return
     const sprite = particle.sprite
     if (particle.finishingTexture <= this.finishingTextureNames.length - 1) {
-      sprite.texture = Texture.from(this.finishingTextureNames[particle.finishingTexture])
+      sprite.texture = this.PIXI.Texture.from(this.finishingTextureNames[particle.finishingTexture])
       particle.finishingTexture++
     }
   }
@@ -360,11 +364,11 @@ export default class Renderer extends ParticleContainer {
       sprite.visible = false
       sprite.alpha = 0
     }
-    this.removeChild(sprite)
+    this.particlesContainer.removeChild(sprite)
     delete (particle as any).sprite
   }
 
-  private getRandomTexture(): string {
+  private getRandomTexture(): any {
     return this.textures[Math.floor(Math.random() * this.textures.length)]
   }
 

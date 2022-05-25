@@ -25,9 +25,9 @@ export default class EmitterParser {
     if (typeof this.emitter.alpha !== 'undefined') {
       config.alpha = this.emitter.alpha
     }
-    if (typeof this.emitter.blendMode !== 'undefined') {
-      config.blendMode = this.emitter.blendMode
-    }
+    // if (typeof this.emitter.blendMode !== 'undefined') {
+      // config.blendMode = this.emitter.blendMode
+    // }
     if (typeof this.emitter.animatedSprite !== 'undefined') {
       config.animatedSprite = this.emitter.animatedSprite
     }
@@ -56,7 +56,7 @@ export default class EmitterParser {
       this.emitter.alpha = config.alpha
     }
     if (typeof config.blendMode !== 'undefined') {
-      this.emitter.blendMode = config.blendMode
+      // this.emitter.blendMode = config.blendMode
     }
     if (typeof config.animatedSprite !== 'undefined') {
       this.emitter.animatedSprite = config.animatedSprite
@@ -86,7 +86,7 @@ export default class EmitterParser {
       this.emitter.alpha = config.alpha
     }
     if (typeof config.blendMode !== 'undefined') {
-      this.emitter.blendMode = config.blendMode
+      // this.emitter.blendMode = config.blendMode
     }
     if (typeof config.animatedSprite !== 'undefined') {
       this.emitter.animatedSprite = config.animatedSprite

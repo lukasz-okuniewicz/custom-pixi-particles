@@ -1,4 +1,3 @@
-import { Sprite } from 'pixi.js'
 import { Color, Point } from './util'
 
 export default class Particle {
@@ -32,7 +31,7 @@ export default class Particle {
   rotation: number
   rotationDelta: number
   angle: number
-  sprite: Sprite
+  sprite: any
   showVortices: boolean
   turbulence: boolean
   finishingTexture: number
