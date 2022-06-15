@@ -4,9 +4,9 @@ import { ICustomPixiParticlesSettings } from './lib/customPixiParticlesSettingsI
 const customPixiParticles = {
   create(settings: ICustomPixiParticlesSettings) {
     const {
-      textures, emitterConfig, PIXI, finishingTextures = []
+      textures, resources, animatedSpriteZeroPad = 2, animatedSpriteIndexToStart = 0, emitterConfig, PIXI, finishingTextures = []
     } = settings
-    return new Renderer({textures, emitterConfig, finishingTextures, PIXI})
+    return new Renderer({textures, resources, animatedSpriteZeroPad, animatedSpriteIndexToStart, emitterConfig, finishingTextures, PIXI})
   },
 }
 

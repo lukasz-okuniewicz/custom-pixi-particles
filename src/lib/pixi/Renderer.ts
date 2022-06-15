@@ -19,6 +19,9 @@ export default class Renderer {
   private currentTime: number = 0
   private lastTime: number = 0
   private textures: any[]
+  private resources: any[]
+  private zeroPad: number = 2
+  private indexToStart: number = 0
   private finishingTextureNames: any[]
   private pausedTime: number = 0
   private unusedSprites: any[] = []
@@ -28,7 +31,7 @@ export default class Renderer {
   private PIXI: any;
 
   constructor(settings: ICustomPixiParticlesSettings) {
-    const { textures, emitterConfig, finishingTextures, PIXI } = settings
+    const { textures, resources, animatedSpriteZeroPad, animatedSpriteIndexToStart, emitterConfig, finishingTextures, PIXI } = settings
 
     this.particlesContainer = new PIXI.ParticleContainer(100000, {
       vertices: true,
@@ -44,6 +47,9 @@ export default class Renderer {
     this.PIXI = PIXI
     this.config = emitterConfig
     this.textures = textures
+    this.resources = resources
+    this.zeroPad = animatedSpriteZeroPad!
+    this.indexToStart = animatedSpriteIndexToStart!
     this.finishingTextureNames = finishingTextures!
 
     const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, emitterConfig)
@@ -210,7 +216,7 @@ export default class Renderer {
     }
 
     if (this.emitter.animatedSprite) {
-      const textures: any[] = this.createFrameAnimationByName(this.getRandomTexture(), 2)
+      const textures: any[] = this.createFrameAnimationByName(this.getRandomTexture())
       if (textures.length) {
         const animation: any = new this.PIXI.AnimatedSprite(textures)
         animation.anchor.set(0.5)
@@ -228,16 +234,16 @@ export default class Renderer {
 
   private createFrameAnimationByName(
     prefix: any,
-    zeroPad: number = 0,
     imageFileExtension: string = 'png',
   ): any[] {
+    const zeroPad = this.zeroPad
     const textures: any[] = []
     let frame: string = ''
-    let indexFrame: number = 0
+    let indexFrame: number = this.indexToStart
     let padding: number = 0
     let texture: any | null
     const sheets = []
-    const resources = this.PIXI.Loader.shared.resources
+    const resources = this.resources
     for (const key in resources) {
       if (resources[key].extension === 'json') {
         // @ts-ignore
@@ -255,19 +261,19 @@ export default class Renderer {
       try {
         let found = false
         for (const sheet of sheets) {
-          if (sheet && sheet.textures[`${prefix}_${frame}.${imageFileExtension}`]) {
+          if (sheet && sheet.textures[`${prefix}${frame}.${imageFileExtension}`]) {
             found = true
           }
         }
         if (found) {
-          texture = this.PIXI.Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
+          texture = this.PIXI.Texture.from(`${prefix}${frame}.${imageFileExtension}`)
           textures.push(texture)
           indexFrame += 1
         } else {
           texture = null
           for (const key in resources) {
             if (key === `${prefix}_${frame}.${imageFileExtension}`) {
-              texture = this.PIXI.Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
+              texture = this.PIXI.Texture.from(`${prefix}${frame}.${imageFileExtension}`)
               textures.push(texture)
               indexFrame += 1
             }
