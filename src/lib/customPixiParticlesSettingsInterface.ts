@@ -1,11 +1,11 @@
 export interface ICustomPixiParticlesSettings {
-  textures: any[]
-  resources: any[]
+  textures: string[]
+  resources: any
   emitterConfig: any
   animatedSpriteZeroPad?: number
   animatedSpriteIndexToStart?: number
   animatedSprite?: boolean
-  finishingTextures?: any[]
+  finishingTextures?: string[]
   animatedSpriteFrameRate?: number
   animatedSpriteLoop?: boolean
   PIXI: any

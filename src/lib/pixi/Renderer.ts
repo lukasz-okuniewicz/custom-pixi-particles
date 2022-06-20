@@ -18,11 +18,11 @@ export default class Renderer {
   private _paused: boolean = false
   private currentTime: number = 0
   private lastTime: number = 0
-  private textures: any[]
-  private resources: any[]
+  private textures: string[]
+  private resources: any
   private zeroPad: number = 2
   private indexToStart: number = 0
-  private finishingTextureNames: any[]
+  private finishingTextureNames: string[]
   private pausedTime: number = 0
   private unusedSprites: any[] = []
   private emitterParser: EmitterParser
@@ -159,7 +159,7 @@ export default class Renderer {
     }
   }
 
-  setTextures(textures: any[]) {
+  setTextures(textures: string[]) {
     this.textures = textures
     this.updateTexture()
   }
@@ -216,7 +216,7 @@ export default class Renderer {
     }
 
     if (this.emitter.animatedSprite) {
-      const textures: any[] = this.createFrameAnimationByName(this.getRandomTexture())
+      const textures: string[] = this.createFrameAnimationByName(this.getRandomTexture())
       if (textures.length) {
         const animation: any = new this.PIXI.AnimatedSprite(textures)
         animation.anchor.set(0.5)
@@ -237,7 +237,7 @@ export default class Renderer {
     imageFileExtension: string = 'png',
   ): any[] {
     const zeroPad = this.zeroPad
-    const textures: any[] = []
+    const textures: string[] = []
     let frame: string = ''
     let indexFrame: number = this.indexToStart
     let padding: number = 0
@@ -377,7 +377,7 @@ export default class Renderer {
     delete (particle as any).sprite
   }
 
-  private getRandomTexture(): any {
+  private getRandomTexture(): string {
     return this.textures[Math.floor(Math.random() * this.textures.length)]
   }
 
