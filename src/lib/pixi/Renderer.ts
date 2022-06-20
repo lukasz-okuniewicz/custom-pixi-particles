@@ -291,7 +291,9 @@ export default class Renderer extends ParticleContainer {
   }
 
   private onCreateTurbulence(particle: Particle) {
-    const sprite = new Sprite(Texture.from('vortex.png'))
+    const vortexTexture = Texture.from('vortex.png')
+    if (!vortexTexture) return
+    const sprite = new Sprite(vortexTexture)
     sprite.anchor.set(0.5)
     this.addChild(sprite)
     sprite.visible = false
