@@ -96,6 +96,10 @@ export default class Renderer {
     })
   }
 
+  pause(isPaused: boolean): void {
+    this.paused(isPaused)
+  }
+
   updateTransform() {
     if (this._paused) return
     this.currentTime = performance.now()
@@ -302,9 +306,12 @@ export default class Renderer {
   }
 
   private onCreateTurbulence(particle: Particle) {
-    const vortexTexture = this.PIXI.Texture.from('vortex.png')
-    if (!vortexTexture) return
-    const sprite = new this.PIXI.Sprite(vortexTexture)
+    let sprite
+    if (particle.showVortices) {
+      sprite = new this.PIXI.Sprite(this.PIXI.Texture.from('vortex.png'))
+    } else {
+      sprite = new this.PIXI.Sprite()
+    }
     sprite.anchor.set(0.5)
     this.particlesContainer.addChild(sprite)
     sprite.visible = false
