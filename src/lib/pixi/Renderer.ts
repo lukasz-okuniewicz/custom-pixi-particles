@@ -19,6 +19,8 @@ export default class Renderer extends ParticleContainer {
   private currentTime: number = 0
   private lastTime: number = 0
   private textures: string[]
+  private zeroPad: number = 2
+  private indexToStart: number = 0
   private finishingTextureNames: string[]
   private pausedTime: number = 0
   private unusedSprites: any[] = []
@@ -38,11 +40,13 @@ export default class Renderer extends ParticleContainer {
       tint: true,
     })
 
-    const { textures, emitterConfig, finishingTextures } = settings
+    const { textures, emitterConfig, finishingTextures, animatedSpriteZeroPad, animatedSpriteIndexToStart } = settings
 
     this.config = emitterConfig
     this.textures = textures
     this.finishingTextureNames = finishingTextures!
+    this.zeroPad = animatedSpriteZeroPad!
+    this.indexToStart = animatedSpriteIndexToStart!
 
     const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, emitterConfig)
     if (turbulenceConfigIndex !== -1) {
@@ -81,6 +85,10 @@ export default class Renderer extends ParticleContainer {
     }
 
     document.addEventListener('visibilitychange', () => this.paused(document.hidden))
+  }
+
+  pause(isPaused: boolean): void {
+    this.paused(isPaused)
   }
 
   updateTransform() {
@@ -196,6 +204,7 @@ export default class Renderer extends ParticleContainer {
   }
 
   private getOrCreateSprite() {
+    console.log(Loader.shared.resources)
     if (this.unusedSprites.length > 0) {
       const sprite = this.unusedSprites.pop()
       if (this.finishingTextureNames && this.finishingTextureNames.length) {
@@ -205,7 +214,7 @@ export default class Renderer extends ParticleContainer {
     }
 
     if (this.emitter.animatedSprite) {
-      const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture(), 2)
+      const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
       if (textures.length) {
         const animation: AnimatedSprite = new AnimatedSprite(textures)
         animation.anchor.set(0.5)
@@ -223,12 +232,12 @@ export default class Renderer extends ParticleContainer {
 
   private createFrameAnimationByName(
     prefix: string,
-    zeroPad: number = 0,
     imageFileExtension: string = 'png',
   ): Texture[] {
+    const zeroPad = this.zeroPad
     const textures: Texture[] = []
     let frame: string = ''
-    let indexFrame: number = 0
+    let indexFrame: number = this.indexToStart
     let padding: number = 0
     let texture: Texture | null
     const sheets = []
@@ -250,19 +259,19 @@ export default class Renderer extends ParticleContainer {
       try {
         let found = false
         for (const sheet of sheets) {
-          if (sheet && sheet.textures[`${prefix}_${frame}.${imageFileExtension}`]) {
+          if (sheet && sheet.textures[`${prefix}${frame}.${imageFileExtension}`]) {
             found = true
           }
         }
         if (found) {
-          texture = Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
+          texture = Texture.from(`${prefix}${frame}.${imageFileExtension}`)
           textures.push(texture)
           indexFrame += 1
         } else {
           texture = null
           for (const key in resources) {
             if (key === `${prefix}_${frame}.${imageFileExtension}`) {
-              texture = Texture.from(`${prefix}_${frame}.${imageFileExtension}`)
+              texture = Texture.from(`${prefix}${frame}.${imageFileExtension}`)
               textures.push(texture)
               indexFrame += 1
             }
