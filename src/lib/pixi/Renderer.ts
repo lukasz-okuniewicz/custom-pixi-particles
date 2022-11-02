@@ -204,7 +204,6 @@ export default class Renderer extends ParticleContainer {
   }
 
   private getOrCreateSprite() {
-    console.log(Loader.shared.resources)
     if (this.unusedSprites.length > 0) {
       const sprite = this.unusedSprites.pop()
       if (this.finishingTextureNames && this.finishingTextureNames.length) {
