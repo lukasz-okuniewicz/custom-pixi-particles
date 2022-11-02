@@ -37,5 +37,5 @@
     "build": "npm run clean-dist && tsc",
     "clean-dist": "rimraf dist/*"
   },
-  "version": "4.0.1"
+  "version": "4.0.2"
 }
