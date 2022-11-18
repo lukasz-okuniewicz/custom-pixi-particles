@@ -20,7 +20,7 @@ export default class Emitter extends eventemitter3 {
   static COMPLETE = 'emitter/complete'
   list: List = new List()
   duration: Duration = new Duration()
-  animatedSprite: { loop: boolean, frameRate: number }
+  animatedSprite: { loop: boolean, frameRate: number, randomFrameStart: number }
   alpha: number = 1
   blendMode: BLEND_MODES = BLEND_MODES.NONE
   behaviours: EmitterBehaviours = new EmitterBehaviours()

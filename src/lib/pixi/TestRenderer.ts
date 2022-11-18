@@ -8,9 +8,9 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
-import { AnimatedSprite, Loader, ParticleContainer, Sprite, Texture } from 'pixi.js'
+import { AnimatedSprite, Loader, Container, Sprite, Texture } from 'pixi.js'
 
-export default class Renderer extends ParticleContainer {
+export default class Renderer extends Container {
   blendMode: any
   emitter: Emitter
   turbulenceEmitter: Emitter
@@ -29,16 +29,7 @@ export default class Renderer extends ParticleContainer {
   private config: any
 
   constructor(settings: ICustomPixiParticlesSettings) {
-    super(100000, {
-      vertices: true,
-      position: true,
-      rotation: true,
-      uvs: !!(
-        settings.emitterConfig.animatedSprite ||
-        (settings.finishingTextures && settings.finishingTextures.length)
-      ),
-      tint: true,
-    })
+    super()
 
     const { textures, emitterConfig, finishingTextures, animatedSpriteZeroPad, animatedSpriteIndexToStart } = settings
 
@@ -104,7 +95,7 @@ export default class Renderer extends ParticleContainer {
       this.turbulenceEmitter.update((this.currentTime - this.lastTime) / 1000)
     }
 
-    ParticleContainer.prototype.updateTransform.call(this)
+    Container.prototype.updateTransform.call(this)
 
     this.lastTime = this.currentTime
   }
