@@ -264,7 +264,7 @@ export default class TestRenderer extends Container {
         } else {
           texture = null
           for (const key in resources) {
-            if (key === `${prefix}_${frame}.${imageFileExtension}`) {
+            if (key === `${prefix}${frame}.${imageFileExtension}`) {
               texture = Texture.from(`${prefix}${frame}.${imageFileExtension}`)
               textures.push(texture)
               indexFrame += 1
