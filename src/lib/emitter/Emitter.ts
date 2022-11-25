@@ -1,13 +1,13 @@
 import Duration from './Duration'
 import { EmitterBehaviours } from '../behaviour'
-import eventemitter3 = require('eventemitter3')
+import eventemitter3 from 'eventemitter3'
 import ParticlePool from '../ParticlePool'
 import { EmitterParser } from '../parser'
 import List from '../util/List'
 import * as emission from '../emission'
 import Particle from '../Particle'
 import turbulencePool from '../util/turbulencePool'
-import { BLEND_MODES } from 'pixi.js'
+import { BLEND_MODES } from 'pixi.js-legacy'
 
 export default class Emitter extends eventemitter3 {
   static PLAY = 'emitter/play'

@@ -1,4 +1,4 @@
-import { Sprite } from 'pixi.js'
+import { Sprite } from 'pixi.js-legacy'
 import { Color, Point } from './util'
 
 export default class Particle {

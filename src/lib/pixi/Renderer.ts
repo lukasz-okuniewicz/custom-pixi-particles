@@ -8,7 +8,7 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
-import { AnimatedSprite, Loader, ParticleContainer, Sprite, Texture } from 'pixi.js'
+import { AnimatedSprite, Loader, ParticleContainer, Sprite, Texture } from 'pixi.js-legacy'
 
 export default class Renderer extends ParticleContainer {
   blendMode: any
