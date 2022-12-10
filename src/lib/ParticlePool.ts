@@ -2,7 +2,7 @@ import Particle from './Particle'
 
 export default class ParticlePool {
   static global = new ParticlePool()
-  first: any = null
+  first: Particle | null = null
 
   pop() {
     if (!this.first) return this.create()

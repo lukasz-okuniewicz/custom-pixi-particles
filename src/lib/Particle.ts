@@ -3,8 +3,8 @@ import { Color, Point } from './util'
 
 export default class Particle {
   static _UID: { value: number } = { value: 0 }
-  next = null
-  prev = null
+  next: Particle | null = null
+  prev: Particle | null = null
   uid = Particle._UID.value++
   movement = new Point()
   acceleration = new Point()

@@ -352,7 +352,7 @@ export default class Renderer extends ParticleContainer {
     if (!this.finishingTextureNames || !this.finishingTextureNames.length) return
     const sprite = particle.sprite
     if (particle.finishingTexture <= this.finishingTextureNames.length - 1) {
-      sprite.texture = Texture.from(this.finishingTextureNames[particle.finishingTexture])
+      sprite.texture = Texture.from(this.getRandomFinishingTexture())
       particle.finishingTexture++
     }
   }
@@ -381,6 +381,10 @@ export default class Renderer extends ParticleContainer {
 
   private getRandomTexture(): string {
     return this.textures[Math.floor(Math.random() * this.textures.length)]
+  }
+
+  private getRandomFinishingTexture(): string {
+    return this.finishingTextureNames[Math.floor(Math.random() * this.finishingTextureNames.length)]
   }
 
   private getRandomFrameNumber(textures: number): number {
