@@ -403,7 +403,6 @@ export default class TestRenderer extends Container {
       this.lastTime = performance.now()
     }
 
-    this._paused = paused
     this._internalPaused = paused
   }
 

@@ -412,7 +412,6 @@ export default class Renderer extends ParticleContainer {
       this.lastTime = performance.now()
     }
 
-    this._paused = paused
     this._internalPaused = paused
   }
 
