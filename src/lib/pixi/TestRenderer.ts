@@ -16,6 +16,7 @@ export default class TestRenderer extends Container {
   turbulenceEmitter: Emitter
   onComplete: any = () => {}
   private _paused: boolean = false
+  private _internalPaused: boolean = false
   private currentTime: number = 0
   private lastTime: number = 0
   private textures: string[]
@@ -75,7 +76,7 @@ export default class TestRenderer extends Container {
       turbulencePool.list = this.turbulenceEmitter.list
     }
 
-    document.addEventListener('visibilitychange', () => this.paused(document.hidden))
+    document.addEventListener('visibilitychange', () => this.internalPause(document.hidden))
   }
 
   pause(isPaused: boolean): void {
@@ -387,13 +388,23 @@ export default class TestRenderer extends Container {
   private paused(paused: boolean) {
     if (paused === this._paused) return
 
-    if (paused) {
-      this.pausedTime = performance.now()
-    } else {
-      this.pausedTime = 0
-      this.lastTime = performance.now() - this.pausedTime
+    if (!paused) {
+      this.lastTime = performance.now()
     }
+
     this._paused = paused
+  }
+
+  private internalPause(paused: boolean) {
+    if (this._paused) return
+    if (paused === this._internalPaused) return
+
+    if (!paused) {
+      this.lastTime = performance.now()
+    }
+
+    this._paused = paused
+    this._internalPaused = paused
   }
 
   private getConfigIndexByName(name: string, config: any) {
