@@ -83,6 +83,8 @@ export default class Renderer extends ParticleContainer {
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       turbulencePool.list = this.turbulenceEmitter.list
     }
+
+    document.addEventListener('visibilitychange', () => this.paused(document.hidden))
   }
 
   pause(isPaused: boolean): void {
