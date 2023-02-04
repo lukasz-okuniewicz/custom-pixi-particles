@@ -82,8 +82,8 @@ export default class PositionBehaviour extends Behaviour {
     }
     const distance = Math.random() * this.positionVariance.x + 1;
     const deg = Math.random() * (Math.PI * 2);
-    particle.x = Math.cos(deg) * distance;
-    particle.y = Math.sin(deg) * distance;
+    particle.movement.x = Math.cos(deg) * distance;
+    particle.movement.y = Math.sin(deg) * distance;
     particle.color.alpha = (1 - (distance / this.positionVariance.x)) * 0.5
   }
 
