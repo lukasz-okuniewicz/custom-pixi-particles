@@ -11,6 +11,7 @@ export default class Particle {
   velocity = new Point()
   size = new Point()
   sizeStart = new Point()
+  warpSizeStart = new Point()
   sizeEnd = new Point()
   sinXVal = new Point()
   sinYVal = new Point()
@@ -82,6 +83,7 @@ export default class Particle {
 
     this.size.set(1, 1)
     this.sizeStart.set(0, 0)
+    this.warpSizeStart.set(0, 0)
     this.sizeEnd.set(0, 0)
 
     this.color.set(255, 255, 255, 1)

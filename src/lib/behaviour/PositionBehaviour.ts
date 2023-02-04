@@ -78,10 +78,12 @@ export default class PositionBehaviour extends Behaviour {
     if (initial) {
       particle.z = Math.random() * this.warpDistanceScaleConverter
     } else {
-      particle.z = model.cameraZ + Math.random() * (this.warpDistanceScaleConverter / 2)
+      particle.z = model.cameraZ + Math.random() * this.warpDistanceScaleConverter
     }
     const distance = Math.random() * this.positionVariance.x + 1;
     const deg = Math.random() * (Math.PI * 2);
+    particle.warpSizeStart.x = (1 - (distance / this.positionVariance.x)) * 0.5 * particle.sizeStart.x
+    particle.warpSizeStart.y = (1 - (distance / this.positionVariance.x)) * 0.5 * particle.sizeStart.y
     particle.movement.x = Math.cos(deg) * distance;
     particle.movement.y = Math.sin(deg) * distance;
     particle.color.alpha = (1 - (distance / this.positionVariance.x)) * 0.5
@@ -124,8 +126,8 @@ export default class PositionBehaviour extends Behaviour {
       const fovZ = this.warpFov / z
       particle.x = particle.movement.x * fovZ
       particle.y = particle.movement.y * fovZ
-      particle.size.x = distanceScale * particle.sizeStart.x
-      particle.size.y = distanceScale * particle.sizeStart.y + distanceScale * this.warpSpeed * this.warpStretch * distanceCenter
+      particle.size.x = distanceScale * particle.warpSizeStart.x
+      particle.size.y = distanceScale * particle.warpSizeStart.y + distanceScale * this.warpSpeed * this.warpStretch * distanceCenter
       particle.rotation = Math.atan2(dyCenter, dxCenter) + Math.PI / 2
     }
   }
