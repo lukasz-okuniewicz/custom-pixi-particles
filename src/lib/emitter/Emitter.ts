@@ -8,6 +8,7 @@ import * as emission from '../emission'
 import Particle from '../Particle'
 import turbulencePool from '../util/turbulencePool'
 import { BLEND_MODES } from 'pixi.js-legacy'
+import Model from "../Model";
 
 export default class Emitter extends eventemitter3 {
   static PLAY = 'emitter/play'
@@ -27,9 +28,11 @@ export default class Emitter extends eventemitter3 {
   behaviours: EmitterBehaviours = new EmitterBehaviours()
   emitController: any
   private _play: boolean
+  private _model: Model
 
-  constructor() {
+  constructor(model: Model) {
     super()
+    this._model = model
 
     // @ts-ignore
     this.emitController = new emission[emission.EmissionTypes.DEFAULT]()
@@ -60,7 +63,7 @@ export default class Emitter extends eventemitter3 {
     const particlesToEmit = this.emitController.howMany(deltaTime, this.list.length)
     for (let i = 0; i < particlesToEmit; ++i) {
       const particle: Particle = this.list.add(ParticlePool.global.pop())
-      this.behaviours.init(particle)
+      this.behaviours.init(particle, this._model)
       this.emit(Emitter.CREATE, particle)
     }
   }
@@ -75,11 +78,11 @@ export default class Emitter extends eventemitter3 {
     if (particle.isDead()) {
       this.removeParticle(particle)
     } else if (particle.isAlmostDead()) {
-      this.behaviours.apply(particle, deltaTime)
+      this.behaviours.apply(particle, deltaTime, this._model)
       this.emit(Emitter.FINISHING, particle)
       this.emit(Emitter.UPDATE, particle)
     } else {
-      this.behaviours.apply(particle, deltaTime)
+      this.behaviours.apply(particle, deltaTime, this._model)
       this.emit(Emitter.UPDATE, particle)
     }
   }

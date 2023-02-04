@@ -1,6 +1,7 @@
 // tslint:disable:prefer-for-of
 
 import Particle from '../Particle'
+import Model from "../Model";
 
 export default class EmitterBehaviours {
   behaviours: any = []
@@ -53,15 +54,16 @@ export default class EmitterBehaviours {
     this.behaviours = behaviours
   }
 
-  init = (particle: Particle) => {
+  init = (particle: Particle, model: Model) => {
     for (let i = 0; i < this.behaviours.length; ++i) {
-      this.behaviours[i].init(particle)
+      this.behaviours[i].init(particle, model)
     }
   }
 
-  apply = (particle: Particle, deltaTime: number) => {
+  apply = (particle: Particle, deltaTime: number, model: Model) => {
     for (let i = 0; i < this.behaviours.length; ++i) {
-      this.behaviours[i].apply(particle, deltaTime)
+      model.updateCamera(deltaTime);
+      this.behaviours[i].apply(particle, deltaTime, model)
     }
   }
 }

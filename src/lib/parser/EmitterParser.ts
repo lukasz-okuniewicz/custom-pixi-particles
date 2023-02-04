@@ -3,6 +3,7 @@ import CompatibilityHelper from './CompatibilityHelper'
 import * as emissions from '../emission'
 import * as behaviours from '../behaviour'
 import { Emitter } from '../emitter'
+import Model from "../Model";
 
 export default class EmitterParser {
   private readonly emitter: Emitter
@@ -37,7 +38,7 @@ export default class EmitterParser {
     return config
   }
 
-  read = (config: any) => {
+  read = (config: any, model: Model) => {
     const behavioursConfig = config.behaviours
     const existingBehaviours = this.emitter.behaviours.getAll()
     const alwaysCreate = this.emitter.behaviours.isEmpty()
@@ -48,6 +49,10 @@ export default class EmitterParser {
       const behaviour = alwaysCreate ? this.createBehaviour(name) : this.getExistingOrCreate(name, existingBehaviours)
       behaviour.getParser().read(behavioursConfig[i])
       this.emitter.behaviours.add(behaviour)
+
+      if (behaviour.name === 'PositionBehaviour') {
+        model.update(behaviour);
+      }
     }
 
     this.emitter.emitController = this.createEmitController(
@@ -71,7 +76,7 @@ export default class EmitterParser {
     return this.emitter
   }
 
-  update = (config: any) => {
+  update = (config: any, model: Model) => {
     const behavioursConfig = config.behaviours
     const existingBehaviours = this.emitter.behaviours.getAll()
     const alwaysCreate = this.emitter.behaviours.isEmpty()
@@ -82,6 +87,10 @@ export default class EmitterParser {
       const behaviour = alwaysCreate ? this.createBehaviour(name) : this.getExistingOrCreate(name, existingBehaviours)
       behaviour.getParser().read(behavioursConfig[i])
       this.emitter.behaviours.add(behaviour)
+
+      if (behaviour.name === 'PositionBehaviour') {
+        model.update(behaviour);
+      }
     }
 
     this.emitter.emitController.getParser().read(config.emitController)

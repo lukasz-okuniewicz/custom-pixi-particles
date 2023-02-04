@@ -1,6 +1,7 @@
 import { Point } from '../util'
 import { Behaviour, BehaviourNames } from './index'
 import Particle from '../Particle'
+import Model from "../Model";
 
 export default class PositionBehaviour extends Behaviour {
   enabled = false
@@ -22,13 +23,12 @@ export default class PositionBehaviour extends Behaviour {
   velocityVariance = new Point()
   acceleration = new Point()
   accelerationVariance = new Point()
-  cameraZ: number = 0
   cameraZConverter: number = 10
   warpFov: number = 20
   warpStretch: number = 5
   warpDistanceScaleConverter: number = 2000
 
-  init = (particle: Particle) => {
+  init = (particle: Particle, model: Model) => {
     if (!this.enabled) return
 
     if (this.spawnType === 'Rectangle') {
@@ -70,15 +70,15 @@ export default class PositionBehaviour extends Behaviour {
     particle.x = particle.movement.x
     particle.y = particle.movement.y
 
-    this.restartWarp(particle, true);
+    this.restartWarp(particle, true, model);
   }
 
-  restartWarp = (particle: Particle, initial: boolean) => {
+  restartWarp = (particle: Particle, initial: boolean, model: Model) => {
     if (!this.warp) return;
     if (initial) {
       particle.z = Math.random() * this.warpDistanceScaleConverter
     } else {
-      particle.z = this.cameraZ + Math.random() * (this.warpDistanceScaleConverter / 2)
+      particle.z = model.cameraZ + Math.random() * (this.warpDistanceScaleConverter / 2)
     }
     const distance = Math.random() * this.positionVariance.x + 1;
     const deg = Math.random() * (Math.PI * 2);
@@ -91,7 +91,7 @@ export default class PositionBehaviour extends Behaviour {
     return value + this.varianceFrom(variance)
   }
 
-  apply = (particle: Particle, deltaTime: number) => {
+  apply = (particle: Particle, deltaTime: number, model: Model) => {
     if (!this.enabled) return
 
     particle.velocity.x += particle.acceleration.x * deltaTime
@@ -112,23 +112,21 @@ export default class PositionBehaviour extends Behaviour {
       particle.y = particle.movement.y
     }
 
-    if (this.warp) {
-      this.cameraZ += deltaTime * this.cameraZConverter * this.warpSpeed * this.warpBaseSpeed
-      if (particle.z < this.cameraZ) {
-        this.restartWarp(particle, false);
+    if (model.warp) {
+      if (particle.z < model.cameraZ) {
+        this.restartWarp(particle, false, model);
       }
-      const z = particle.z - this.cameraZ
+      const z = particle.z - model.cameraZ
       const dxCenter = particle.movement.x
       const dyCenter = particle.movement.y
       const distanceCenter = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter)
       const distanceScale = Math.max(0, (this.warpDistanceScaleConverter - z) / this.warpDistanceScaleConverter)
-      particle.x = particle.movement.x * (this.warpFov / z)
-      particle.y = particle.movement.y * (this.warpFov / z)
+      const fovZ = this.warpFov / z
+      particle.x = particle.movement.x * fovZ
+      particle.y = particle.movement.y * fovZ
       particle.size.x = distanceScale * particle.sizeStart.x
       particle.size.y = distanceScale * particle.sizeStart.y + distanceScale * this.warpSpeed * this.warpStretch * distanceCenter
       particle.rotation = Math.atan2(dyCenter, dxCenter) + Math.PI / 2
-    } else {
-      particle.y = particle.movement.y
     }
   }
 

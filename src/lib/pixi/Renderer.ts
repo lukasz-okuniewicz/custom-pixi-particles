@@ -9,6 +9,7 @@ import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
 import { AnimatedSprite, Loader, ParticleContainer, Sprite, Texture } from 'pixi.js-legacy'
+import Model from "../Model";
 
 export default class Renderer extends ParticleContainer {
   blendMode: any
@@ -29,6 +30,7 @@ export default class Renderer extends ParticleContainer {
   private turbulenceParser: EmitterParser
   private config: any
   private anchor: { x: number, y: number } = { x: 0.5, y: 0.5 }
+  private _model: Model = new Model()
 
   constructor(settings: ICustomPixiParticlesSettings) {
     super(100000, {
@@ -54,9 +56,9 @@ export default class Renderer extends ParticleContainer {
     if (turbulenceConfigIndex !== -1) {
       const turbulenceConfig = emitterConfig.behaviours[turbulenceConfigIndex]
       if (turbulenceConfig.enabled === true) {
-        this.turbulenceEmitter = new engine.Emitter()
+        this.turbulenceEmitter = new engine.Emitter(this._model)
         this.turbulenceParser = this.turbulenceEmitter.getParser()
-        this.turbulenceParser.read(this.buildTurbulenceConfig(turbulenceConfig))
+        this.turbulenceParser.read(this.buildTurbulenceConfig(turbulenceConfig), this._model)
         this.turbulenceEmitter.on(Emitter.CREATE, this.onCreateTurbulence, this)
         this.turbulenceEmitter.on(Emitter.UPDATE, this.onUpdateTurbulence, this)
         this.turbulenceEmitter.on(Emitter.REMOVE, this.onRemoveTurbulence, this)
@@ -75,9 +77,9 @@ export default class Renderer extends ParticleContainer {
       this.anchor = emitterConfig.anchor
     }
 
-    this.emitter = new engine.Emitter()
+    this.emitter = new engine.Emitter(this._model)
     this.emitterParser = this.emitter.getParser()
-    this.emitterParser.read(emitterConfig)
+    this.emitterParser.read(emitterConfig, this._model)
     this.emitter.on(Emitter.CREATE, this.onCreate, this)
     this.emitter.on(Emitter.UPDATE, this.onUpdate, this)
     this.emitter.on(Emitter.FINISHING, this.onFinishing, this)
@@ -168,13 +170,13 @@ export default class Renderer extends ParticleContainer {
   }
 
   updateConfig(config: any) {
-    this.emitterParser.update(config)
+    this.emitterParser.update(config, this._model)
     if (this.turbulenceEmitter) {
       const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
       if (turbulenceConfigIndex !== -1) {
         const turbulenceConfig = config.behaviours[turbulenceConfigIndex]
         if (turbulenceConfig.enabled === true) {
-          this.turbulenceParser.update(this.buildTurbulenceConfig(turbulenceConfig))
+          this.turbulenceParser.update(this.buildTurbulenceConfig(turbulenceConfig), this._model)
         }
       }
     }
@@ -184,7 +186,7 @@ export default class Renderer extends ParticleContainer {
     const positionBehaviour = this.getByName(BehaviourNames.POSITION_BEHAVIOUR)
     positionBehaviour.position.x = position.x
     positionBehaviour.position.y = position.y
-    this.emitterParser.update(this.config)
+    this.emitterParser.update(this.config, this._model)
   }
 
   clearPool() {
