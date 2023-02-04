@@ -22,6 +22,7 @@ export default class Emitter extends eventemitter3 {
   duration: Duration = new Duration()
   animatedSprite: { loop: boolean, frameRate: number, randomFrameStart: number }
   alpha: number = 1
+  anchor: { x: number, y: number } = { x: 0.5, y: 0.5 }
   blendMode: BLEND_MODES = BLEND_MODES.NONE
   behaviours: EmitterBehaviours = new EmitterBehaviours()
   emitController: any

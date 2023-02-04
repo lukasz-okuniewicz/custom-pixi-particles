@@ -25,6 +25,9 @@ export default class EmitterParser {
     if (typeof this.emitter.alpha !== 'undefined') {
       config.alpha = this.emitter.alpha
     }
+    if (typeof this.emitter.anchor !== 'undefined') {
+      config.anchor = this.emitter.anchor
+    }
     if (typeof this.emitter.blendMode !== 'undefined') {
       config.blendMode = this.emitter.blendMode
     }
@@ -55,6 +58,9 @@ export default class EmitterParser {
     if (typeof config.alpha !== 'undefined') {
       this.emitter.alpha = config.alpha
     }
+    if (typeof config.anchor !== 'undefined') {
+      this.emitter.anchor = config.anchor
+    }
     if (typeof config.blendMode !== 'undefined') {
       this.emitter.blendMode = config.blendMode
     }
@@ -84,6 +90,9 @@ export default class EmitterParser {
 
     if (typeof config.alpha !== 'undefined') {
       this.emitter.alpha = config.alpha
+    }
+    if (typeof config.anchor !== 'undefined') {
+      this.emitter.anchor = config.anchor
     }
     if (typeof config.blendMode !== 'undefined') {
       this.emitter.blendMode = config.blendMode

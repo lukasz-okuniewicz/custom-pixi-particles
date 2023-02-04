@@ -28,6 +28,7 @@ export default class TestRenderer extends Container {
   private emitterParser: EmitterParser
   private turbulenceParser: EmitterParser
   private config: any
+  private anchor: { x: number, y: number } = { x: 0.5, y: 0.5 }
 
   constructor(settings: ICustomPixiParticlesSettings) {
     super()
@@ -59,6 +60,10 @@ export default class TestRenderer extends Container {
 
     if (typeof emitterConfig.blendMode !== 'undefined') {
       this.blendMode = emitterConfig.blendMode
+    }
+
+    if (typeof emitterConfig.anchor !== 'undefined') {
+      this.anchor = emitterConfig.anchor
     }
 
     this.emitter = new engine.Emitter()
@@ -208,7 +213,7 @@ export default class TestRenderer extends Container {
       const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
       if (textures.length) {
         const animation: AnimatedSprite = new AnimatedSprite(textures)
-        animation.anchor.set(0.5)
+        animation.anchor.set(this.anchor.x, this.anchor.y)
         animation.loop = this.emitter.animatedSprite.loop
         if (this.emitter.animatedSprite.randomFrameStart) {
           animation.gotoAndPlay(this.getRandomFrameNumber(textures.length))
@@ -221,7 +226,7 @@ export default class TestRenderer extends Container {
     }
 
     const sprite = new Sprite(Texture.from(this.getRandomTexture()))
-    sprite.anchor.set(0.5)
+    sprite.anchor.set(this.anchor.x, this.anchor.y)
     return this.addChild(sprite)
   }
 
@@ -301,7 +306,7 @@ export default class TestRenderer extends Container {
     } else {
       sprite = new Sprite()
     }
-    sprite.anchor.set(0.5)
+    sprite.anchor.set(this.anchor.x, this.anchor.y)
     this.addChild(sprite)
     sprite.visible = false
     sprite.alpha = 0
