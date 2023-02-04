@@ -7,6 +7,9 @@ export default class PositionBehaviour extends Behaviour {
   priority = 100
   spawnType: string = 'Rectangle'
   radius: number = 0
+  warp: boolean = false
+  warpSpeed: number = 0
+  warpBaseSpeed: number = 0
   sinX: boolean = false
   sinY: boolean = false
   sinXVal = new Point()
@@ -19,6 +22,11 @@ export default class PositionBehaviour extends Behaviour {
   velocityVariance = new Point()
   acceleration = new Point()
   accelerationVariance = new Point()
+  cameraZ: number = 0
+  cameraZConverter: number = 10
+  warpFov: number = 20
+  warpStretch: number = 5
+  warpDistanceScaleConverter: number = 2000
 
   init = (particle: Particle) => {
     if (!this.enabled) return
@@ -50,13 +58,33 @@ export default class PositionBehaviour extends Behaviour {
     particle.acceleration.x = this.calculate(this.acceleration.x, this.accelerationVariance.x)
     particle.acceleration.y = this.calculate(this.acceleration.y, this.accelerationVariance.y)
 
-    particle.sinXVal.x = this.calculate(this.sinXVal.x, this.sinXValVariance.x)
-    particle.sinXVal.y = this.calculate(this.sinXVal.y, this.sinXValVariance.y)
-    particle.sinYVal.x = this.calculate(this.sinYVal.x, this.sinYValVariance.x)
-    particle.sinYVal.y = this.calculate(this.sinYVal.y, this.sinYValVariance.y)
+    if (this.sinX) {
+      particle.sinXVal.x = this.calculate(this.sinXVal.x, this.sinXValVariance.x)
+      particle.sinXVal.y = this.calculate(this.sinXVal.y, this.sinXValVariance.y)
+    }
+    if (this.sinY) {
+      particle.sinYVal.x = this.calculate(this.sinYVal.x, this.sinYValVariance.x)
+      particle.sinYVal.y = this.calculate(this.sinYVal.y, this.sinYValVariance.y)
+    }
 
     particle.x = particle.movement.x
     particle.y = particle.movement.y
+
+    this.restartWarp(particle, true);
+  }
+
+  restartWarp = (particle: Particle, initial: boolean) => {
+    if (!this.warp) return;
+    if (initial) {
+      particle.z = Math.random() * this.warpDistanceScaleConverter
+    } else {
+      particle.z = this.cameraZ + Math.random() * (this.warpDistanceScaleConverter / 2)
+    }
+    const distance = Math.random() * this.positionVariance.x + 1;
+    const deg = Math.random() * (Math.PI * 2);
+    particle.x = Math.cos(deg) * distance;
+    particle.y = Math.sin(deg) * distance;
+    particle.color.alpha = (1 - (distance / this.positionVariance.x)) * 0.5
   }
 
   calculate = (value: number, variance: number) => {
@@ -65,6 +93,7 @@ export default class PositionBehaviour extends Behaviour {
 
   apply = (particle: Particle, deltaTime: number) => {
     if (!this.enabled) return
+
     particle.velocity.x += particle.acceleration.x * deltaTime
     particle.velocity.y += particle.acceleration.y * deltaTime
 
@@ -82,6 +111,25 @@ export default class PositionBehaviour extends Behaviour {
     } else {
       particle.y = particle.movement.y
     }
+
+    if (this.warp) {
+      this.cameraZ += deltaTime * this.cameraZConverter * this.warpSpeed * this.warpBaseSpeed
+      if (particle.z < this.cameraZ) {
+        this.restartWarp(particle, false);
+      }
+      const z = particle.z - this.cameraZ
+      const dxCenter = particle.movement.x
+      const dyCenter = particle.movement.y
+      const distanceCenter = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter)
+      const distanceScale = Math.max(0, (this.warpDistanceScaleConverter - z) / this.warpDistanceScaleConverter)
+      particle.x = particle.movement.x * (this.warpFov / z)
+      particle.y = particle.movement.y * (this.warpFov / z)
+      particle.size.x = distanceScale * particle.sizeStart.x
+      particle.size.y = distanceScale * particle.sizeStart.y + distanceScale * this.warpSpeed * this.warpStretch * distanceCenter
+      particle.rotation = Math.atan2(dyCenter, dxCenter) + Math.PI / 2
+    } else {
+      particle.y = particle.movement.y
+    }
   }
 
   getName() {
@@ -94,6 +142,7 @@ export default class PositionBehaviour extends Behaviour {
       priority: this.priority,
       spawnType: this.spawnType,
       radius: this.radius,
+      warp: this.warp,
       sinX: this.sinX,
       sinY: this.sinY,
       sinXVal: this.sinXVal,
@@ -124,6 +173,12 @@ export default class PositionBehaviour extends Behaviour {
         x: this.position.x,
         y: this.position.y,
       },
+      warpSpeed: this.warpSpeed,
+      warpBaseSpeed: this.warpBaseSpeed,
+      cameraZConverter: this.warpBaseSpeed,
+      warpFov: this.warpFov,
+      warpStretch: this.warpStretch,
+      warpDistanceScaleConverter: this.warpDistanceScaleConverter,
       name: this.getName(),
     }
   }

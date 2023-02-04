@@ -22,6 +22,7 @@ export default class Particle {
   lifeProgress: number
   x: number
   y: number
+  z: number
   velocityAngle: number
   radiansPerSecond: number
   radius: number
@@ -36,6 +37,13 @@ export default class Particle {
   showVortices: boolean
   turbulence: boolean
   finishingTexture: number
+  cameraZ: number
+  cameraZConverter: number
+  warpSpeed: number
+  warpBaseSpeed: number
+  warpFov: number
+  warpStretch: number
+  warpDistanceScaleConverter: number
 
   constructor() {
     this.reset()
@@ -47,6 +55,7 @@ export default class Particle {
     this.lifeProgress = 0
     this.x = 0
     this.y = 0
+    this.z = 0
 
     this.movement.set(0, 0)
     this.acceleration.set(0, 0)
@@ -78,6 +87,14 @@ export default class Particle {
     this.color.set(255, 255, 255, 1)
     this.colorStart.set(0, 0, 0, 1)
     this.colorEnd.set(0, 0, 0, 1)
+
+    this.cameraZ = 0
+    this.cameraZConverter = 10
+    this.warpSpeed = 0
+    this.warpBaseSpeed = 0
+    this.warpFov = 20
+    this.warpStretch = 5
+    this.warpDistanceScaleConverter = 2000
   }
 
   isAlmostDead() {

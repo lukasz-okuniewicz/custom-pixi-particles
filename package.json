@@ -35,7 +35,7 @@
     "url": "git@github.com:lukasz-okuniewicz/custom-pixi-particles.git"
   },
   "scripts": {
-    "build": "npm run clean-dist && tsc",
+    "build": "npm run clean-dist && tsc && node copy.js",
     "clean-dist": "rimraf dist/*"
   },
   "version": "4.0.17"
