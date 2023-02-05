@@ -27,6 +27,7 @@ export default class PositionBehaviour extends Behaviour {
   warpFov: number = 20
   warpStretch: number = 5
   warpDistanceScaleConverter: number = 2000
+  warpDistanceToCenter: boolean = false
 
   init = (particle: Particle, model: Model) => {
     if (!this.enabled) return
@@ -83,9 +84,14 @@ export default class PositionBehaviour extends Behaviour {
     const distance = Math.random() * this.positionVariance.x + 1;
     const deg = Math.random() * (Math.PI * 2);
     particle.warpSizeStart.x = (1 - (distance / this.positionVariance.x)) * 0.5 * particle.sizeStart.x
-    particle.warpSizeStart.y = (1 - (distance / this.positionVariance.x)) * 0.5 * particle.sizeStart.y
-    particle.movement.x = Math.cos(deg) * distance;
-    particle.movement.y = Math.sin(deg) * distance;
+    particle.warpSizeStart.y = (1 - (distance / this.positionVariance.y)) * 0.5 * particle.sizeStart.y
+    if (this.warpDistanceToCenter) {
+      particle.movement.x = Math.cos(deg) * distance;
+      particle.movement.y = Math.sin(deg) * distance;
+    } else {
+      particle.x = Math.cos(deg) * distance;
+      particle.y = Math.sin(deg) * distance;
+    }
     particle.color.alpha = (1 - (distance / this.positionVariance.x)) * 0.5
   }
 
@@ -179,6 +185,7 @@ export default class PositionBehaviour extends Behaviour {
       warpFov: this.warpFov,
       warpStretch: this.warpStretch,
       warpDistanceScaleConverter: this.warpDistanceScaleConverter,
+      warpDistanceToCenter: this.warpDistanceToCenter,
       name: this.getName(),
     }
   }
