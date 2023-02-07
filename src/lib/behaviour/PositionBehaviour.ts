@@ -29,6 +29,11 @@ export default class PositionBehaviour extends Behaviour {
   warpDistanceScaleConverter: number = 2000
   warpDistanceToCenter: boolean = false
 
+  /**
+   * Function that initializes a particle
+   * @param {Particle} particle - The particle to be initialized
+   * @param {Model} model - The model of the particle
+   */
   init = (particle: Particle, model: Model) => {
     if (!this.enabled) return
 
@@ -74,6 +79,12 @@ export default class PositionBehaviour extends Behaviour {
     this.restartWarp(particle, true, model);
   }
 
+  /**
+   * Restarts the warp of a particle
+   * @param {Particle} particle - The particle to restart the warp on
+   * @param {boolean} initial - True if this is the initial warp, false if it is a subsequent one
+   * @param {Model} model - The model containing the camera Z property
+   */
   restartWarp = (particle: Particle, initial: boolean, model: Model) => {
     if (!this.warp) return;
     if (initial) {
@@ -95,10 +106,22 @@ export default class PositionBehaviour extends Behaviour {
     particle.color.alpha = (1 - (distance / this.positionVariance.x)) * 0.5
   }
 
+  /**
+   * Adds a random variance to the given value
+   * @param {number} value - The value to calculate
+   * @param {number} variance - The random variance to add
+   * @returns {number} The calculated value
+   */
   calculate = (value: number, variance: number) => {
     return value + this.varianceFrom(variance)
   }
 
+  /**
+   * Applies the particle's velocity and acceleration to move it and calculate its size, rotation, and position.
+   * @param {Particle} particle - The particle to be moved
+   * @param {number} deltaTime - The time delta for the movement calculation
+   * @param {Model} model - The model containing information about the particle's movement
+   */
   apply = (particle: Particle, deltaTime: number, model: Model) => {
     if (!this.enabled) return
 
@@ -138,10 +161,18 @@ export default class PositionBehaviour extends Behaviour {
     }
   }
 
+  /**
+   * Gets the name of the behaviour
+   * @return {BehaviourNames} The name of the behaviour
+   */
   getName() {
     return BehaviourNames.POSITION_BEHAVIOUR
   }
 
+  /**
+   * @description Retrieves the properties of the object.
+   * @returns {Object} The properties of the object.
+   */
   getProps() {
     return {
       enabled: this.enabled,

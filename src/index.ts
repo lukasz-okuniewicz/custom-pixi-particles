@@ -2,6 +2,11 @@ import Renderer from './lib/pixi/Renderer'
 import TestRenderer from './lib/pixi/TestRenderer'
 import { ICustomPixiParticlesSettings } from './lib/customPixiParticlesSettingsInterface'
 
+/**
+ * Constructs a renderer for custom pixi particles
+ * @class Renderer
+ * @param {ICustomPixiParticlesSettings} settings The settings for the renderer
+ */
 const customPixiParticles = {
   create(settings: ICustomPixiParticlesSettings) {
     const {

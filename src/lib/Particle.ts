@@ -1,55 +1,224 @@
 import { Sprite } from 'pixi.js-legacy'
 import { Color, Point } from './util'
 
+/**
+ * Represents a particle object used in particle system simulations
+ */
 export default class Particle {
   static _UID: { value: number } = { value: 0 }
   next: Particle | null = null
   prev: Particle | null = null
+
+  /**
+   * Stores the unique ID of the particle
+   */
   uid = Particle._UID.value++
+
+  /**
+   * Stores the movement of the particle
+   */
   movement = new Point()
+
+  /**
+   * Stores the acceleration of the particle
+   */
   acceleration = new Point()
+
+  /**
+   * Stores the velocity of the particle
+   */
   velocity = new Point()
+
+  /**
+   * Stores the size of the particle
+   */
   size = new Point()
+
+  /**
+   * Stores the starting size of the particle
+   */
   sizeStart = new Point()
+
+  /**
+   * Stores the starting warp size of the particle
+   */
   warpSizeStart = new Point()
+
+  /**
+   * Stores the ending size of the particle
+   */
   sizeEnd = new Point()
+
+  /**
+   * Stores the x value of the particle for sin wave
+   */
   sinXVal = new Point()
+
+  /**
+   * Stores the y value of the particle for sin wave
+   */
   sinYVal = new Point()
+
+  /**
+   * Stores the color of the particle
+   */
   color = new Color()
+
+  /**
+   * Stores the starting color of the particle
+   */
   colorStart = new Color()
+
+  /**
+   * Stores the ending color of the particle
+   */
   colorEnd = new Color()
+
+  /**
+   * Stores the maximum life time of the particle
+   */
   maxLifeTime: number
+
+  /**
+   * Stores the current life time of the particle
+   */
   lifeTime: number
+
+  /**
+   * Stores the current life progress of the particle
+   */
   lifeProgress: number
+
+  /**
+   * Stores the x position of the particle
+   */
   x: number
+
+  /**
+   * Stores the y position of the particle
+   */
   y: number
+
+  /**
+   * Stores the z position of the particle
+   */
   z: number
+
+  /**
+   * Stores the velocity angle of the particle
+   */
   velocityAngle: number
+
+  /**
+   * Stores the radians per second of the particle
+   */
   radiansPerSecond: number
+
+  /**
+   * Stores the radius of the particle
+   */
   radius: number
+
+  /**
+   * Stores the starting radius of the particle
+   */
   radiusStart: number
+
+  /**
+   * Stores the ending radius of the particle
+   */
   radiusEnd: number
+
+  /**
+   * Stores the cosine of the direction of the particle
+   */
   directionCos: number
+
+  /**
+   * Stores the sine of the direction of the particle
+   */
   directionSin: number
+
+  /**
+   * Stores the rotation of the particle
+   */
   rotation: number
+
+  /**
+   * Stores the rotation delta of the particle
+   */
   rotationDelta: number
+
+  /**
+   * Stores the angle of the particle
+   */
   angle: number
+
+  /**
+   * Stores the sprite of the particle
+   */
   sprite: Sprite
+
+  /**
+   * Stores whether the vortices are shown
+   */
   showVortices: boolean
+
+  /**
+   * Stores whether the turbulence is enabled
+   */
   turbulence: boolean
+
+  /**
+   * Stores the finishing texture of the particle
+   */
   finishingTexture: number
+
+  /**
+   * Stores the camera z position of the particle
+   */
   cameraZ: number
+
+  /**
+   * Stores the camera z position converter of the particle
+   */
   cameraZConverter: number
+
+  /**
+   * Stores the warp speed of the particle
+   */
   warpSpeed: number
+
+  /**
+   * Stores the warp base speed of the particle
+   */
   warpBaseSpeed: number
+
+  /**
+   * Stores the warp field of view of the particle
+   */
   warpFov: number
+
+  /**
+   * Stores the warp stretch of the particle
+   */
   warpStretch: number
+
+  /**
+   * Stores the warp distance scale converter of the particle
+   */
   warpDistanceScaleConverter: number
 
+  /**
+   * Constructs a particle object
+   */
   constructor() {
     this.reset()
   }
 
+  /**
+   * Resets the particle object
+   */
   reset() {
     this.maxLifeTime = 0
     this.lifeTime = 0
@@ -99,14 +268,27 @@ export default class Particle {
     this.warpDistanceScaleConverter = 2000
   }
 
+  /**
+   * Checks if the particle is almost dead
+   *
+   * @return {boolean} True if the particle is almost dead, otherwise false
+   */
   isAlmostDead() {
     return this.lifeTime >= this.maxLifeTime - 0.1
   }
 
+  /**
+   * Checks if the particle is dead
+   *
+   * @return {boolean} True if the particle is dead, otherwise false
+   */
   isDead() {
     return this.lifeTime >= this.maxLifeTime
   }
 
+  /**
+   * Hides the particle
+   */
   hide() {
     if (!this.sprite) return
     if (!this.sprite.visible) return

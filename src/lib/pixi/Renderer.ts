@@ -11,6 +11,11 @@ import { EmitterParser } from '../parser'
 import { AnimatedSprite, Loader, ParticleContainer, Sprite, Texture } from 'pixi.js-legacy'
 import Model from "../Model";
 
+/**
+ * Renderer is a class used to render particles in the Pixi library.
+ *
+ * @class Renderer
+ */
 export default class Renderer extends ParticleContainer {
   blendMode: any
   emitter: Emitter
@@ -32,6 +37,11 @@ export default class Renderer extends ParticleContainer {
   private anchor: { x: number, y: number } = { x: 0.5, y: 0.5 }
   private _model: Model = new Model()
 
+  /**
+   * Creates an instance of Renderer.
+   *
+   * @memberof Renderer
+   */
   constructor(settings: ICustomPixiParticlesSettings) {
     super(100000, {
       vertices: true,
@@ -95,10 +105,18 @@ export default class Renderer extends ParticleContainer {
     document.addEventListener('visibilitychange', () => this.internalPause(document.hidden))
   }
 
+  /**
+   * Sets the paused state of the object.
+   * @param {boolean} isPaused - The new paused state of the object.
+   * @return {void}
+   */
   pause(isPaused: boolean): void {
     this.paused(isPaused)
   }
 
+  /**
+   * Updates the transform of the ParticleContainer and updates the emitters.
+   */
   updateTransform() {
     if (this._paused) return
     this.currentTime = performance.now()
@@ -117,6 +135,11 @@ export default class Renderer extends ParticleContainer {
     this.lastTime = this.currentTime
   }
 
+  /**
+   *
+   * @method updateTexture
+   * @description This method updates the texture of the unused sprites and children to a randomly generated texture.
+   */
   updateTexture() {
     for (let i = 0; i < this.unusedSprites.length; ++i) {
       this.unusedSprites[i].texture = Texture.from(this.getRandomTexture())
@@ -128,6 +151,10 @@ export default class Renderer extends ParticleContainer {
     }
   }
 
+  /**
+   * This method is used to start the emitter and turbulenceEmitter if available.
+   * @function start
+   */
   start() {
     this.emitter.resetAndPlay()
     if (this.turbulenceEmitter) {
@@ -135,6 +162,10 @@ export default class Renderer extends ParticleContainer {
     }
   }
 
+  /**
+   * Resets the particle emitters in this class without removing existing particles and plays them.
+   * @function play
+   */
   play() {
     this.emitter.resetWithoutRemovingAndPlay()
     if (this.turbulenceEmitter) {
@@ -142,6 +173,9 @@ export default class Renderer extends ParticleContainer {
     }
   }
 
+  /**
+   * Immediately stops emitting particles
+   */
   stopImmediately() {
     this.emitter.stop()
     if (this.turbulenceEmitter) {
@@ -150,6 +184,9 @@ export default class Renderer extends ParticleContainer {
     this.emitter.emit(Emitter.COMPLETE)
   }
 
+  /**
+   * Terminates the emitter and any turbulence emitter it is associated with
+   */
   stop() {
     this.emitter.stopWithoutKilling()
     if (this.turbulenceEmitter) {
@@ -157,6 +194,9 @@ export default class Renderer extends ParticleContainer {
     }
   }
 
+  /**
+   * Resets the emitters to their initial state
+   */
   resetEmitter() {
     this.emitter.reset()
     if (this.turbulenceEmitter) {
@@ -164,11 +204,19 @@ export default class Renderer extends ParticleContainer {
     }
   }
 
+  /**
+   * Sets the textures used by the emitter
+   * @param {string[]} textures - Array of strings containing the textures to be used by the emitter
+   */
   setTextures(textures: string[]) {
     this.textures = textures
     this.updateTexture()
   }
 
+  /**
+   * Updates the configuration of the emitter
+   * @param {any} config - Configuration object to be used to update the emitter
+   */
   updateConfig(config: any) {
     this.emitterParser.update(config, this._model)
     if (this.turbulenceEmitter) {
@@ -182,6 +230,10 @@ export default class Renderer extends ParticleContainer {
     }
   }
 
+  /**
+   * Updates the position of the emitter
+   * @param {Object} position - Object containing the x and y coordinates of the new position
+   */
   updatePosition(position: { x: number, y: number }) {
     const positionBehaviour = this.getByName(BehaviourNames.POSITION_BEHAVIOUR)
     positionBehaviour.position.x = position.x
@@ -189,6 +241,9 @@ export default class Renderer extends ParticleContainer {
     this.emitterParser.update(this.config, this._model)
   }
 
+  /**
+   * Clears the sprite pool, the unused sprites list and the turbulence and particle pools.
+   */
   clearPool() {
     this.removeChildren()
     this.unusedSprites = []

@@ -1,11 +1,38 @@
+/**
+ * List is a class which allows items to be added, removed and iterated through.
+ *
+ * @class List
+ */
 export default class List {
+  /**
+   * Stores the first item of the list
+   *
+   * @member {any}
+   */
   first: any = null
+
+  /**
+   * Stores the length of the list
+   *
+   * @member {number}
+   */
   length = 0
 
+  /**
+   * Returns true if the list is empty
+   *
+   * @returns {boolean}
+   */
   isEmpty() {
     return this.first === null
   }
 
+  /**
+   * Adds an item to the list
+   *
+   * @param {any} item
+   * @returns {any}
+   */
   add(item: any) {
     item.prev = null
     item.next = null
@@ -19,6 +46,11 @@ export default class List {
     return item
   }
 
+  /**
+   * Iterates through the list, calling the callback for each item
+   *
+   * @param {any} callback
+   */
   forEach(callback: any) {
     let current: any = this.first
     let next = null
@@ -29,6 +61,11 @@ export default class List {
     }
   }
 
+  /**
+   * Removes an item from the list
+   *
+   * @param {any} item
+   */
   remove(item: any) {
     const previous = item.prev
     const next = item.next
@@ -44,6 +81,10 @@ export default class List {
     this.length--
   }
 
+  /**
+   * Resets the list
+   *
+   */
   reset() {
     this.first = null
     this.length = 0
