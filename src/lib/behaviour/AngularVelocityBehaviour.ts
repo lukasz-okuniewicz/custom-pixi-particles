@@ -3,6 +3,12 @@ import math from '../util/maths'
 import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 
+/**
+ * AngularVelocityBehaviour is a subclass of Behaviour and defines the angular velocity of a particle.
+ *
+ * @class AngularVelocityBehaviour
+ * @extends {Behaviour}
+ */
 export default class AngularVelocityBehaviour extends Behaviour {
   private enabled: boolean = false
   private degrees: number = 0
@@ -13,6 +19,12 @@ export default class AngularVelocityBehaviour extends Behaviour {
   private minRadiusVariance: number = 0
   protected priority: number = 100
 
+  /**
+   * Initializes particle properties of the behaviour
+   *
+   * @param {Particle} particle - The current particle
+   * @memberof AngularVelocityBehaviour
+   */
   init = (particle: Particle) => {
     if (!this.enabled) return
     particle.radiansPerSecond = math.degreesToRadians(this.degrees + this.varianceFrom(this.degreesVariance))
@@ -25,6 +37,13 @@ export default class AngularVelocityBehaviour extends Behaviour {
     particle.angle = 0
   }
 
+  /**
+   * Applies the behaviour to the particle
+   *
+   * @param {Particle} particle - The current particle
+   * @param {number} deltaTime - Time elapsed since the last frame
+   * @memberof AngularVelocityBehaviour
+   */
   apply = (particle: Particle, deltaTime: number) => {
     if (!this.enabled) return
     particle.velocityAngle += particle.radiansPerSecond * deltaTime
@@ -37,10 +56,22 @@ export default class AngularVelocityBehaviour extends Behaviour {
     particle.y = particle.movement.y
   }
 
+  /**
+   * Returns the name of the behaviour
+   *
+   * @returns {string} Name of the behaviour
+   * @memberof AngularVelocityBehaviour
+   */
   getName() {
     return BehaviourNames.ANGULAR_BEHAVIOUR
   }
 
+  /**
+   * Returns the properties of the behaviour
+   *
+   * @returns {object} Properties of the behaviour
+   * @memberof AngularVelocityBehaviour
+   */
   getProps() {
     return {
       enabled: this.enabled,

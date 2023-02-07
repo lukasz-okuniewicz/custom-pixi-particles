@@ -3,23 +3,46 @@
 import Particle from '../Particle'
 import Model from "../Model";
 
+/**
+ * EmitterBehaviours class manages the behaviour of particles
+ */
 export default class EmitterBehaviours {
   behaviours: any = []
 
+  /**
+   * Gets all the enabled behaviours
+   *
+   * @return {any[]} The enabled behaviours
+   */
   getAll = () => {
     return this.behaviours.filter((behaviour: any) => {
       return behaviour.enabled
     })
   }
 
+  /**
+   * Checks if there are no behaviours stored
+   *
+   * @return {boolean} True if there are no behaviours stored, false otherwise
+   */
   isEmpty = () => {
     return this.getAll().length === 0
   }
 
+  /**
+   * Clears all the stored behaviours
+   */
   clear = () => {
     this.behaviours = []
   }
 
+  /**
+   * Adds a behaviour
+   *
+   * @param {any} behaviour The behaviour to add
+   *
+   * @return {any} The added behaviour
+   */
   add = (behaviour: any) => {
     if (this.getByName(behaviour.getName()) !== null) {
       throw new Error('Emitter duplicate')
@@ -33,6 +56,13 @@ export default class EmitterBehaviours {
     return behaviour
   }
 
+  /**
+   * Gets a behaviour by name
+   *
+   * @param {string} name The name of the behaviour to get
+   *
+   * @return {any | null} The behaviour with the given name or null if not found
+   */
   getByName = (name: string) => {
     for (let i = 0; i < this.behaviours.length; ++i) {
       if (this.behaviours[i].getName() === name) {
@@ -43,6 +73,11 @@ export default class EmitterBehaviours {
     return null
   }
 
+  /**
+   * Removes a behaviour by name
+   *
+   * @param {string} name The name of the behaviour to remove
+   */
   removeByName = (name: string) => {
     const behaviours = []
     for (let i = 0; i < this.behaviours.length; ++i) {
@@ -54,12 +89,25 @@ export default class EmitterBehaviours {
     this.behaviours = behaviours
   }
 
+  /**
+   * Initialises the behaviours
+   *
+   * @param {Particle} particle The particle
+   * @param {Model} model The model
+   */
   init = (particle: Particle, model: Model) => {
     for (let i = 0; i < this.behaviours.length; ++i) {
       this.behaviours[i].init(particle, model)
     }
   }
 
+  /**
+   * Applies the behaviours
+   *
+   * @param {Particle} particle The particle
+   * @param {number} deltaTime The delta time
+   * @param {Model} model The model
+   */
   apply = (particle: Particle, deltaTime: number, model: Model) => {
     for (let i = 0; i < this.behaviours.length; ++i) {
       model.updateCamera(deltaTime);
