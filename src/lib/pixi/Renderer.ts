@@ -9,7 +9,7 @@ import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
 import { AnimatedSprite, Loader, ParticleContainer, Sprite, Texture } from 'pixi.js-legacy'
-import Model from "../Model";
+import Model from '../Model'
 
 /**
  * Renderer is a class used to render particles in the Pixi library.
@@ -34,7 +34,7 @@ export default class Renderer extends ParticleContainer {
   private emitterParser: EmitterParser
   private turbulenceParser: EmitterParser
   private config: any
-  private anchor: { x: number, y: number } = { x: 0.5, y: 0.5 }
+  private anchor: { x: number; y: number } = { x: 0.5, y: 0.5 }
   private _model: Model = new Model()
 
   /**
@@ -234,7 +234,7 @@ export default class Renderer extends ParticleContainer {
    * Updates the position of the emitter
    * @param {Object} position - Object containing the x and y coordinates of the new position
    */
-  updatePosition(position: { x: number, y: number }) {
+  updatePosition(position: { x: number; y: number }) {
     const positionBehaviour = this.getByName(BehaviourNames.POSITION_BEHAVIOUR)
     positionBehaviour.position.x = position.x
     positionBehaviour.position.y = position.y
@@ -296,10 +296,7 @@ export default class Renderer extends ParticleContainer {
     return this.addChild(sprite)
   }
 
-  private createFrameAnimationByName(
-    prefix: string,
-    imageFileExtension: string = 'png',
-  ): Texture[] {
+  private createFrameAnimationByName(prefix: string, imageFileExtension: string = 'png'): Texture[] {
     const zeroPad = this.zeroPad
     const textures: Texture[] = []
     let frame: string = ''

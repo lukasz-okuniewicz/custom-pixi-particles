@@ -1,16 +1,17 @@
-CustomPIXIParticles by [@lukasz-okuniewicz](http://github.com/lukasz-okuniewicz)
-=========
+# CustomPIXIParticles by [@lukasz-okuniewicz](http://github.com/lukasz-okuniewicz)
 
 Custom PIXI Particles.
 
 Editor for particles: [custom-pixi-particles-editor](https://github.com/lukasz-okuniewicz/custom-pixi-particles-editor)
 
 How to use:
+
 ```
 npm install custom-pixi-particles
 ```
 
 then:
+
 ```javascript
 const customPIXIParticles = require('custom-pixi-particles')
 // or
@@ -42,4 +43,11 @@ this.particles.onComplete = () => {
 const newTextures = ['texture3.png', 'texture4.png']
 // Change textures
 this.particles.setTextures(newTextures)
+```
+
+```javascript
+// Update config
+emitController.duration = 3
+emitController._emitPerSecond = 200
+this.particles.updateConfig(emitterConfig)
 ```

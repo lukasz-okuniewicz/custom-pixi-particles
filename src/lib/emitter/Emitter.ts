@@ -8,7 +8,7 @@ import * as emission from '../emission'
 import Particle from '../Particle'
 import turbulencePool from '../util/turbulencePool'
 import { BLEND_MODES } from 'pixi.js-legacy'
-import Model from "../Model";
+import Model from '../Model'
 
 export default class Emitter extends eventemitter3 {
   static PLAY = 'emitter/play'
@@ -21,9 +21,9 @@ export default class Emitter extends eventemitter3 {
   static COMPLETE = 'emitter/complete'
   list: List = new List()
   duration: Duration = new Duration()
-  animatedSprite: { loop: boolean, frameRate: number, randomFrameStart: number }
+  animatedSprite: { loop: boolean; frameRate: number; randomFrameStart: number }
   alpha: number = 1
-  anchor: { x: number, y: number } = { x: 0.5, y: 0.5 }
+  anchor: { x: number; y: number } = { x: 0.5, y: 0.5 }
   blendMode: BLEND_MODES = BLEND_MODES.NONE
   behaviours: EmitterBehaviours = new EmitterBehaviours()
   emitController: any
