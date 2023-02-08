@@ -25,17 +25,17 @@ export default class TurbulenceBehaviour extends Behaviour {
   maxLifeTime = 0
 
   init = (particle: Particle) => {
-    if (!this.enabled) return
     particle.showVortices = this.showVortices
     particle.turbulence = this.turbulence
   }
 
-  apply = (particle: Particle, deltaTime: number) => {
-    if (!this.enabled) return
+  apply = (particle: Particle) => {
     if (particle.turbulence) return
 
     turbulencePool.list.forEach((vortex: Particle) => {
-      let vx = 0, vy = 0, factor = 0
+      let vx = 0,
+        vy = 0,
+        factor = 0
 
       const dx = particle.x - vortex.x
       const dy = particle.y - vortex.y

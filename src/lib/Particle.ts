@@ -209,6 +209,8 @@ export default class Particle {
    */
   warpDistanceScaleConverter: number
 
+  sizeDifference: { x: number; y: number }
+
   /**
    * Constructs a particle object
    */

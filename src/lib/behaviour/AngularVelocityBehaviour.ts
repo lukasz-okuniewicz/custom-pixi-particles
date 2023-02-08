@@ -26,14 +26,14 @@ export default class AngularVelocityBehaviour extends Behaviour {
    * @memberof AngularVelocityBehaviour
    */
   init = (particle: Particle) => {
-    if (!this.enabled) return
     particle.radiansPerSecond = math.degreesToRadians(this.degrees + this.varianceFrom(this.degreesVariance))
-    particle.radiusStart = this.maxRadius + this.varianceFrom(this.maxRadiusVariance)
+    const radiusStart = this.maxRadius + this.varianceFrom(this.maxRadiusVariance)
+    particle.radiusStart = radiusStart
     particle.radiusEnd = this.minRadius + this.varianceFrom(this.minRadiusVariance)
 
     particle.x = 0
     particle.y = 0
-    particle.radius = particle.radiusStart
+    particle.radius = radiusStart
     particle.angle = 0
   }
 
@@ -45,15 +45,18 @@ export default class AngularVelocityBehaviour extends Behaviour {
    * @memberof AngularVelocityBehaviour
    */
   apply = (particle: Particle, deltaTime: number) => {
-    if (!this.enabled) return
-    particle.velocityAngle += particle.radiansPerSecond * deltaTime
-    particle.radius = particle.radiusStart + (particle.radiusEnd - particle.radiusStart) * particle.lifeProgress
+    const { radiusStart, radiusEnd, radiansPerSecond, lifeProgress } = particle
+    const velocityAngle = particle.velocityAngle + radiansPerSecond * deltaTime
+    const radius = radiusStart + (radiusEnd - radiusStart) * lifeProgress
+    const movementX = Math.cos(velocityAngle) * radius
+    const movementY = Math.sin(velocityAngle) * radius
 
-    particle.movement.x = Math.cos(particle.velocityAngle) * particle.radius
-    particle.movement.y = Math.sin(particle.velocityAngle) * particle.radius
-
-    particle.x = particle.movement.x
-    particle.y = particle.movement.y
+    particle.velocityAngle = velocityAngle
+    particle.radius = radius
+    particle.movement.x = movementX
+    particle.movement.y = movementY
+    particle.x = movementX
+    particle.y = movementY
   }
 
   /**

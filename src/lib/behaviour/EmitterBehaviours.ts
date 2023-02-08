@@ -1,7 +1,7 @@
 // tslint:disable:prefer-for-of
 
 import Particle from '../Particle'
-import Model from "../Model";
+import Model from '../Model'
 
 /**
  * EmitterBehaviours class manages the behaviour of particles
@@ -18,15 +18,6 @@ export default class EmitterBehaviours {
     return this.behaviours.filter((behaviour: any) => {
       return behaviour.enabled
     })
-  }
-
-  /**
-   * Checks if there are no behaviours stored
-   *
-   * @return {boolean} True if there are no behaviours stored, false otherwise
-   */
-  isEmpty = () => {
-    return this.getAll().length === 0
   }
 
   /**
@@ -110,7 +101,7 @@ export default class EmitterBehaviours {
    */
   apply = (particle: Particle, deltaTime: number, model: Model) => {
     for (let i = 0; i < this.behaviours.length; ++i) {
-      model.updateCamera(deltaTime);
+      model.updateCamera(deltaTime)
       this.behaviours[i].apply(particle, deltaTime, model)
     }
   }

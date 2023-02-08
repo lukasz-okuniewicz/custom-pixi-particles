@@ -23,7 +23,6 @@ export default class EmitDirectionBehaviour extends Behaviour {
    * @memberof EmitDirectionBehaviour
    */
   init = (particle: Particle) => {
-    if (!this.enabled) return
     const directionAngle = this.angle + this.varianceFrom(this.variance)
     particle.directionCos = Math.cos(directionAngle)
     particle.directionSin = Math.sin(directionAngle)
@@ -35,10 +34,11 @@ export default class EmitDirectionBehaviour extends Behaviour {
    * @param {number} deltaTime - The amount of time since the behavior was last applied.
    * @memberof EmitDirectionBehaviour
    */
-  apply = (particle: Particle, deltaTime: number) => {
-    if (!this.enabled) return
-    _tmp = particle.directionCos * particle.x - particle.directionSin * particle.y
-    particle.y = particle.directionSin * particle.x + particle.directionCos * particle.y
+  apply = (particle: Particle) => {
+    const { x, y, directionSin, directionCos } = particle
+
+    _tmp = directionCos * x - directionSin * y
+    particle.y = directionSin * x + directionCos * y
     particle.x = _tmp
   }
 

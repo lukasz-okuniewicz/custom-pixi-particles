@@ -13,7 +13,6 @@ export default class ColorBehaviour extends Behaviour {
   sinus = false
 
   init = (particle: Particle) => {
-    if (!this.enabled) return
     particle.colorStart.copyFrom(this.start)
     particle.colorStart.r += this.varianceFrom(this.startVariance.r)
     particle.colorStart.g += this.varianceFrom(this.startVariance.g)
@@ -29,18 +28,19 @@ export default class ColorBehaviour extends Behaviour {
     particle.color.copyFrom(particle.colorStart)
   }
 
-  apply = (particle: Particle, deltaTime: number) => {
-    if (!this.enabled) return
-    particle.color.copyFrom(particle.colorStart)
+  apply = (particle: Particle) => {
+    const { colorStart, lifeProgress, colorEnd } = particle
 
-    particle.color.r += (particle.colorEnd.r - particle.colorStart.r) * particle.lifeProgress
-    particle.color.g += (particle.colorEnd.g - particle.colorStart.g) * particle.lifeProgress
-    particle.color.b += (particle.colorEnd.b - particle.colorStart.b) * particle.lifeProgress
+    particle.color.copyFrom(colorStart)
+
+    particle.color.r += (colorEnd.r - colorStart.r) * lifeProgress
+    particle.color.g += (colorEnd.g - colorStart.g) * lifeProgress
+    particle.color.b += (colorEnd.b - colorStart.b) * lifeProgress
 
     if (!this.sinus) {
-      particle.color.alpha += (particle.colorEnd.alpha - particle.colorStart.alpha) * particle.lifeProgress
+      particle.color.alpha += (colorEnd.alpha - colorStart.alpha) * lifeProgress
     } else {
-      particle.color.alpha = Math.sin(particle.lifeProgress * 3.1)
+      particle.color.alpha = Math.sin(lifeProgress * 3.1)
     }
   }
 
