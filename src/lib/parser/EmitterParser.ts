@@ -40,6 +40,7 @@ export default class EmitterParser {
     }
 
     config.emitController = this.emitter.emitController.getParser().write()
+    delete config.emitController._frames
     config.duration = this.emitter.duration.maxTime
     if (typeof this.emitter.alpha !== 'undefined') {
       config.alpha = this.emitter.alpha
