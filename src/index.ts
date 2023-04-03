@@ -21,7 +21,7 @@ const customPixiParticles = {
       tint = true,
       maxParticles = 10000,
       maxFPS = 60,
-      tickerSpeed = 0.03,
+      tickerSpeed = 0.02,
     } = settings
     return new Renderer({
       textures,
