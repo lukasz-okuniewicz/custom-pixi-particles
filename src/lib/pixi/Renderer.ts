@@ -8,7 +8,7 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
-import { AnimatedSprite, Loader, ParticleContainer, Sprite, Texture } from 'pixi.js-legacy'
+import { AnimatedSprite, Loader, ParticleContainer, Sprite, Texture, Ticker } from 'pixi.js-legacy'
 import Model from '../Model'
 
 /**
@@ -23,19 +23,17 @@ export default class Renderer extends ParticleContainer {
   onComplete: any = () => {}
   private _paused: boolean = false
   private _internalPaused: boolean = false
-  private currentTime: number = 0
-  private lastTime: number = 0
   private textures: string[]
   private zeroPad: number = 2
   private indexToStart: number = 0
   private finishingTextureNames: string[]
-  private pausedTime: number = 0
   private unusedSprites: any[] = []
   private emitterParser: EmitterParser
   private turbulenceParser: EmitterParser
   private config: any
   private anchor: { x: number; y: number } = { x: 0.5, y: 0.5 }
   private _model: Model = new Model()
+  private _ticker: Ticker
 
   /**
    * Creates an instance of Renderer.
@@ -43,18 +41,29 @@ export default class Renderer extends ParticleContainer {
    * @memberof Renderer
    */
   constructor(settings: ICustomPixiParticlesSettings) {
-    super(100000, {
-      vertices: true,
-      position: true,
-      rotation: true,
-      uvs: !!(
-        settings.emitterConfig.animatedSprite ||
-        (settings.finishingTextures && settings.finishingTextures.length)
-      ),
-      tint: true,
-    })
+    const {
+      textures,
+      emitterConfig,
+      finishingTextures,
+      animatedSpriteZeroPad,
+      animatedSpriteIndexToStart,
+      vertices,
+      position,
+      rotation,
+      uvs,
+      tint,
+      maxParticles,
+      maxFPS,
+      tickerSpeed,
+    } = settings
 
-    const { textures, emitterConfig, finishingTextures, animatedSpriteZeroPad, animatedSpriteIndexToStart } = settings
+    super(maxParticles, {
+      vertices,
+      position,
+      rotation,
+      uvs,
+      tint,
+    })
 
     this.config = emitterConfig
     this.textures = textures
@@ -94,7 +103,6 @@ export default class Renderer extends ParticleContainer {
     this.emitter.on(Emitter.UPDATE, this.onUpdate, this)
     this.emitter.on(Emitter.FINISHING, this.onFinishing, this)
     this.emitter.on(Emitter.REMOVE, this.onRemove, this)
-    this.emitter.on(Emitter.PLAY, this.onPlay, this)
     this.emitter.on(Emitter.COMPLETE, () => {
       this.onComplete()
     })
@@ -103,6 +111,14 @@ export default class Renderer extends ParticleContainer {
     }
 
     document.addEventListener('visibilitychange', () => this.internalPause(document.hidden))
+
+    const ticker = new Ticker()
+    ticker.maxFPS = maxFPS
+    ticker.speed = tickerSpeed
+    ticker.stop()
+    ticker.add(this._updateTransform, this)
+    ticker.start()
+    this._ticker = ticker
   }
 
   /**
@@ -117,22 +133,13 @@ export default class Renderer extends ParticleContainer {
   /**
    * Updates the transform of the ParticleContainer and updates the emitters.
    */
-  updateTransform() {
+  _updateTransform(deltaTime: number) {
     if (this._paused) return
-    this.currentTime = performance.now()
 
-    if (this.lastTime === 0) {
-      this.lastTime = this.currentTime
-    }
-
-    this.emitter.update((this.currentTime - this.lastTime) / 1000)
+    this.emitter.update(deltaTime)
     if (this.turbulenceEmitter) {
-      this.turbulenceEmitter.update((this.currentTime - this.lastTime) / 1000)
+      this.turbulenceEmitter.update(deltaTime)
     }
-
-    ParticleContainer.prototype.updateTransform.call(this)
-
-    this.lastTime = this.currentTime
   }
 
   /**
@@ -347,11 +354,6 @@ export default class Renderer extends ParticleContainer {
     return textures
   }
 
-  private onPlay() {
-    this.currentTime = 0
-    this.lastTime = 0
-  }
-
   private onCreate(particle: Particle) {
     const sprite = this.getOrCreateSprite()
     sprite.visible = true
@@ -455,22 +457,17 @@ export default class Renderer extends ParticleContainer {
 
   private paused(paused: boolean) {
     if (paused === this._paused) return
-
-    if (!paused) {
-      this.lastTime = performance.now()
-    }
-
     this._paused = paused
+    if (paused) {
+      this._ticker.stop()
+    } else {
+      this._ticker.start()
+    }
   }
 
   private internalPause(paused: boolean) {
     if (this._paused) return
     if (paused === this._internalPaused) return
-
-    if (!paused) {
-      this.lastTime = performance.now()
-    }
-
     this._internalPaused = paused
   }
 

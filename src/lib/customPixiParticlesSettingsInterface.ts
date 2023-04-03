@@ -7,4 +7,12 @@ export interface ICustomPixiParticlesSettings {
   finishingTextures?: string[]
   animatedSpriteFrameRate?: number
   animatedSpriteLoop?: boolean
+  vertices?: boolean
+  position?: boolean
+  rotation?: boolean
+  uvs?: boolean
+  tint?: boolean
+  maxParticles?: number
+  maxFPS: number
+  tickerSpeed: number
 }

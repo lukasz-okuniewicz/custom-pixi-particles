@@ -86,8 +86,6 @@ export default class PositionBehaviour extends Behaviour {
   restartWarp = (particle: Particle, initial: boolean, model: Model) => {
     if (!this.warp) return
 
-    const { sizeStart } = particle
-
     if (initial) {
       particle.z = Math.random() * this.warpDistanceScaleConverter
     } else {
@@ -95,8 +93,8 @@ export default class PositionBehaviour extends Behaviour {
     }
     const distance = Math.random() * this.positionVariance.x + 1
     const deg = Math.random() * (Math.PI * 2)
-    particle.warpSizeStart.x = (1 - distance / this.positionVariance.x) * 0.5 * sizeStart.x
-    particle.warpSizeStart.y = (1 - distance / this.positionVariance.y) * 0.5 * sizeStart.y
+    particle.warpSizeStart.x = (1 - distance / this.positionVariance.x) * 0.5 * particle.sizeStart.x
+    particle.warpSizeStart.y = (1 - distance / this.positionVariance.y) * 0.5 * particle.sizeStart.y
     if (this.warpDistanceToCenter) {
       particle.movement.x = Math.cos(deg) * distance
       particle.movement.y = Math.sin(deg) * distance
@@ -124,48 +122,42 @@ export default class PositionBehaviour extends Behaviour {
    * @param {Model} model - The model containing information about the particle's movement
    */
   apply = (particle: Particle, deltaTime: number, model: Model) => {
-    const { acceleration, sinXVal, sinYVal, z, warpSizeStart, movement } = particle
-    const { cameraZ } = model
+    particle.velocity.x += particle.acceleration.x * deltaTime
+    particle.velocity.y += particle.acceleration.y * deltaTime
 
-    const PI = Math.PI
-
-    particle.velocity.x += acceleration.x * deltaTime
-    particle.velocity.y += acceleration.y * deltaTime
-
-    const movementX = movement.x + particle.velocity.x * deltaTime
-    const movementY = movement.y + particle.velocity.y * deltaTime
-
-    particle.movement.x = movementX
-    particle.movement.y = movementY
+    particle.movement.x += particle.velocity.x * deltaTime
+    particle.movement.y += particle.velocity.y * deltaTime
 
     if (this.sinX) {
-      particle.x = movementX + Math.sin(PI * (movementY / sinXVal.x)) * sinXVal.y
+      particle.x =
+        particle.movement.x + Math.sin(Math.PI * (particle.movement.y / particle.sinXVal.x)) * particle.sinXVal.y
     } else {
-      particle.x = movementX
+      particle.x = particle.movement.x
     }
 
     if (this.sinY) {
-      particle.y = movementY + Math.sin(PI * (movementX / sinYVal.x)) * sinYVal.y
+      particle.y =
+        particle.movement.y + Math.sin(Math.PI * (particle.movement.x / particle.sinYVal.x)) * particle.sinYVal.y
     } else {
-      particle.y = movementY
+      particle.y = particle.movement.y
     }
 
     if (model.warp) {
-      if (z < cameraZ) {
+      if (particle.z < model.cameraZ) {
         this.restartWarp(particle, false, model)
       }
-      const newZ = z - cameraZ
-      const dxCenter = movementX
-      const dyCenter = movementY
+      const z = particle.z - model.cameraZ
+      const dxCenter = particle.movement.x
+      const dyCenter = particle.movement.y
       const distanceCenter = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter)
-      const distanceScale = Math.max(0, (this.warpDistanceScaleConverter - newZ) / this.warpDistanceScaleConverter)
-      const fovZ = this.warpFov / newZ
-      particle.x = movementX * fovZ
-      particle.y = movementY * fovZ
-      particle.size.x = distanceScale * warpSizeStart.x
+      const distanceScale = Math.max(0, (this.warpDistanceScaleConverter - z) / this.warpDistanceScaleConverter)
+      const fovZ = this.warpFov / z
+      particle.x = particle.movement.x * fovZ
+      particle.y = particle.movement.y * fovZ
+      particle.size.x = distanceScale * particle.warpSizeStart.x
       particle.size.y =
-        distanceScale * warpSizeStart.y + distanceScale * this.warpSpeed * this.warpStretch * distanceCenter
-      particle.rotation = Math.atan2(dyCenter, dxCenter) + PI / 2
+        distanceScale * particle.warpSizeStart.y + distanceScale * this.warpSpeed * this.warpStretch * distanceCenter
+      particle.rotation = Math.atan2(dyCenter, dxCenter) + Math.PI / 2
     }
   }
 

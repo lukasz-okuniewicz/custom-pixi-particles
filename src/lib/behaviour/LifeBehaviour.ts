@@ -45,7 +45,9 @@ export default class LifeBehaviour extends Behaviour {
   init = (particle: Particle) => {
     particle.lifeTime = 0
     particle.lifeProgress = 0
-    particle.maxLifeTime = Math.max(this.maxLifeTime + this.varianceFrom(this.timeVariance), 0.0)
+
+    particle.maxLifeTime = this.maxLifeTime + this.varianceFrom(this.timeVariance)
+    particle.maxLifeTime = Math.max(particle.maxLifeTime, 0.0)
   }
 
   /**
@@ -56,13 +58,10 @@ export default class LifeBehaviour extends Behaviour {
    * @returns {void}
    */
   apply = (particle: Particle, deltaTime: number) => {
-    const { maxLifeTime } = particle
-    const lifeTime = particle.lifeTime + deltaTime
+    particle.lifeTime += deltaTime
 
-    particle.lifeTime = lifeTime
-
-    if (maxLifeTime > 0) {
-      particle.lifeProgress = Math.min(1.0, lifeTime / maxLifeTime)
+    if (particle.maxLifeTime > 0) {
+      particle.lifeProgress = Math.min(1.0, particle.lifeTime / particle.maxLifeTime)
     }
   }
 

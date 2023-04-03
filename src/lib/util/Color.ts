@@ -45,7 +45,8 @@ export default class Color {
    * @param {number} value - The red component value to set
    */
   set r(value: number) {
-    this._r = math.clamp(value, 0, 255)
+    const newValue = value === undefined ? 0 : value
+    this._r = newValue
   }
 
   /**
@@ -65,7 +66,8 @@ export default class Color {
    * @param {number} value - The green component value to set
    */
   set g(value: number) {
-    this._g = math.clamp(value, 0, 255)
+    const newValue = value === undefined ? 0 : value
+    this._g = newValue
   }
 
   /**
@@ -85,7 +87,8 @@ export default class Color {
    * @param {number} value - The blue component value to set
    */
   set b(value: number) {
-    this._b = math.clamp(value, 0, 255)
+    const newValue = value === undefined ? 0 : value
+    this._b = newValue
   }
 
   /**
@@ -106,7 +109,7 @@ export default class Color {
    */
   set alpha(value: number) {
     const newValue = value === undefined ? 1 : value
-    this._alpha = math.clamp(newValue, 0, 1)
+    this._alpha = newValue
   }
 
   /**

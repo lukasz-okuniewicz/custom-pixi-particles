@@ -67,20 +67,17 @@ export default class EmitterParser {
   read = (config: any, model: Model) => {
     const behavioursConfig = config.behaviours
     const existingBehaviours = this.emitter.behaviours.getAll()
+    const alwaysCreate = this.emitter.behaviours.isEmpty()
 
     this.emitter.behaviours.clear()
     for (let i = 0; i < behavioursConfig.length; i++) {
       const name = behavioursConfig[i].name
-      if (!behavioursConfig[i].enabled) {
-        this.emitter.behaviours.removeByName(name)
-      } else {
-        const behaviour = this.getExistingOrCreate(name, existingBehaviours)
-        behaviour.getParser().read(behavioursConfig[i])
-        this.emitter.behaviours.add(behaviour)
+      const behaviour = alwaysCreate ? this.createBehaviour(name) : this.getExistingOrCreate(name, existingBehaviours)
+      behaviour.getParser().read(behavioursConfig[i])
+      this.emitter.behaviours.add(behaviour)
 
-        if (behaviour.name === 'PositionBehaviour') {
-          model.update(behaviour)
-        }
+      if (behaviour.name === 'PositionBehaviour') {
+        model.update(behaviour)
       }
     }
 
@@ -115,19 +112,17 @@ export default class EmitterParser {
   update = (config: any, model: Model) => {
     const behavioursConfig = config.behaviours
     const existingBehaviours = this.emitter.behaviours.getAll()
+    const alwaysCreate = this.emitter.behaviours.isEmpty()
 
     this.emitter.behaviours.clear()
     for (let i = 0; i < behavioursConfig.length; i++) {
       const name = behavioursConfig[i].name
-      if (!behavioursConfig[i].enabled) {
-        this.emitter.behaviours.removeByName(name)
-      } else {
-        const behaviour = this.getExistingOrCreate(name, existingBehaviours)
-        behaviour.getParser().read(behavioursConfig[i])
-        this.emitter.behaviours.add(behaviour)
-        if (behaviour.name === 'PositionBehaviour') {
-          model.update(behaviour)
-        }
+      const behaviour = alwaysCreate ? this.createBehaviour(name) : this.getExistingOrCreate(name, existingBehaviours)
+      behaviour.getParser().read(behavioursConfig[i])
+      this.emitter.behaviours.add(behaviour)
+
+      if (behaviour.name === 'PositionBehaviour') {
+        model.update(behaviour)
       }
     }
 

@@ -11,6 +11,10 @@ export default class ColorBehaviour extends Behaviour {
   startVariance = new Color(0, 0, 0, 0)
   endVariance = new Color(0, 0, 0, 0)
   sinus = false
+  _rDiff: number = 0
+  _gDiff: number = 0
+  _bDiff: number = 0
+  _aDiff: number = 0
 
   init = (particle: Particle) => {
     particle.colorStart.copyFrom(this.start)
@@ -26,21 +30,24 @@ export default class ColorBehaviour extends Behaviour {
     particle.colorEnd.alpha += this.varianceFrom(this.endVariance.alpha)
 
     particle.color.copyFrom(particle.colorStart)
+
+    this._rDiff = particle.colorEnd.r - particle.colorStart.r
+    this._gDiff = particle.colorEnd.g - particle.colorStart.g
+    this._bDiff = particle.colorEnd.b - particle.colorStart.b
+    this._aDiff = particle.colorEnd.alpha - particle.colorStart.alpha
   }
 
   apply = (particle: Particle) => {
-    const { colorStart, lifeProgress, colorEnd } = particle
+    particle.color.copyFrom(particle.colorStart)
 
-    particle.color.copyFrom(colorStart)
-
-    particle.color.r += (colorEnd.r - colorStart.r) * lifeProgress
-    particle.color.g += (colorEnd.g - colorStart.g) * lifeProgress
-    particle.color.b += (colorEnd.b - colorStart.b) * lifeProgress
+    particle.color.r += this._rDiff * particle.lifeProgress
+    particle.color.g += this._gDiff * particle.lifeProgress
+    particle.color.b += this._bDiff * particle.lifeProgress
 
     if (!this.sinus) {
-      particle.color.alpha += (colorEnd.alpha - colorStart.alpha) * lifeProgress
+      particle.color.alpha += this._aDiff * particle.lifeProgress
     } else {
-      particle.color.alpha = Math.sin(lifeProgress * 3.1)
+      particle.color.alpha = Math.sin(particle.lifeProgress * 3.1)
     }
   }
 

@@ -11,7 +11,6 @@ import { BLEND_MODES } from 'pixi.js-legacy'
 import Model from '../Model'
 
 export default class Emitter extends eventemitter3 {
-  static PLAY = 'emitter/play'
   static STOP = 'emitter/stop'
   static RESET = 'emitter/reset'
   static CREATE = 'emitter/create'
@@ -145,7 +144,6 @@ export default class Emitter extends eventemitter3 {
   play() {
     this.duration.start()
     this._play = true
-    this.emit(Emitter.PLAY)
   }
 
   /**

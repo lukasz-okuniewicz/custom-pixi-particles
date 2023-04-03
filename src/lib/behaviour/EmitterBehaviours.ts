@@ -48,6 +48,15 @@ export default class EmitterBehaviours {
   }
 
   /**
+   * Checks if there are no behaviours stored
+   *
+   * @return {boolean} True if there are no behaviours stored, false otherwise
+   */
+  isEmpty = () => {
+    return this.getAll().length === 0
+  }
+
+  /**
    * Gets a behaviour by name
    *
    * @param {string} name The name of the behaviour to get

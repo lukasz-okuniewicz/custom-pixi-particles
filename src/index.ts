@@ -1,5 +1,4 @@
 import Renderer from './lib/pixi/Renderer'
-import TestRenderer from './lib/pixi/TestRenderer'
 import { ICustomPixiParticlesSettings } from './lib/customPixiParticlesSettingsInterface'
 
 /**
@@ -15,6 +14,14 @@ const customPixiParticles = {
       animatedSpriteZeroPad = 2,
       animatedSpriteIndexToStart = 0,
       finishingTextures = [],
+      vertices = true,
+      position = true,
+      rotation = true,
+      uvs = false,
+      tint = true,
+      maxParticles = 10000,
+      maxFPS = 60,
+      tickerSpeed = 0.03,
     } = settings
     return new Renderer({
       textures,
@@ -22,22 +29,14 @@ const customPixiParticles = {
       animatedSpriteIndexToStart,
       emitterConfig,
       finishingTextures,
-    })
-  },
-  createTest(settings: ICustomPixiParticlesSettings) {
-    const {
-      textures,
-      emitterConfig,
-      animatedSpriteZeroPad = 2,
-      animatedSpriteIndexToStart = 0,
-      finishingTextures = [],
-    } = settings
-    return new TestRenderer({
-      textures,
-      animatedSpriteZeroPad,
-      animatedSpriteIndexToStart,
-      emitterConfig,
-      finishingTextures,
+      vertices,
+      position,
+      rotation,
+      uvs,
+      tint,
+      maxParticles,
+      maxFPS,
+      tickerSpeed,
     })
   },
 }

@@ -13,48 +13,32 @@ export default class SizeBehaviour extends Behaviour {
 
   init = (particle: Particle) => {
     let variance = this.varianceFrom(this.startVariance)
-
-    let sizeStartX = this.sizeStart.x + variance
-    let sizeStartY = this.sizeStart.y + variance
+    particle.sizeStart.x = this.sizeStart.x + variance
+    particle.sizeStart.y = this.sizeStart.y + variance
 
     variance = this.varianceFrom(this.endVariance)
-
-    let sizeEndX = this.sizeEnd.x + variance
-    let sizeEndY = this.sizeEnd.y + variance
+    particle.sizeEnd.x = this.sizeEnd.x + variance
+    particle.sizeEnd.y = this.sizeEnd.y + variance
 
     if (!this.allowNegativeValues) {
-      sizeStartX = Math.max(sizeStartX, 0)
-      sizeStartY = Math.max(sizeStartY, 0)
-      sizeEndX = Math.max(sizeEndX, 0)
-      sizeEndY = Math.max(sizeEndY, 0)
+      particle.sizeStart.x = Math.max(particle.sizeStart.x, 0)
+      particle.sizeStart.y = Math.max(particle.sizeStart.y, 0)
+      particle.sizeEnd.x = Math.max(particle.sizeEnd.x, 0)
+      particle.sizeEnd.y = Math.max(particle.sizeEnd.y, 0)
     }
 
-    particle.sizeDifference = {
-      x: sizeEndX - sizeStartX,
-      y: sizeEndY - sizeStartY,
-    }
-
-    particle.sizeStart.x = sizeStartX
-    particle.sizeStart.y = sizeStartY
-    particle.sizeEnd.x = sizeEndX
-    particle.sizeEnd.y = sizeEndY
     particle.size.copyFrom(particle.sizeStart)
   }
 
   apply = (particle: Particle) => {
-    const { sizeStart, lifeProgress, sizeDifference, size } = particle
-
-    particle.size.copyFrom(sizeStart)
-    let sizeX = size.x + sizeDifference.x * lifeProgress
-    let sizeY = size.y + sizeDifference.y * lifeProgress
+    particle.size.copyFrom(particle.sizeStart)
+    particle.size.x += (particle.sizeEnd.x - particle.sizeStart.x) * particle.lifeProgress
+    particle.size.y += (particle.sizeEnd.y - particle.sizeStart.y) * particle.lifeProgress
 
     if (!this.allowNegativeValues) {
-      sizeX = Math.max(0, sizeX)
-      sizeY = Math.max(0, sizeY)
+      particle.size.x = Math.max(0, particle.size.x)
+      particle.size.x = Math.max(0, particle.size.x)
     }
-
-    particle.size.x = sizeX
-    particle.size.y = sizeY
   }
 
   getName() {
