@@ -288,11 +288,6 @@ export default class Renderer extends ParticleContainer {
         const animation: AnimatedSprite = new AnimatedSprite(textures)
         animation.anchor.set(this.anchor.x, this.anchor.y)
         animation.loop = this.emitter.animatedSprite.loop
-        if (this.emitter.animatedSprite.randomFrameStart) {
-          animation.gotoAndPlay(this.getRandomFrameNumber(textures.length))
-        } else {
-          animation.play()
-        }
         animation.animationSpeed = this.emitter.animatedSprite.frameRate
         return this.addChild(animation)
       }
@@ -360,6 +355,14 @@ export default class Renderer extends ParticleContainer {
     sprite.alpha = 1
     if (this.blendMode) {
       sprite.blendMode = this.blendMode
+    }
+    if (this.emitter.animatedSprite) {
+      if (this.emitter.animatedSprite.randomFrameStart) {
+        const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
+        sprite.gotoAndPlay(this.getRandomFrameNumber(textures.length))
+      } else {
+        sprite.play()
+      }
     }
     particle.sprite = sprite
   }
@@ -429,6 +432,9 @@ export default class Renderer extends ParticleContainer {
     }
     particle.finishingTexture = 0
     this.unusedSprites.push(sprite)
+    if (this.emitter.animatedSprite) {
+      ;(sprite as AnimatedSprite).stop()
+    }
     // this.removeChild(sprite)
     // delete particle.sprite
   }
