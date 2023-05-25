@@ -118,7 +118,7 @@ export default class Emitter extends eventemitter3 {
     this.list.remove(particle)
     particle.reset()
     ParticlePool.global.push(particle)
-    turbulencePool.list.remove(particle)
+    turbulencePool.list = this.list
   }
 
   /**
@@ -204,8 +204,6 @@ export default class Emitter extends eventemitter3 {
     this.list.forEach((particle: Particle) => {
       this.removeParticle(particle)
     })
-    turbulencePool.list.forEach((particle: Particle) => {
-      this.removeParticle(particle)
-    })
+    turbulencePool.list = this.list
   }
 }

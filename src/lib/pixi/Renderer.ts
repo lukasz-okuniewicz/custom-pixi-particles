@@ -255,8 +255,9 @@ export default class Renderer extends ParticleContainer {
     this.removeChildren()
     this.unusedSprites = []
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
-      turbulencePool.list.reset()
-      turbulencePool.list = new List()
+      this.turbulenceEmitter.list.reset()
+      this.turbulenceEmitter.list = new List()
+      turbulencePool.list = this.turbulenceEmitter.list
     }
     this.emitter.list.reset()
     this.emitter.list = new List()
@@ -356,7 +357,7 @@ export default class Renderer extends ParticleContainer {
     if (this.blendMode) {
       sprite.blendMode = this.blendMode
     }
-    if (this.emitter.animatedSprite) {
+    if (sprite instanceof AnimatedSprite) {
       if (this.emitter.animatedSprite.randomFrameStart) {
         const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
         sprite.gotoAndPlay(this.getRandomFrameNumber(textures.length))
@@ -432,11 +433,9 @@ export default class Renderer extends ParticleContainer {
     }
     particle.finishingTexture = 0
     this.unusedSprites.push(sprite)
-    if (this.emitter.animatedSprite) {
-      ;(sprite as AnimatedSprite).stop()
+    if (sprite instanceof AnimatedSprite) {
+      sprite.stop()
     }
-    // this.removeChild(sprite)
-    // delete particle.sprite
   }
 
   private onRemoveTurbulence(particle: Particle) {
