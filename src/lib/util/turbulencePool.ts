@@ -1,5 +1,5 @@
 import List from './List'
 
-export default {
-  list: new List(),
+export default class TurbulencePool {
+  list: List = new List()
 }

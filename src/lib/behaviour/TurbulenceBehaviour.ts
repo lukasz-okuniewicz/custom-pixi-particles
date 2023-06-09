@@ -2,7 +2,8 @@ import Behaviour from './Behaviour'
 import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 import { Point } from '../util'
-import turbulencePool from '../util/turbulencePool'
+import TurbulencePool from '../util/turbulencePool'
+import Model from '../Model'
 
 export default class TurbulenceBehaviour extends Behaviour {
   private enabled: boolean = false
@@ -23,16 +24,18 @@ export default class TurbulenceBehaviour extends Behaviour {
   emitPerSecond = 0
   duration = 0
   maxLifeTime = 0
+  turbulencePool: TurbulencePool
 
-  init = (particle: Particle) => {
+  init = (particle: Particle, model: Model, turbulencePool: TurbulencePool) => {
     particle.showVortices = this.showVortices
     particle.turbulence = this.turbulence
+    this.turbulencePool = turbulencePool
   }
 
   apply = (particle: Particle) => {
     if (particle.turbulence) return
 
-    turbulencePool.list.forEach((vortex: Particle) => {
+    this.turbulencePool.list.forEach((vortex: Particle) => {
       let vx = 0,
         vy = 0,
         factor = 0

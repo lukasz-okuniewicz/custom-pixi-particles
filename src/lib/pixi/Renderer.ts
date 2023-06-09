@@ -1,7 +1,6 @@
 // tslint:disable:prefer-for-of
 import engine from '../index'
 import { Emitter } from '../emitter'
-import turbulencePool from '../util/turbulencePool'
 import Particle from '../Particle'
 import BehaviourNames from '../behaviour/BehaviourNames'
 import List from '../util/List'
@@ -107,7 +106,7 @@ export default class Renderer extends ParticleContainer {
       this.onComplete()
     })
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
-      turbulencePool.list = this.turbulenceEmitter.list
+      this.emitter.turbulencePool.list = this.turbulenceEmitter.list
     }
 
     document.addEventListener('visibilitychange', () => this.internalPause(document.hidden))
@@ -255,9 +254,8 @@ export default class Renderer extends ParticleContainer {
     this.removeChildren()
     this.unusedSprites = []
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
-      this.turbulenceEmitter.list.reset()
-      this.turbulenceEmitter.list = new List()
-      turbulencePool.list = this.turbulenceEmitter.list
+      this.emitter.turbulencePool.list.reset()
+      this.emitter.turbulencePool.list = new List()
     }
     this.emitter.list.reset()
     this.emitter.list = new List()

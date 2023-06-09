@@ -2,6 +2,7 @@
 
 import Particle from '../Particle'
 import Model from '../Model'
+import TurbulencePool from '../util/turbulencePool'
 
 /**
  * EmitterBehaviours class manages the behaviour of particles
@@ -94,10 +95,11 @@ export default class EmitterBehaviours {
    *
    * @param {Particle} particle The particle
    * @param {Model} model The model
+   * @param {Model} turbulencePool The turbulencePool
    */
-  init = (particle: Particle, model: Model) => {
+  init = (particle: Particle, model: Model, turbulencePool: TurbulencePool) => {
     for (let i = 0; i < this.behaviours.length; ++i) {
-      this.behaviours[i].init(particle, model)
+      this.behaviours[i].init(particle, model, turbulencePool)
     }
   }
 

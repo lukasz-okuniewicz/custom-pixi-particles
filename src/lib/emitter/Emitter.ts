@@ -6,9 +6,9 @@ import { EmitterParser } from '../parser'
 import List from '../util/List'
 import * as emission from '../emission'
 import Particle from '../Particle'
-import turbulencePool from '../util/turbulencePool'
 import { BLEND_MODES } from 'pixi.js-legacy'
 import Model from '../Model'
+import TurbulencePool from '../util/turbulencePool'
 
 export default class Emitter extends eventemitter3 {
   static STOP = 'emitter/stop'
@@ -26,6 +26,7 @@ export default class Emitter extends eventemitter3 {
   blendMode: BLEND_MODES = BLEND_MODES.NONE
   behaviours: EmitterBehaviours = new EmitterBehaviours()
   emitController: any
+  turbulencePool: TurbulencePool = new TurbulencePool()
   private _play: boolean
   private _model: Model
 
@@ -76,7 +77,7 @@ export default class Emitter extends eventemitter3 {
     const particlesToEmit = this.emitController.howMany(deltaTime, this.list.length)
     for (let i = 0; i < particlesToEmit; ++i) {
       const particle: Particle = this.list.add(ParticlePool.global.pop())
-      this.behaviours.init(particle, this._model)
+      this.behaviours.init(particle, this._model, this.turbulencePool)
       this.emit(Emitter.CREATE, particle)
     }
   }
@@ -118,7 +119,7 @@ export default class Emitter extends eventemitter3 {
     this.list.remove(particle)
     particle.reset()
     ParticlePool.global.push(particle)
-    turbulencePool.list = this.list
+    this.turbulencePool.list.remove(particle)
   }
 
   /**
@@ -204,6 +205,8 @@ export default class Emitter extends eventemitter3 {
     this.list.forEach((particle: Particle) => {
       this.removeParticle(particle)
     })
-    turbulencePool.list = this.list
+    this.turbulencePool.list.forEach((particle: Particle) => {
+      this.removeParticle(particle)
+    })
   }
 }
