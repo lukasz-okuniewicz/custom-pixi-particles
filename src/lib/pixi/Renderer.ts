@@ -103,6 +103,7 @@ export default class Renderer extends ParticleContainer {
     this.emitter.on(Emitter.FINISHING, this.onFinishing, this)
     this.emitter.on(Emitter.REMOVE, this.onRemove, this)
     this.emitter.on(Emitter.COMPLETE, () => {
+      this._ticker.stop()
       this.onComplete()
     })
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
@@ -183,11 +184,21 @@ export default class Renderer extends ParticleContainer {
    * Immediately stops emitting particles
    */
   stopImmediately() {
+    this._ticker.stop()
+    this._ticker.destroy()
     this.emitter.stop()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.stop()
     }
     this.emitter.emit(Emitter.COMPLETE)
+  }
+
+  /**
+   * Destroy particles
+   */
+  destroy() {
+    this.stopImmediately()
+    super.destroy()
   }
 
   /**

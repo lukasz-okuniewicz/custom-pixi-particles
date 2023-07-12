@@ -38,5 +38,5 @@
     "build": "npm run clean-dist && tsc && node copy.js",
     "clean-dist": "rimraf dist/*"
   },
-  "version": "4.1.9"
+  "version": "4.1.10"
 }
