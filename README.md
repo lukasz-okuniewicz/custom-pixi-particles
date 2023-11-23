@@ -1,20 +1,25 @@
-CustomPIXIParticles by [@lukasz-okuniewicz](http://github.com/lukasz-okuniewicz)
-=========
+# CustomPIXIParticles by [@lukasz-okuniewicz](http://github.com/lukasz-okuniewicz)
 
-Custom PIXI Particles.
+CustomPIXIParticles is a lightweight and flexible library for creating and managing particle effects in PIXI.js applications. It provides a simple API for defining particle emitters, textures, and configurations, allowing developers to create a wide range of visual effects with ease.
 
-Editor for particles: [custom-pixi-particles-editor](https://github.com/lukasz-okuniewicz/custom-pixi-particles-editor)
+### Features
+* Easy-to-use API: Create particle emitters with just a few lines of code
+* Flexible configuration: Customize particle behavior, appearance, and animation
+* High performance: Render particles efficiently without impacting application performance
+* Compatible with PIXI.js v6: Works seamlessly with the latest version of PIXI.js
 
-How to use:
+#### Installation:
+
 ```
 npm install custom-pixi-particles
 ```
 
-then:
+#### Usage:
+Import or require the library:
 ```javascript
-const customPIXIParticles = require('custom-pixi-particles')
+const customPixiParticles = require('custom-pixi-particles')
 // or
-import customPIXIParticles from 'custom-pixi-particles'
+import customPixiParticles from 'custom-pixi-particles'
 ```
 
 ```javascript
@@ -30,8 +35,29 @@ this.particles.play()
 container.addChild(this.particles)
 ```
 
+### API Reference
+`create`
 ```javascript
-// On complete
+// All possible params which can be passed during particles creation
+this.particles = customPixiParticles.create({
+  textures: [String],
+  animatedSpriteZeroPad: Boolean,
+  animatedSpriteIndexToStart: Number,
+  emitterConfig: Object,
+  finishingTextures: [String],
+  vertices: Boolean,
+  position: Boolean,
+  rotation: Boolean,
+  uvs: Boolean,
+  tint: Boolean,
+  maxParticles: Number,
+  maxFPS: Number,
+  tickerSpeed: Number,
+})
+```
+
+```javascript
+// Callback function called when the particle animation completes.
 this.particles.onComplete = () => {
   //...
 }
@@ -40,6 +66,51 @@ this.particles.onComplete = () => {
 ```javascript
 // Define array of new textures
 const newTextures = ['texture3.png', 'texture4.png']
-// Change textures
+// Updates the particle emitter's textures.
 this.particles.setTextures(newTextures)
 ```
+
+```javascript
+// Updates the particle emitter's configuration.
+this.particles.updateConfig({
+  // Update emitter configuration properties
+})
+```
+
+```javascript
+// Sets the paused state
+pause(isPaused)
+
+// Starts the emitter
+start()
+
+// Resets the particle emitters in this class without removing existing particles and plays them
+play()
+
+// Immediately stops emitting particles
+stopImmediately()
+
+// Destroy particles
+destroy()
+
+// Terminates the emitter
+stop()
+
+// Resets the emitters to their initial state
+resetEmitter()
+
+// Update textures used by the emitter
+setTextures(textures)
+
+// Updates the configuration of the emitter
+updateConfig(config, resetDuration = true)
+
+// Updates the position of the emitter
+updatePosition(position, resetDuration = true)
+
+// Clear pools
+clearPool()
+```
+
+### Additional Resources
+Editor for particles: [custom-pixi-particles-editor](https://github.com/lukasz-okuniewicz/custom-pixi-particles-editor)

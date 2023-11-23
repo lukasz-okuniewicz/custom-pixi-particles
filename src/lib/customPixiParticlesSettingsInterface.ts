@@ -1,6 +1,5 @@
 export interface ICustomPixiParticlesSettings {
   textures: string[]
-  resources: any
   emitterConfig: any
   animatedSpriteZeroPad?: number
   animatedSpriteIndexToStart?: number
@@ -8,5 +7,12 @@ export interface ICustomPixiParticlesSettings {
   finishingTextures?: string[]
   animatedSpriteFrameRate?: number
   animatedSpriteLoop?: boolean
-  PIXI: any
+  vertices?: boolean
+  position?: boolean
+  rotation?: boolean
+  uvs?: boolean
+  tint?: boolean
+  maxParticles?: number
+  maxFPS: number
+  tickerSpeed: number
 }

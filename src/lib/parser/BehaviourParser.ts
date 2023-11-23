@@ -1,18 +1,31 @@
-import { Color, Point } from '../util'
-
+/**
+ * Class used to parse a behaviour object into a JSON config object and vice versa
+ */
 export default class BehaviourParser {
   private readonly _behaviour: any
 
+  /**
+   * Constructs a BehaviourParser object.
+   * @param {any} behaviour The behaviour to be parsed.
+   */
   constructor(behaviour: any) {
     this._behaviour = behaviour
   }
 
+  /**
+   * Writes the behaviour to a config object.
+   * @returns {object} The config object.
+   */
   write = () => {
     const config = JSON.parse(JSON.stringify(this._behaviour))
     config.name = this._behaviour.getName()
     return config
   }
 
+  /**
+   * Reads a config object and sets the behaviour appropriately.
+   * @param {object} config The config object to be read.
+   */
   read = (config: any) => {
     for (const key in config) {
       if (this._behaviour[key] instanceof Object) {
@@ -21,31 +34,5 @@ export default class BehaviourParser {
         this._behaviour[key] = config[key]
       }
     }
-  }
-
-  private writePoint = (point: Point) => {
-    return { x: point.x, y: point.y }
-  }
-
-  private readPoint = (rawData: Point) => {
-    const point = new Point()
-    if (rawData) {
-      point.x = rawData.x || 0
-      point.y = rawData.y || 0
-    }
-    return point
-  }
-
-  private writeColor = (color: Color) => {
-    return { hex: color.hex, alpha: color.alpha }
-  }
-
-  private readColor = (rawData: Color) => {
-    const color = new Color()
-    if (rawData) {
-      color.hex = rawData.hex || 0
-      color.alpha = rawData.alpha || 0
-    }
-    return color
   }
 }

@@ -1,64 +1,81 @@
 // tslint:disable:prefer-for-of
 import engine from '../index'
 import { Emitter } from '../emitter'
-import turbulencePool from '../util/turbulencePool'
 import Particle from '../Particle'
 import BehaviourNames from '../behaviour/BehaviourNames'
 import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
+import { AnimatedSprite, Assets, ParticleContainer, Sprite, Texture, Ticker, utils } from 'pixi.js'
+import Model from '../Model'
 
-export default class Renderer {
+/**
+ * Renderer is a class used to render particles in the Pixi library.
+ *
+ * @class Renderer
+ */
+export default class Renderer extends ParticleContainer {
   blendMode: any
   emitter: Emitter
   turbulenceEmitter: Emitter
-  onComplete: any = () => {}
-  particlesContainer: any;
   private _paused: boolean = false
-  private currentTime: number = 0
-  private lastTime: number = 0
+  private _internalPaused: boolean = false
   private textures: string[]
-  private resources: any
   private zeroPad: number = 2
   private indexToStart: number = 0
   private finishingTextureNames: string[]
-  private pausedTime: number = 0
   private unusedSprites: any[] = []
   private emitterParser: EmitterParser
   private turbulenceParser: EmitterParser
   private config: any
-  private PIXI: any;
+  private anchor: { x: number; y: number } = { x: 0.5, y: 0.5 }
+  private _model: Model = new Model()
+  private _ticker: Ticker | undefined
 
+  /**
+   * Creates an instance of Renderer.
+   *
+   * @memberof Renderer
+   */
   constructor(settings: ICustomPixiParticlesSettings) {
-    const { textures, resources, animatedSpriteZeroPad, animatedSpriteIndexToStart, emitterConfig, finishingTextures, PIXI } = settings
+    const {
+      textures,
+      emitterConfig,
+      finishingTextures,
+      animatedSpriteZeroPad,
+      animatedSpriteIndexToStart,
+      vertices,
+      position,
+      rotation,
+      uvs,
+      tint,
+      maxParticles,
+      maxFPS,
+      tickerSpeed,
+    } = settings
 
-    this.particlesContainer = new PIXI.ParticleContainer(100000, {
-      vertices: true,
-      position: true,
-      rotation: true,
-      uvs: !!(
-        settings.emitterConfig.animatedSprite ||
-        (settings.finishingTextures && settings.finishingTextures.length)
-      ),
-      tint: true,
+    super(maxParticles, {
+      vertices,
+      position,
+      rotation,
+      uvs,
+      tint,
     })
 
-    this.PIXI = PIXI
     this.config = emitterConfig
     this.textures = textures
-    this.resources = resources
+    this.finishingTextureNames = finishingTextures!
     this.zeroPad = animatedSpriteZeroPad!
     this.indexToStart = animatedSpriteIndexToStart!
-    this.finishingTextureNames = finishingTextures!
 
     const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, emitterConfig)
     if (turbulenceConfigIndex !== -1) {
       const turbulenceConfig = emitterConfig.behaviours[turbulenceConfigIndex]
       if (turbulenceConfig.enabled === true) {
-        this.turbulenceEmitter = new engine.Emitter()
+        this.turbulenceEmitter = new engine.Emitter(this._model)
         this.turbulenceParser = this.turbulenceEmitter.getParser()
-        this.turbulenceParser.read(this.buildTurbulenceConfig(turbulenceConfig))
+        this.turbulenceParser.read(this.buildTurbulenceConfig(turbulenceConfig), this._model)
         this.turbulenceEmitter.on(Emitter.CREATE, this.onCreateTurbulence, this)
         this.turbulenceEmitter.on(Emitter.UPDATE, this.onUpdateTurbulence, this)
         this.turbulenceEmitter.on(Emitter.REMOVE, this.onRemoveTurbulence, this)
@@ -66,67 +83,87 @@ export default class Renderer {
     }
 
     if (typeof emitterConfig.alpha !== 'undefined') {
-      this.particlesContainer.alpha = emitterConfig.alpha
+      this.alpha = emitterConfig.alpha
     }
 
     if (typeof emitterConfig.blendMode !== 'undefined') {
       this.blendMode = emitterConfig.blendMode
     }
 
-    this.emitter = new engine.Emitter()
+    if (typeof emitterConfig.anchor !== 'undefined') {
+      this.anchor = emitterConfig.anchor
+    }
+
+    this.emitter = new engine.Emitter(this._model)
     this.emitterParser = this.emitter.getParser()
-    this.emitterParser.read(emitterConfig)
+    this.emitterParser.read(emitterConfig, this._model)
     this.emitter.on(Emitter.CREATE, this.onCreate, this)
     this.emitter.on(Emitter.UPDATE, this.onUpdate, this)
     this.emitter.on(Emitter.FINISHING, this.onFinishing, this)
     this.emitter.on(Emitter.REMOVE, this.onRemove, this)
-    this.emitter.on(Emitter.PLAY, this.onPlay, this)
     this.emitter.on(Emitter.COMPLETE, () => {
       this.onComplete()
     })
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
-      turbulencePool.list = this.turbulenceEmitter.list
+      this.emitter.turbulencePool.list = this.turbulenceEmitter.list
     }
 
-    document.addEventListener('visibilitychange', () => this.paused(document.hidden))
+    document.addEventListener('visibilitychange', () => this.internalPause(document.hidden))
 
-    const ticker = this.PIXI.Ticker.shared
-    ticker.add(() => {
-      this.updateTransform()
-    })
+    const ticker = new Ticker()
+    ticker.maxFPS = maxFPS
+    ticker.speed = tickerSpeed
+    ticker.stop()
+    ticker.add(this._updateTransform, this)
+    ticker.start()
+    this._ticker = ticker
   }
 
+  onComplete: any = () => {
+    /**/
+  }
+
+  /**
+   * Sets the paused state of the object.
+   * @param {boolean} isPaused - The new paused state of the object.
+   * @return {void}
+   */
   pause(isPaused: boolean): void {
     this.paused(isPaused)
   }
 
-  updateTransform() {
+  /**
+   * Updates the transform of the ParticleContainer and updates the emitters.
+   */
+  _updateTransform(deltaTime: number) {
     if (this._paused) return
-    this.currentTime = performance.now()
 
-    if (this.lastTime === 0) {
-      this.lastTime = this.currentTime
-    }
-
-    this.emitter.update((this.currentTime - this.lastTime) / 1000)
+    this.emitter.update(deltaTime)
     if (this.turbulenceEmitter) {
-      this.turbulenceEmitter.update((this.currentTime - this.lastTime) / 1000)
+      this.turbulenceEmitter.update(deltaTime)
     }
-
-    this.lastTime = this.currentTime
   }
 
+  /**
+   *
+   * @method updateTexture
+   * @description This method updates the texture of the unused sprites and children to a randomly generated texture.
+   */
   updateTexture() {
     for (let i = 0; i < this.unusedSprites.length; ++i) {
-      this.unusedSprites[i].texture = this.PIXI.Texture.from(this.getRandomTexture())
+      this.unusedSprites[i].texture = Assets.get(this.getRandomTexture())
     }
 
-    for (let i = 0; i < this.particlesContainer.children.length; ++i) {
+    for (let i = 0; i < this.children.length; ++i) {
       // @ts-ignore
-      this.children[i].texture = this.PIXI.Texture.from(this.getRandomTexture())
+      this.children[i].texture = Assets.get(this.getRandomTexture())
     }
   }
 
+  /**
+   * This method is used to start the emitter and turbulenceEmitter if available.
+   * @function start
+   */
   start() {
     this.emitter.resetAndPlay()
     if (this.turbulenceEmitter) {
@@ -134,6 +171,10 @@ export default class Renderer {
     }
   }
 
+  /**
+   * Resets the particle emitters in this class without removing existing particles and plays them.
+   * @function play
+   */
   play() {
     this.emitter.resetWithoutRemovingAndPlay()
     if (this.turbulenceEmitter) {
@@ -141,7 +182,12 @@ export default class Renderer {
     }
   }
 
+  /**
+   * Immediately stops emitting particles
+   */
   stopImmediately() {
+    this._ticker?.destroy()
+    this._ticker = undefined
     this.emitter.stop()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.stop()
@@ -149,6 +195,17 @@ export default class Renderer {
     this.emitter.emit(Emitter.COMPLETE)
   }
 
+  /**
+   * Destroy particles
+   */
+  destroy() {
+    this.stopImmediately()
+    super.destroy()
+  }
+
+  /**
+   * Terminates the emitter and any turbulence emitter it is associated with
+   */
   stop() {
     this.emitter.stopWithoutKilling()
     if (this.turbulenceEmitter) {
@@ -156,6 +213,9 @@ export default class Renderer {
     }
   }
 
+  /**
+   * Resets the emitters to their initial state
+   */
   resetEmitter() {
     this.emitter.reset()
     if (this.turbulenceEmitter) {
@@ -163,37 +223,54 @@ export default class Renderer {
     }
   }
 
+  /**
+   * Sets the textures used by the emitter
+   * @param {string[]} textures - Array of strings containing the textures to be used by the emitter
+   */
   setTextures(textures: string[]) {
     this.textures = textures
     this.updateTexture()
   }
 
-  updateConfig(config: any) {
-    this.emitterParser.update(config)
+  /**
+   * Updates the configuration of the emitter
+   * @param {any} config - Configuration object to be used to update the emitter
+   * @param {boolean} resetDuration - should duration be reset
+   */
+  updateConfig(config: any, resetDuration = false) {
+    this.emitterParser.update(config, this._model, resetDuration)
     if (this.turbulenceEmitter) {
       const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
       if (turbulenceConfigIndex !== -1) {
         const turbulenceConfig = config.behaviours[turbulenceConfigIndex]
         if (turbulenceConfig.enabled === true) {
-          this.turbulenceParser.update(this.buildTurbulenceConfig(turbulenceConfig))
+          this.turbulenceParser.update(this.buildTurbulenceConfig(turbulenceConfig), this._model, resetDuration)
         }
       }
     }
   }
 
-  updatePosition(position: { x: number, y: number }) {
+  /**
+   * Updates the position of the emitter
+   * @param {Object} position - Object containing the x and y coordinates of the new position
+   * @param {boolean} resetDuration - should duration be reset
+   */
+  updatePosition(position: { x: number; y: number }, resetDuration = true) {
     const positionBehaviour = this.getByName(BehaviourNames.POSITION_BEHAVIOUR)
     positionBehaviour.position.x = position.x
     positionBehaviour.position.y = position.y
-    this.emitterParser.update(this.config)
+    this.emitterParser.update(this.config, this._model, resetDuration)
   }
 
+  /**
+   * Clears the sprite pool, the unused sprites list and the turbulence and particle pools.
+   */
   clearPool() {
-    this.particlesContainer.removeChildren()
+    this.removeChildren()
     this.unusedSprites = []
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
-      turbulencePool.list.reset()
-      turbulencePool.list = new List()
+      this.emitter.turbulencePool.list.reset()
+      this.emitter.turbulencePool.list = new List()
     }
     this.emitter.list.reset()
     this.emitter.list = new List()
@@ -214,46 +291,34 @@ export default class Renderer {
     if (this.unusedSprites.length > 0) {
       const sprite = this.unusedSprites.pop()
       if (this.finishingTextureNames && this.finishingTextureNames.length) {
-        sprite.texture = this.PIXI.Texture.from(this.getRandomTexture())
+        sprite.texture = Assets.get(this.getRandomTexture())
       }
       return sprite
     }
 
     if (this.emitter.animatedSprite) {
-      const textures: string[] = this.createFrameAnimationByName(this.getRandomTexture())
+      const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
       if (textures.length) {
-        const animation: any = new this.PIXI.AnimatedSprite(textures)
-        animation.anchor.set(0.5)
+        const animation: AnimatedSprite = new AnimatedSprite(textures)
+        animation.anchor.set(this.anchor.x, this.anchor.y)
         animation.loop = this.emitter.animatedSprite.loop
-        animation.play()
         animation.animationSpeed = this.emitter.animatedSprite.frameRate
-        return this.particlesContainer.addChild(animation)
+        return this.addChild(animation)
       }
     }
 
-    const sprite = new this.PIXI.Sprite(this.PIXI.Texture.from(this.getRandomTexture()))
-    sprite.anchor.set(0.5)
-    return this.particlesContainer.addChild(sprite)
+    const sprite = new Sprite(Assets.get(this.getRandomTexture()))
+    sprite.anchor.set(this.anchor.x, this.anchor.y)
+    return this.addChild(sprite)
   }
 
-  private createFrameAnimationByName(
-    prefix: any,
-    imageFileExtension: string = 'png',
-  ): any[] {
+  private createFrameAnimationByName(prefix: string, imageFileExtension: string = 'png'): Texture[] {
     const zeroPad = this.zeroPad
-    const textures: string[] = []
+    const textures: any = []
     let frame: string = ''
     let indexFrame: number = this.indexToStart
     let padding: number = 0
-    let texture: any | null
-    const sheets = []
-    const resources = this.resources
-    for (const key in resources) {
-      if (resources[key].extension === 'json') {
-        // @ts-ignore
-        sheets.push(resources[key].spritesheet)
-      }
-    }
+    let texture: Texture | null
 
     do {
       frame = indexFrame.toString()
@@ -263,36 +328,20 @@ export default class Renderer {
       }
 
       try {
-        let found = false
-        for (const sheet of sheets) {
-          if (sheet && sheet.textures[`${prefix}${frame}.${imageFileExtension}`]) {
-            found = true
-          }
-        }
-        if (found) {
-          texture = this.PIXI.Texture.from(`${prefix}${frame}.${imageFileExtension}`)
+        const fileName = `${prefix}${frame}.${imageFileExtension}`
+        const file = utils.TextureCache[fileName]
+        if (file) {
+          texture = Assets.get(fileName)
           textures.push(texture)
           indexFrame += 1
         } else {
           texture = null
-          for (const key in resources) {
-            if (key === `${prefix}_${frame}.${imageFileExtension}`) {
-              texture = this.PIXI.Texture.from(`${prefix}${frame}.${imageFileExtension}`)
-              textures.push(texture)
-              indexFrame += 1
-            }
-          }
         }
       } catch (e) {
         texture = null
       }
     } while (texture)
     return textures
-  }
-
-  private onPlay() {
-    this.currentTime = 0
-    this.lastTime = 0
   }
 
   private onCreate(particle: Particle) {
@@ -302,18 +351,26 @@ export default class Renderer {
     if (this.blendMode) {
       sprite.blendMode = this.blendMode
     }
+    if (sprite instanceof AnimatedSprite) {
+      if (this.emitter.animatedSprite.randomFrameStart) {
+        const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
+        sprite.gotoAndPlay(this.getRandomFrameNumber(textures.length))
+      } else {
+        sprite.play()
+      }
+    }
     particle.sprite = sprite
   }
 
   private onCreateTurbulence(particle: Particle) {
     let sprite
     if (particle.showVortices) {
-      sprite = new this.PIXI.Sprite(this.PIXI.Texture.from('vortex.png'))
+      sprite = new Sprite(Assets.get('vortex.png'))
     } else {
-      sprite = new this.PIXI.Sprite()
+      sprite = new Sprite()
     }
-    sprite.anchor.set(0.5)
-    this.particlesContainer.addChild(sprite)
+    sprite.anchor.set(this.anchor.x, this.anchor.y)
+    this.addChild(sprite)
     sprite.visible = false
     sprite.alpha = 0
     particle.sprite = sprite
@@ -357,7 +414,7 @@ export default class Renderer {
     if (!this.finishingTextureNames || !this.finishingTextureNames.length) return
     const sprite = particle.sprite
     if (particle.finishingTexture <= this.finishingTextureNames.length - 1) {
-      sprite.texture = this.PIXI.Texture.from(this.finishingTextureNames[particle.finishingTexture])
+      sprite.texture = Assets.get(this.getRandomFinishingTexture())
       particle.finishingTexture++
     }
   }
@@ -370,8 +427,9 @@ export default class Renderer {
     }
     particle.finishingTexture = 0
     this.unusedSprites.push(sprite)
-    // this.removeChild(sprite)
-    // delete particle.sprite
+    if (sprite instanceof AnimatedSprite) {
+      sprite.stop()
+    }
   }
 
   private onRemoveTurbulence(particle: Particle) {
@@ -380,7 +438,7 @@ export default class Renderer {
       sprite.visible = false
       sprite.alpha = 0
     }
-    this.particlesContainer.removeChild(sprite)
+    this.removeChild(sprite)
     delete (particle as any).sprite
   }
 
@@ -388,16 +446,28 @@ export default class Renderer {
     return this.textures[Math.floor(Math.random() * this.textures.length)]
   }
 
+  private getRandomFinishingTexture(): string {
+    return this.finishingTextureNames[Math.floor(Math.random() * this.finishingTextureNames.length)]
+  }
+
+  private getRandomFrameNumber(textures: number): number {
+    return Math.floor(Math.random() * textures)
+  }
+
   private paused(paused: boolean) {
     if (paused === this._paused) return
-
-    if (paused) {
-      this.pausedTime = performance.now()
-    } else {
-      this.pausedTime = 0
-      this.lastTime = performance.now() - this.pausedTime
-    }
     this._paused = paused
+    if (paused) {
+      this._ticker?.stop()
+    } else {
+      this._ticker?.start()
+    }
+  }
+
+  private internalPause(paused: boolean) {
+    if (this._paused) return
+    if (paused === this._internalPaused) return
+    this._internalPaused = paused
   }
 
   private getConfigIndexByName(name: string, config: any) {

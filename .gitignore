@@ -4,3 +4,4 @@ node_modules/
 src/**/*.jsx
 tests/__coverage__/
 tests/**/*.jsx
+copy.js

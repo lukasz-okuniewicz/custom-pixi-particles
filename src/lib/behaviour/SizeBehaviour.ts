@@ -12,7 +12,6 @@ export default class SizeBehaviour extends Behaviour {
   endVariance = 0
 
   init = (particle: Particle) => {
-    if (!this.enabled) return
     let variance = this.varianceFrom(this.startVariance)
     particle.sizeStart.x = this.sizeStart.x + variance
     particle.sizeStart.y = this.sizeStart.y + variance
@@ -31,8 +30,7 @@ export default class SizeBehaviour extends Behaviour {
     particle.size.copyFrom(particle.sizeStart)
   }
 
-  apply = (particle: Particle, deltaTime: number) => {
-    if (!this.enabled) return
+  apply = (particle: Particle) => {
     particle.size.copyFrom(particle.sizeStart)
     particle.size.x += (particle.sizeEnd.x - particle.sizeStart.x) * particle.lifeProgress
     particle.size.y += (particle.sizeEnd.y - particle.sizeStart.y) * particle.lifeProgress
