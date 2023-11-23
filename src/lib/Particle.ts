@@ -1,4 +1,4 @@
-import { Sprite } from 'pixi.js-legacy'
+import { Sprite } from 'pixi.js'
 import { Color, Point } from './util'
 
 /**

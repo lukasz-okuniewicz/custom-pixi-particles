@@ -6,11 +6,6 @@ import TurbulencePool from '../util/turbulencePool'
 import Model from '../Model'
 
 export default class TurbulenceBehaviour extends Behaviour {
-  private enabled: boolean = false
-  private showVortices: boolean = false
-  private effect: number = 0
-  private turbulence: boolean = false
-  private vortexOrgSize: number = 128
   position = new Point()
   positionVariance = new Point()
   velocity = new Point()
@@ -25,6 +20,11 @@ export default class TurbulenceBehaviour extends Behaviour {
   duration = 0
   maxLifeTime = 0
   turbulencePool: TurbulencePool
+  private enabled: boolean = false
+  private showVortices: boolean = false
+  private effect: number = 0
+  private turbulence: boolean = false
+  private vortexOrgSize: number = 128
 
   init = (particle: Particle, model: Model, turbulencePool: TurbulencePool) => {
     particle.showVortices = this.showVortices
@@ -36,9 +36,9 @@ export default class TurbulenceBehaviour extends Behaviour {
     if (particle.turbulence) return
 
     this.turbulencePool.list.forEach((vortex: Particle) => {
-      let vx = 0,
-        vy = 0,
-        factor = 0
+      let vx = 0
+      let vy = 0
+      let factor = 0
 
       const dx = particle.x - vortex.x
       const dy = particle.y - vortex.y

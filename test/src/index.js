@@ -1,5 +1,5 @@
 import { customPixiParticles } from 'custom-pixi-particles'
-import { Application } from 'pixi.js-legacy'
+import { Application } from 'pixi.js'
 
 const config = {
   emitterConfig: {
