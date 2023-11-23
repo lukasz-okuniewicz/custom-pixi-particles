@@ -15,6 +15,9 @@ CustomPIXIParticles is a lightweight and flexible library for creating and manag
 | v5.x - v6.x | v4.x |
 | v7.x | v5.x |
 
+### Demo 
+[custom-pixi-particles](http://particles.okuniewicz.eu/)
+
 #### Installation:
 
 ```
