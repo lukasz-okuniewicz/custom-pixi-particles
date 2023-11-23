@@ -51,7 +51,7 @@ container.addChild(this.particles)
 // All possible params which can be passed during particles creation
 this.particles = customPixiParticles.create({
   textures: [String],
-  animatedSpriteZeroPad: Boolean,
+  animatedSpriteZeroPad: Number,
   animatedSpriteIndexToStart: Number,
   emitterConfig: Object,
   finishingTextures: [String],
