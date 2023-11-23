@@ -6,7 +6,7 @@ CustomPIXIParticles is a lightweight and flexible library for creating and manag
 * Easy-to-use API: Create particle emitters with just a few lines of code
 * Flexible configuration: Customize particle behavior, appearance, and animation
 * High performance: Render particles efficiently without impacting application performance
-* Compatible with PIXI.js v6: Works seamlessly with the latest version of PIXI.js
+* Compatible with PIXI.js v7: Works seamlessly with the latest version of PIXI.js
 
 ### Versions Compatibility
 
