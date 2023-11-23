@@ -107,9 +107,10 @@ export default class EmitterParser {
    * @description Updates the emitter configuration from a json object
    * @param {Object} config - the emitter configuration
    * @param {Model} model - the model to be updated
+   * @param {boolean} resetDuration - should duration be reset
    * @returns {Emitter} - the emitter
    */
-  update = (config: any, model: Model) => {
+  update = (config: any, model: Model, resetDuration: boolean) => {
     const behavioursConfig = config.behaviours
     const existingBehaviours = this.emitter.behaviours.getAll()
     const alwaysCreate = this.emitter.behaviours.isEmpty()
@@ -128,7 +129,9 @@ export default class EmitterParser {
 
     this.emitter.emitController.getParser().read(config.emitController)
     this.emitter.duration.maxTime = CompatibilityHelper.readDuration(config)
-    this.emitter.duration.reset()
+    if (resetDuration) {
+      this.emitter.duration.reset()
+    }
 
     if (typeof config.alpha !== 'undefined') {
       this.emitter.alpha = config.alpha

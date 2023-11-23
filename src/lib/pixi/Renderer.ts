@@ -32,7 +32,7 @@ export default class Renderer extends ParticleContainer {
   private config: any
   private anchor: { x: number; y: number } = { x: 0.5, y: 0.5 }
   private _model: Model = new Model()
-  private _ticker: Ticker
+  private _ticker: Ticker | undefined
 
   /**
    * Creates an instance of Renderer.
@@ -103,7 +103,6 @@ export default class Renderer extends ParticleContainer {
     this.emitter.on(Emitter.FINISHING, this.onFinishing, this)
     this.emitter.on(Emitter.REMOVE, this.onRemove, this)
     this.emitter.on(Emitter.COMPLETE, () => {
-      this._ticker.stop()
       this.onComplete()
     })
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
@@ -184,8 +183,8 @@ export default class Renderer extends ParticleContainer {
    * Immediately stops emitting particles
    */
   stopImmediately() {
-    this._ticker.stop()
-    this._ticker.destroy()
+    this._ticker?.destroy()
+    this._ticker = undefined
     this.emitter.stop()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.stop()
@@ -233,15 +232,16 @@ export default class Renderer extends ParticleContainer {
   /**
    * Updates the configuration of the emitter
    * @param {any} config - Configuration object to be used to update the emitter
+   * @param {boolean} resetDuration - should duration be reset
    */
-  updateConfig(config: any) {
-    this.emitterParser.update(config, this._model)
+  updateConfig(config: any, resetDuration = false) {
+    this.emitterParser.update(config, this._model, resetDuration)
     if (this.turbulenceEmitter) {
       const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
       if (turbulenceConfigIndex !== -1) {
         const turbulenceConfig = config.behaviours[turbulenceConfigIndex]
         if (turbulenceConfig.enabled === true) {
-          this.turbulenceParser.update(this.buildTurbulenceConfig(turbulenceConfig), this._model)
+          this.turbulenceParser.update(this.buildTurbulenceConfig(turbulenceConfig), this._model, resetDuration)
         }
       }
     }
@@ -250,12 +250,13 @@ export default class Renderer extends ParticleContainer {
   /**
    * Updates the position of the emitter
    * @param {Object} position - Object containing the x and y coordinates of the new position
+   * @param {boolean} resetDuration - should duration be reset
    */
-  updatePosition(position: { x: number; y: number }) {
+  updatePosition(position: { x: number; y: number }, resetDuration = true) {
     const positionBehaviour = this.getByName(BehaviourNames.POSITION_BEHAVIOUR)
     positionBehaviour.position.x = position.x
     positionBehaviour.position.y = position.y
-    this.emitterParser.update(this.config, this._model)
+    this.emitterParser.update(this.config, this._model, resetDuration)
   }
 
   /**
@@ -473,9 +474,9 @@ export default class Renderer extends ParticleContainer {
     if (paused === this._paused) return
     this._paused = paused
     if (paused) {
-      this._ticker.stop()
+      this._ticker?.stop()
     } else {
-      this._ticker.start()
+      this._ticker?.start()
     }
   }
 
