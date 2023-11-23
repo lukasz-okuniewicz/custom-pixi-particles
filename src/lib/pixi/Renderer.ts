@@ -19,7 +19,6 @@ export default class Renderer extends ParticleContainer {
   blendMode: any
   emitter: Emitter
   turbulenceEmitter: Emitter
-  onComplete: any = () => {}
   private _paused: boolean = false
   private _internalPaused: boolean = false
   private textures: string[]
@@ -118,6 +117,10 @@ export default class Renderer extends ParticleContainer {
     ticker.add(this._updateTransform, this)
     ticker.start()
     this._ticker = ticker
+  }
+
+  onComplete: any = () => {
+    /**/
   }
 
   /**
