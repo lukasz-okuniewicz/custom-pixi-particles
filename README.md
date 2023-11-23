@@ -8,6 +8,13 @@ CustomPIXIParticles is a lightweight and flexible library for creating and manag
 * High performance: Render particles efficiently without impacting application performance
 * Compatible with PIXI.js v6: Works seamlessly with the latest version of PIXI.js
 
+### Versions Compatibility
+
+| PixiJS | CustomPIXIParticles |
+|---|---|
+| v5.x - v6.x | v4.x |
+| v7.x | v5.x |
+
 #### Installation:
 
 ```
