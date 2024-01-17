@@ -31,6 +31,7 @@ export default class RotationBehaviour extends Behaviour {
    * @param {Particle} particle - The particle to be initialised
    */
   init = (particle: Particle) => {
+    if (!this.enabled) return
     particle.rotationDelta = this.rotation + this.varianceFrom(this.variance)
   }
 
@@ -40,6 +41,7 @@ export default class RotationBehaviour extends Behaviour {
    * @param {number} deltaTime - The delta time of the runtime
    */
   apply = (particle: Particle, deltaTime: number) => {
+    if (!this.enabled) return
     particle.rotation += particle.rotationDelta * deltaTime
   }
 
