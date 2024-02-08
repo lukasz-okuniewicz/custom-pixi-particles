@@ -25,8 +25,8 @@ export default class Point {
    * @return {Point} - The Point instance
    */
   copyFrom = (point: IPoint) => {
-    this.x = point.x
-    this.y = point.y
+    this.x = point.x || 0
+    this.y = point.y || 0
     return this
   }
 

@@ -9,6 +9,7 @@
     "copy-dir": "^1.3.0",
     "file-saver": "^2.0.5",
     "pixi.js-legacy": "^6.5.10",
+    "gsap": "^3.12.5",
     "prettier": "^3.2.4",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
@@ -40,5 +41,5 @@
     "lint": "tslint 'src/**/*.ts'",
     "lint:fix": "tslint --fix 'src/**/*.ts'"
   },
-  "version": "4.1.17"
+  "version": "4.2.0"
 }
