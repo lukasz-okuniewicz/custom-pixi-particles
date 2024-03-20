@@ -41,5 +41,5 @@
     "lint": "tslint 'src/**/*.ts'",
     "lint:fix": "tslint --fix 'src/**/*.ts'"
   },
-  "version": "4.2.1"
+  "version": "4.2.2"
 }
