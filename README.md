@@ -50,18 +50,43 @@ container.addChild(this.particles)
 ```javascript
 // All possible params which can be passed during particles creation
 this.particles = customPixiParticles.create({
+  // An array of paths to the particle textures (as strings)
   textures: [String],
+
+  // Zero-padding for animated sprite filenames (e.g., "fire-0001.png")
   animatedSpriteZeroPad: Number,
+
+  // Index of the first sprite in an animated sprite sequence
   animatedSpriteIndexToStart: Number,
+
+  // Configuration object for the particle emitter that controls particle generation
   emitterConfig: Object,
+
+  // An optional array of paths to textures for finishing particles (after the main lifetime)
   finishingTextures: [String],
+
+  // Boolean flag to include particle vertices data (required for some particle effects)
   vertices: Boolean,
+
+  // Boolean flag to include particle positions data
   position: Boolean,
+
+  // Boolean flag to include particle rotations data
   rotation: Boolean,
+
+  // Boolean flag to include particle UV coordinates data
   uvs: Boolean,
+
+  // Boolean flag to include particle tint colors data
   tint: Boolean,
+
+  // Maximum number of particles to simulate simultaneously
   maxParticles: Number,
+
+  // Target frames per second for particle simulation (affects update frequency)
   maxFPS: Number,
+
+  // Speed multiplier for the ticker (controls how often particles are updated)
   tickerSpeed: Number,
 })
 ```
