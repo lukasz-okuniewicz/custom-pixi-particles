@@ -119,6 +119,8 @@ export default class Particle {
    * Stores the radius of the particle
    */
   radius: number
+  radiusX: number
+  radiusY: number
 
   /**
    * Stores the starting radius of the particle
