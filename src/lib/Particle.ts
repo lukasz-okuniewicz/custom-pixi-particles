@@ -1,5 +1,6 @@
 import { Sprite } from 'pixi.js'
 import { Color, Point } from './util'
+import ThereBack from './util/ThereBack'
 
 /**
  * Represents a particle object used in particle system simulations
@@ -211,6 +212,24 @@ export default class Particle {
 
   sizeDifference: { x: number; y: number }
 
+  fromAtoB: boolean = false
+  fromAtoBTwoWays: boolean = false
+  pointA: Point = new Point()
+  pointB: Point = new Point()
+  there: ThereBack = new ThereBack()
+  back: ThereBack = new ThereBack()
+  xStart: number = 0
+  yStart: number = 0
+  xTarget: number = 0
+  yTarget: number = 0
+  thereDuration: number = 1
+  backDuration: number = 1
+  progress: number = 0
+  time: number = 0
+  thereAmplitude: number = 10
+  backAmplitude: number = 10
+  direction: number = 1
+
   /**
    * Constructs a particle object
    */
@@ -268,6 +287,24 @@ export default class Particle {
     this.warpFov = 20
     this.warpStretch = 5
     this.warpDistanceScaleConverter = 2000
+
+    this.fromAtoB = false
+    this.fromAtoBTwoWays = false
+    this.pointA.set(0, 0)
+    this.pointB.set(0, 0)
+    this.there.set('', '', '')
+    this.back.set('', '', '')
+    this.thereDuration = 1
+    this.backDuration = 1
+    this.thereAmplitude = 10
+    this.backAmplitude = 10
+    this.progress = 0
+    this.direction = 1
+    this.time = 0
+    this.xStart = 0
+    this.yStart = 0
+    this.xTarget = 0
+    this.yTarget = 0
   }
 
   /**
