@@ -3,8 +3,8 @@ import { AbstractEmission, EmissionTypes } from './index'
 /**
  * The StandardEmission class is an abstract class extending from AbstractEmission.
  *
- * It provides methods for calculating the number of particles emitted in an interval of time
- * and setting/getting the emission rate and maximum number of particles.
+ * It provides methods for calculating the number of particles emitted
+ * in an interval of time and setting/getting the emission rate and maximum number of particles.
  *
  * @abstract
  */
