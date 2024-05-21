@@ -10,6 +10,8 @@ export default class PositionBehaviour extends Behaviour {
   priority = 100
   spawnType: string = 'Rectangle'
   radius: number = 0
+  radiusX: number = 0
+  radiusY: number = 0
   warp: boolean = false
   warpSpeed: number = 0
   warpBaseSpeed: number = 0
@@ -59,6 +61,18 @@ export default class PositionBehaviour extends Behaviour {
       } else if (this.spawnType === 'Frame') {
         const w = this.radius
         const h = this.radius
+        if (Math.random() < w / (w + h)) {
+          particle.movement.x = Math.random() * w + particle.movement.x
+          particle.movement.y = Math.random() < 0.5 ? particle.movement.y : particle.movement.y + h - 1
+        } else {
+          particle.movement.y = Math.random() * h + particle.movement.y
+          particle.movement.x = Math.random() < 0.5 ? particle.movement.x : particle.movement.x + w - 1
+        }
+        particle.movement.x += this.calculate(this.position.x, this.positionVariance.x)
+        particle.movement.y += this.calculate(this.position.y, this.positionVariance.y)
+      } else if (this.spawnType === 'FrameRectangle') {
+        const w = this.radiusX
+        const h = this.radiusY
         if (Math.random() < w / (w + h)) {
           particle.movement.x = Math.random() * w + particle.movement.x
           particle.movement.y = Math.random() < 0.5 ? particle.movement.y : particle.movement.y + h - 1
@@ -428,6 +442,8 @@ export default class PositionBehaviour extends Behaviour {
       priority: this.priority,
       spawnType: this.spawnType,
       radius: this.radius,
+      radiusX: this.radiusX,
+      radiusY: this.radiusY,
       fromAtoB: this.fromAtoB,
       fromAtoBTwoWays: this.fromAtoBTwoWays,
       there: {
