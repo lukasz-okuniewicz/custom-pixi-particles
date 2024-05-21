@@ -317,7 +317,7 @@ export default class PositionBehaviour extends Behaviour {
       }
 
       particle.time += deltaTime
-      if (particle.direction) {
+      if (particle.direction === 1) {
         particle.progress = particle.time / particle.thereDuration
       } else {
         particle.progress = particle.time / particle.backDuration
