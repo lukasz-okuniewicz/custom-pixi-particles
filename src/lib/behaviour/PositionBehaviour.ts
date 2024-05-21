@@ -452,9 +452,9 @@ export default class PositionBehaviour extends Behaviour {
         ease: this.there.ease,
       },
       back: {
-        x: this.there.x,
-        y: this.there.y,
-        ease: this.there.ease,
+        x: this.back.x,
+        y: this.back.y,
+        ease: this.back.ease,
       },
       pointA: {
         x: this.pointA.x,
@@ -492,24 +492,24 @@ export default class PositionBehaviour extends Behaviour {
         y: this.position.y,
       },
       positionVariance: {
-        x: this.position.x,
-        y: this.position.y,
+        x: this.positionVariance.x,
+        y: this.positionVariance.y,
       },
       velocity: {
-        x: this.position.x,
-        y: this.position.y,
+        x: this.velocity.x,
+        y: this.velocity.y,
       },
       velocityVariance: {
-        x: this.position.x,
-        y: this.position.y,
+        x: this.velocityVariance.x,
+        y: this.velocityVariance.y,
       },
       acceleration: {
-        x: this.position.x,
-        y: this.position.y,
+        x: this.acceleration.x,
+        y: this.acceleration.y,
       },
       accelerationVariance: {
-        x: this.position.x,
-        y: this.position.y,
+        x: this.accelerationVariance.x,
+        y: this.accelerationVariance.y,
       },
       warpSpeed: this.warpSpeed,
       warpBaseSpeed: this.warpBaseSpeed,

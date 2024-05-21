@@ -71,8 +71,8 @@ export default class SizeBehaviour extends Behaviour {
         y: this.sizeStart.y,
       },
       sizeEnd: {
-        x: this.sizeStart.x,
-        y: this.sizeStart.y,
+        x: this.sizeEnd.x,
+        y: this.sizeEnd.y,
       },
       startVariance: this.startVariance,
       endVariance: this.endVariance,
