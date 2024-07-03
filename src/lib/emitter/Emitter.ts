@@ -6,7 +6,7 @@ import { EmitterParser } from '../parser'
 import List from '../util/List'
 import * as emission from '../emission'
 import Particle from '../Particle'
-import { BLEND_MODES } from 'pixi.js-legacy'
+import { AnimatedSprite, BLEND_MODES } from 'pixi.js-legacy'
 import Model from '../Model'
 import TurbulencePool from '../util/turbulencePool'
 
@@ -207,6 +207,22 @@ export default class Emitter extends eventemitter3 {
     })
     this.turbulencePool.list.forEach((particle: Particle) => {
       this.removeParticle(particle)
+    })
+  }
+
+  pause() {
+    this.list.forEach((particle: Particle) => {
+      if (particle.sprite instanceof AnimatedSprite) {
+        particle.sprite.stop()
+      }
+    })
+  }
+
+  resume() {
+    this.list.forEach((particle: Particle) => {
+      if (particle.sprite instanceof AnimatedSprite) {
+        particle.sprite.play()
+      }
     })
   }
 }

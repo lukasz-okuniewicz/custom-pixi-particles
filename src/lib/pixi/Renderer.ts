@@ -125,11 +125,21 @@ export default class Renderer extends ParticleContainer {
 
   /**
    * Sets the paused state of the object.
-   * @param {boolean} isPaused - The new paused state of the object.
-   * @return {void}
+   *
+   * @param {boolean} [isPaused=true] - The new paused state of the object. Defaults to `true`.
+   * @returns {void}
    */
-  pause(isPaused: boolean): void {
+  pause(isPaused: boolean = true): void {
     this.paused(isPaused)
+  }
+
+  /**
+   * Resumes the object's operation by setting its paused state to false.
+   *
+   * @returns {void}
+   */
+  resume(): void {
+    this.paused(false)
   }
 
   /**
@@ -478,8 +488,10 @@ export default class Renderer extends ParticleContainer {
     this._paused = paused
     if (paused) {
       this._ticker?.stop()
+      this.emitter.pause()
     } else {
       this._ticker?.start()
+      this.emitter.resume()
     }
   }
 
