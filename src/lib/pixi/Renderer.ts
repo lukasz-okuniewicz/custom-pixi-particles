@@ -32,6 +32,7 @@ export default class Renderer extends ParticleContainer {
   private anchor: { x: number; y: number } = { x: 0.5, y: 0.5 }
   private _model: Model = new Model()
   private _ticker: Ticker | undefined
+  private _visibilitychangeBinding: any
 
   /**
    * Creates an instance of Renderer.
@@ -101,14 +102,13 @@ export default class Renderer extends ParticleContainer {
     this.emitter.on(Emitter.UPDATE, this.onUpdate, this)
     this.emitter.on(Emitter.FINISHING, this.onFinishing, this)
     this.emitter.on(Emitter.REMOVE, this.onRemove, this)
-    this.emitter.on(Emitter.COMPLETE, () => {
-      this.onComplete()
-    })
+    this.emitter.on(Emitter.COMPLETE, this.onComplete, this)
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       this.emitter.turbulencePool.list = this.turbulenceEmitter.list
     }
 
-    document.addEventListener('visibilitychange', () => this.internalPause(document.hidden))
+    this._visibilitychangeBinding = () => this.internalPause(document.hidden)
+    document.addEventListener('visibilitychange', this._visibilitychangeBinding)
 
     const ticker = new Ticker()
     ticker.maxFPS = maxFPS
@@ -148,7 +148,7 @@ export default class Renderer extends ParticleContainer {
   _updateTransform(deltaTime: number) {
     if (this._paused) return
 
-    this.emitter.update(deltaTime)
+    this.emitter?.update(deltaTime)
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.update(deltaTime)
     }
@@ -175,7 +175,7 @@ export default class Renderer extends ParticleContainer {
    * @function start
    */
   start() {
-    this.emitter.resetAndPlay()
+    this.emitter?.resetAndPlay()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.resetAndPlay()
     }
@@ -186,7 +186,7 @@ export default class Renderer extends ParticleContainer {
    * @function play
    */
   play() {
-    this.emitter.resetWithoutRemovingAndPlay()
+    this.emitter?.resetWithoutRemovingAndPlay()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.resetWithoutRemovingAndPlay()
     }
@@ -198,11 +198,11 @@ export default class Renderer extends ParticleContainer {
   stopImmediately() {
     this._ticker?.destroy()
     this._ticker = undefined
-    this.emitter.stop()
+    this.emitter?.stop()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.stop()
     }
-    this.emitter.emit(Emitter.COMPLETE)
+    this.emitter?.emit(Emitter.COMPLETE)
   }
 
   /**
@@ -211,13 +211,42 @@ export default class Renderer extends ParticleContainer {
   destroy() {
     this.stopImmediately()
     super.destroy()
+    if (this.emitter) {
+      this.emitter.destroy()
+      this.emitter.off(Emitter.CREATE, this.onCreate, this)
+      this.emitter.off(Emitter.UPDATE, this.onUpdate, this)
+      this.emitter.off(Emitter.FINISHING, this.onFinishing, this)
+      this.emitter.off(Emitter.REMOVE, this.onRemove, this)
+      this.emitter.off(Emitter.COMPLETE, this.onComplete, this)
+      // @ts-ignore
+      this.emitter = undefined
+    }
+    // @ts-ignore
+    this.turbulenceEmitter = undefined
+    // @ts-ignore
+    this.turbulenceParser = undefined
+    // @ts-ignore
+    this.unusedSprites = undefined
+    // @ts-ignore
+    this._model = undefined
+    this.onComplete = undefined
+    this.config = undefined
+    // @ts-ignore
+    this.textures = undefined
+    // @ts-ignore
+    this.finishingTextureNames = undefined
+    // @ts-ignore
+    this.emitterParser = undefined
+    // @ts-ignore
+    this.textures = undefined
+    document.removeEventListener('visibilitychange', this._visibilitychangeBinding)
   }
 
   /**
    * Terminates the emitter and any turbulence emitter it is associated with
    */
   stop() {
-    this.emitter.stopWithoutKilling()
+    this.emitter?.stopWithoutKilling()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.stop()
     }
@@ -227,7 +256,7 @@ export default class Renderer extends ParticleContainer {
    * Resets the emitters to their initial state
    */
   resetEmitter() {
-    this.emitter.reset()
+    this.emitter?.reset()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.reset()
     }
@@ -248,7 +277,7 @@ export default class Renderer extends ParticleContainer {
    * @param {boolean} resetDuration - should duration be reset
    */
   updateConfig(config: any, resetDuration = false) {
-    this.emitterParser.update(config, this._model, resetDuration)
+    this.emitterParser?.update(config, this._model, resetDuration)
     if (this.turbulenceEmitter) {
       const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
       if (turbulenceConfigIndex !== -1) {
@@ -269,7 +298,7 @@ export default class Renderer extends ParticleContainer {
     const positionBehaviour = this.getByName(BehaviourNames.POSITION_BEHAVIOUR)
     positionBehaviour.position.x = position.x
     positionBehaviour.position.y = position.y
-    this.emitterParser.update(this.config, this._model, resetDuration)
+    this.emitterParser?.update(this.config, this._model, resetDuration)
   }
 
   /**
@@ -279,11 +308,15 @@ export default class Renderer extends ParticleContainer {
     this.removeChildren()
     this.unusedSprites = []
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
-      this.emitter.turbulencePool.list.reset()
-      this.emitter.turbulencePool.list = new List()
+      if (this.emitter) {
+        this.emitter.turbulencePool.list.reset()
+        this.emitter.turbulencePool.list = new List()
+      }
     }
-    this.emitter.list.reset()
-    this.emitter.list = new List()
+    if (this.emitter) {
+      this.emitter.list.reset()
+      this.emitter.list = new List()
+    }
     ParticlePool.global.reset()
   }
 
@@ -306,13 +339,13 @@ export default class Renderer extends ParticleContainer {
       return sprite
     }
 
-    if (this.emitter.animatedSprite) {
+    if (this.emitter?.animatedSprite) {
       const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
       if (textures.length) {
         const animation: AnimatedSprite = new AnimatedSprite(textures)
         animation.anchor.set(this.anchor.x, this.anchor.y)
-        animation.loop = this.emitter.animatedSprite.loop
-        animation.animationSpeed = this.emitter.animatedSprite.frameRate
+        animation.loop = this.emitter?.animatedSprite.loop
+        animation.animationSpeed = this.emitter?.animatedSprite.frameRate
         return this.addChild(animation)
       }
     }
@@ -381,7 +414,7 @@ export default class Renderer extends ParticleContainer {
       sprite.blendMode = this.blendMode
     }
     if (sprite instanceof AnimatedSprite) {
-      if (this.emitter.animatedSprite.randomFrameStart) {
+      if (this.emitter?.animatedSprite.randomFrameStart) {
         const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
         sprite.gotoAndPlay(this.getRandomFrameNumber(textures.length))
       } else {
@@ -488,10 +521,10 @@ export default class Renderer extends ParticleContainer {
     this._paused = paused
     if (paused) {
       this._ticker?.stop()
-      this.emitter.pause()
+      this.emitter?.pause()
     } else {
       this._ticker?.start()
-      this.emitter.resume()
+      this.emitter?.resume()
     }
   }
 

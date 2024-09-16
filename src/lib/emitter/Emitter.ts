@@ -225,4 +225,28 @@ export default class Emitter extends eventemitter3 {
       }
     })
   }
+
+  destroy() {
+    this.list.reset()
+    // @ts-ignore
+    this.list = undefined
+    this.turbulencePool.list.reset()
+    // @ts-ignore
+    this.turbulencePool.list = undefined
+    // @ts-ignore
+    this.turbulencePool = undefined
+    // @ts-ignore
+    this.duration = undefined
+    // @ts-ignore
+    this.animatedSprite = undefined
+    this.behaviours?.clear()
+    // @ts-ignore
+    this.behaviours = undefined
+    if (this.emitController && this.emitController.reset) {
+      this.emitController.reset()
+    }
+    this.emitController = undefined
+    // @ts-ignore
+    this._model = undefined
+  }
 }
