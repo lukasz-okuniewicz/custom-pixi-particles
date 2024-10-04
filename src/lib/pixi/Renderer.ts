@@ -102,7 +102,8 @@ export default class Renderer extends ParticleContainer {
     this.emitter.on(Emitter.UPDATE, this.onUpdate, this)
     this.emitter.on(Emitter.FINISHING, this.onFinishing, this)
     this.emitter.on(Emitter.REMOVE, this.onRemove, this)
-    this.emitter.on(Emitter.COMPLETE, this.onComplete, this)
+    this.onCompleteFN = () => this.onComplete()
+    this.emitter.on(Emitter.COMPLETE, this.onCompleteFN, this)
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       this.emitter.turbulencePool.list = this.turbulenceEmitter.list
     }
@@ -120,6 +121,10 @@ export default class Renderer extends ParticleContainer {
   }
 
   onComplete: any = () => {
+    /**/
+  }
+
+  onCompleteFN: any = () => {
     /**/
   }
 
@@ -217,7 +222,7 @@ export default class Renderer extends ParticleContainer {
       this.emitter.off(Emitter.UPDATE, this.onUpdate, this)
       this.emitter.off(Emitter.FINISHING, this.onFinishing, this)
       this.emitter.off(Emitter.REMOVE, this.onRemove, this)
-      this.emitter.off(Emitter.COMPLETE, this.onComplete, this)
+      this.emitter.off(Emitter.COMPLETE, this.onCompleteFN, this)
       // @ts-ignore
       this.emitter = undefined
     }
@@ -230,6 +235,7 @@ export default class Renderer extends ParticleContainer {
     // @ts-ignore
     this._model = undefined
     this.onComplete = undefined
+    this.onCompleteFN = undefined
     this.config = undefined
     // @ts-ignore
     this.textures = undefined
