@@ -207,6 +207,13 @@ export default class Particle {
    */
   warpStretch: number
 
+  skipPositionBehaviour: boolean = false
+  skipAngularVelocityBehaviour: boolean = false
+  skipColorBehaviour: boolean = false
+  skipEmitDirectionBehaviour: boolean = false
+  skipRotationBehaviour: boolean = false
+  skipSizeBehaviour: boolean = false
+
   /**
    * Stores the warp distance scale converter of the particle
    */
@@ -249,6 +256,13 @@ export default class Particle {
     this.x = 0
     this.y = 0
     this.z = 0
+
+    this.skipPositionBehaviour = false
+    this.skipAngularVelocityBehaviour = false
+    this.skipColorBehaviour = false
+    this.skipEmitDirectionBehaviour = false
+    this.skipRotationBehaviour = false
+    this.skipSizeBehaviour = false
 
     this.movement.set(0, 0)
     this.acceleration.set(0, 0)

@@ -35,6 +35,8 @@ export default class EmitDirectionBehaviour extends Behaviour {
    * @memberof EmitDirectionBehaviour
    */
   apply = (particle: Particle) => {
+    if (!this.enabled) return
+    if (particle.skipEmitDirectionBehaviour) return
     const { x, y, directionSin, directionCos } = particle
 
     _tmp = directionCos * x - directionSin * y

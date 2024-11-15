@@ -42,6 +42,8 @@ export default class SizeBehaviour extends Behaviour {
   }
 
   apply = (particle: Particle) => {
+    if (!this.enabled) return
+    if (particle.skipSizeBehaviour) return
     const { sizeStart, lifeProgress, sizeDifference, size } = particle
 
     particle.size.copyFrom(sizeStart)

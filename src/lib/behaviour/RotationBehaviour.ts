@@ -42,6 +42,7 @@ export default class RotationBehaviour extends Behaviour {
    */
   apply = (particle: Particle, deltaTime: number) => {
     if (!this.enabled) return
+    if (particle.skipRotationBehaviour) return
     particle.rotation += particle.rotationDelta * deltaTime
   }
 

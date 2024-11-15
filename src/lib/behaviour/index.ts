@@ -9,6 +9,7 @@ import AngularVelocityBehaviour from './AngularVelocityBehaviour'
 import EmitDirectionBehaviour from './EmitDirectionBehaviour'
 import RotationBehaviour from './RotationBehaviour'
 import TurbulenceBehaviour from './TurbulenceBehaviour'
+import CollisionBehaviour from './CollisionBehaviour'
 
 export {
   EmitterBehaviours,
@@ -21,5 +22,6 @@ export {
   EmitDirectionBehaviour,
   RotationBehaviour,
   TurbulenceBehaviour,
+  CollisionBehaviour,
   BehaviourNames,
 }

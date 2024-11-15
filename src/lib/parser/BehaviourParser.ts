@@ -1,3 +1,5 @@
+import BehaviourNames from '../behaviour/BehaviourNames'
+
 const deepClone = (obj: any, hash = new WeakMap()) => {
   if (Object(obj) !== obj || obj instanceof Function) return obj // Primitives or functions
   if (hash.has(obj)) return hash.get(obj) // Circular reference
@@ -62,7 +64,11 @@ export default class BehaviourParser {
    */
   read = (config: any) => {
     for (const key in config) {
-      if (this._behaviour[key] instanceof Object) {
+      if (
+        this._behaviour[key] instanceof Object &&
+        this._behaviour.name !== BehaviourNames.COLLISION_BEHAVIOUR &&
+        this._behaviour.getName() !== BehaviourNames.COLLISION_BEHAVIOUR
+      ) {
         this._behaviour[key].copyFromRawData(config[key])
       } else {
         this._behaviour[key] = config[key]

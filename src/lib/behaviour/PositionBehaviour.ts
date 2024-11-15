@@ -169,6 +169,8 @@ export default class PositionBehaviour extends Behaviour {
    * @param {Model} model - The model containing information about the particle's movement
    */
   apply = (particle: Particle, deltaTime: number, model: Model) => {
+    if (!this.enabled) return
+    if (particle.skipPositionBehaviour) return
     if (!this.fromAtoB) {
       const { acceleration, sinXVal, sinYVal, z, warpSizeStart, movement } = particle
       const { cameraZ } = model

@@ -29,6 +29,8 @@ export default class ColorBehaviour extends Behaviour {
   }
 
   apply = (particle: Particle) => {
+    if (!this.enabled) return
+    if (particle.skipColorBehaviour) return
     const { colorStart, lifeProgress, colorEnd } = particle
 
     particle.color.copyFrom(colorStart)

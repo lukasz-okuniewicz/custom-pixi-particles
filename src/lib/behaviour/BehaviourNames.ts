@@ -7,4 +7,5 @@ export default {
   EMIT_DIRECTION: 'EmitDirectionBehaviour',
   ROTATION_BEHAVIOUR: 'RotationBehaviour',
   TURBULENCE_BEHAVIOUR: 'TurbulenceBehaviour',
+  COLLISION_BEHAVIOUR: 'CollisionBehaviour',
 }

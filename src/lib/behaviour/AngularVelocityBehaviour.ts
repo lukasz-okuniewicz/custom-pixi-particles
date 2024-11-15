@@ -45,6 +45,8 @@ export default class AngularVelocityBehaviour extends Behaviour {
    * @memberof AngularVelocityBehaviour
    */
   apply = (particle: Particle, deltaTime: number) => {
+    if (!this.enabled) return
+    if (particle.skipAngularVelocityBehaviour) return
     const { radiusStart, radiusEnd, radiansPerSecond, lifeProgress } = particle
     const velocityAngle = particle.velocityAngle + radiansPerSecond * deltaTime
     const radius = radiusStart + (radiusEnd - radiusStart) * lifeProgress
