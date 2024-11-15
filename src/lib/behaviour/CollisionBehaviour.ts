@@ -12,7 +12,9 @@ export default class CollisionBehaviour extends Behaviour {
   skipSizeBehaviourOnCollision: boolean = false
   priority = 100
   distance = 10
-  points: { x: number; y: number }[] = [{ x: 0, y: 0 }]
+  lines: { point1: { x: number; y: number }; point2: { x: number; y: number } }[] = [
+    { point1: { x: 0, y: 0 }, point2: { x: 0, y: 0 } },
+  ]
 
   /**
    * Function that initializes a particle
@@ -59,17 +61,16 @@ export default class CollisionBehaviour extends Behaviour {
   }
 
   checkCollisionAndReflect = (particle: Particle) => {
-    if (this.points.length < 2) return false // No lines to check collision
+    if (this.lines.length === 0) return false // No lines to check collision
 
-    for (let i = 1; i < this.points.length; i++) {
-      const p1 = this.points[i - 1]
-      const p2 = this.points[i]
+    for (const line of this.lines) {
+      const { point1, point2 } = line
 
-      // Check if the ball is near the line segment (using point-line distance)
-      const dist = this.pointToLineDistance(particle.x, particle.y, p1.x, p1.y, p2.x, p2.y)
+      // Check if the particle is near the line segment (using point-line distance)
+      const dist = this.pointToLineDistance(particle.x, particle.y, point1.x, point1.y, point2.x, point2.y)
       if (dist <= this.distance) {
         // Reflect velocity based on the line's normal
-        const normal = this.calculateNormal(p1, p2)
+        const normal = this.calculateNormal(point1, point2)
         this.reflectVelocity(particle, normal)
         return true // Stop further checks after first collision
       }
@@ -77,9 +78,9 @@ export default class CollisionBehaviour extends Behaviour {
     return false
   }
 
-  calculateNormal = (p1: { x: number; y: number }, p2: { x: number; y: number }) => {
-    const dx = p2.x - p1.x
-    const dy = p2.y - p1.y
+  calculateNormal = (point1: { x: number; y: number }, point2: { x: number; y: number }) => {
+    const dx = point2.x - point1.x
+    const dy = point2.y - point1.y
     const length = Math.sqrt(dx * dx + dy * dy)
     return { x: -dy / length, y: dx / length } // Perpendicular vector (normalized)
   }
@@ -135,7 +136,7 @@ export default class CollisionBehaviour extends Behaviour {
       skipRotationBehaviourOnCollision: this.skipRotationBehaviourOnCollision,
       skipSizeBehaviourOnCollision: this.skipSizeBehaviourOnCollision,
       priority: this.priority,
-      points: this.points,
+      lines: this.lines,
       distance: this.distance,
       name: this.getName(),
     }
