@@ -42,7 +42,7 @@ const customPixiParticles = {
   },
 }
 
-const customPixiParticlesTest = {
+const _customPixiParticlesEditorOnly = {
   create(settings: ICustomPixiParticlesSettings) {
     const {
       textures,
@@ -65,4 +65,4 @@ const customPixiParticlesTest = {
   },
 }
 
-export { Renderer, customPixiParticles, customPixiParticlesTest, ICustomPixiParticlesSettings }
+export { Renderer, customPixiParticles, _customPixiParticlesEditorOnly, ICustomPixiParticlesSettings }
