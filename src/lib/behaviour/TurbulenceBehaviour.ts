@@ -128,7 +128,7 @@ export default class TurbulenceBehaviour extends Behaviour {
       emitPerSecond: this.emitPerSecond,
       duration: this.duration,
       maxLifeTime: this.maxLifeTime,
-      version: this.effect,
+      effect: this.effect,
       name: this.getName(),
     }
   }
