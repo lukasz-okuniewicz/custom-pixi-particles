@@ -12,6 +12,7 @@ import RotationBehaviour from './RotationBehaviour'
 import TurbulenceBehaviour from './TurbulenceBehaviour'
 import CollisionBehaviour from './CollisionBehaviour'
 import NoiseBasedMotionBehaviour from './NoiseBasedMotionBehaviour'
+import ForceFieldsBehaviour from './ForceFieldsBehaviour'
 
 export {
   EmitterBehaviours,
@@ -27,5 +28,6 @@ export {
   CollisionBehaviour,
   AttractionRepulsionBehaviour,
   NoiseBasedMotionBehaviour,
+  ForceFieldsBehaviour,
   BehaviourNames,
 }

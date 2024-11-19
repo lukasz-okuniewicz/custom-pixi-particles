@@ -10,4 +10,5 @@ export default {
   COLLISION_BEHAVIOUR: 'CollisionBehaviour',
   ATTRACTION_REPULSION_BEHAVIOUR: 'AttractionRepulsionBehaviour',
   NOISE_BASED_MOTION_BEHAVIOUR: 'NoiseBasedMotionBehaviour',
+  FORCE_FIELDS_BEHAVIOUR: 'ForceFieldsBehaviour',
 }
