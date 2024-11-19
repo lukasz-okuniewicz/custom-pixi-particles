@@ -7,6 +7,7 @@ export default class CollisionBehaviour extends Behaviour {
   skipPositionBehaviourOnCollision: boolean = false
   skipAngularVelocityBehaviourOnCollision: boolean = false
   skipColorBehaviourOnCollision: boolean = false
+  skipAttractionRepulsionBehaviourOnCollision: boolean = false
   skipEmitDirectionBehaviourOnCollision: boolean = false
   skipRotationBehaviourOnCollision: boolean = false
   skipSizeBehaviourOnCollision: boolean = false
@@ -48,6 +49,9 @@ export default class CollisionBehaviour extends Behaviour {
     }
     if (this.skipColorBehaviourOnCollision) {
       particle.skipColorBehaviour = true
+    }
+    if (this.skipAttractionRepulsionBehaviourOnCollision) {
+      particle.skipAttractionRepulsionBehaviour = true
     }
     if (this.skipEmitDirectionBehaviourOnCollision) {
       particle.skipEmitDirectionBehaviour = true
@@ -132,6 +136,7 @@ export default class CollisionBehaviour extends Behaviour {
       skipPositionBehaviourOnCollision: this.skipPositionBehaviourOnCollision,
       skipAngularVelocityBehaviourOnCollision: this.skipAngularVelocityBehaviourOnCollision,
       skipColorBehaviourOnCollision: this.skipColorBehaviourOnCollision,
+      skipAttractionRepulsionBehaviourOnCollision: this.skipAttractionRepulsionBehaviourOnCollision,
       skipEmitDirectionBehaviourOnCollision: this.skipEmitDirectionBehaviourOnCollision,
       skipRotationBehaviourOnCollision: this.skipRotationBehaviourOnCollision,
       skipSizeBehaviourOnCollision: this.skipSizeBehaviourOnCollision,

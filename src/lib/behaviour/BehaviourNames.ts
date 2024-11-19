@@ -8,4 +8,5 @@ export default {
   ROTATION_BEHAVIOUR: 'RotationBehaviour',
   TURBULENCE_BEHAVIOUR: 'TurbulenceBehaviour',
   COLLISION_BEHAVIOUR: 'CollisionBehaviour',
+  ATTRACTION_REPULSION_BEHAVIOUR: 'AttractionRepulsionBehaviour',
 }

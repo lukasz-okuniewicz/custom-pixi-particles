@@ -4,6 +4,7 @@ import Behaviour from './Behaviour'
 import LifeBehaviour from './LifeBehaviour'
 import PositionBehaviour from './PositionBehaviour'
 import ColorBehaviour from './ColorBehaviour'
+import AttractionRepulsionBehaviour from './AttractionRepulsionBehaviour'
 import SizeBehaviour from './SizeBehaviour'
 import AngularVelocityBehaviour from './AngularVelocityBehaviour'
 import EmitDirectionBehaviour from './EmitDirectionBehaviour'
@@ -23,5 +24,6 @@ export {
   RotationBehaviour,
   TurbulenceBehaviour,
   CollisionBehaviour,
+  AttractionRepulsionBehaviour,
   BehaviourNames,
 }

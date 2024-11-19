@@ -213,6 +213,7 @@ export default class Particle {
   skipEmitDirectionBehaviour: boolean = false
   skipRotationBehaviour: boolean = false
   skipSizeBehaviour: boolean = false
+  skipAttractionRepulsionBehaviour: boolean = false
 
   /**
    * Stores the warp distance scale converter of the particle
@@ -260,6 +261,7 @@ export default class Particle {
     this.skipPositionBehaviour = false
     this.skipAngularVelocityBehaviour = false
     this.skipColorBehaviour = false
+    this.skipAttractionRepulsionBehaviour = false
     this.skipEmitDirectionBehaviour = false
     this.skipRotationBehaviour = false
     this.skipSizeBehaviour = false
