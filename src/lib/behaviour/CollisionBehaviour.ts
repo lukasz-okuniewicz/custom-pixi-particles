@@ -11,7 +11,7 @@ export default class CollisionBehaviour extends Behaviour {
   skipEmitDirectionBehaviourOnCollision: boolean = false
   skipRotationBehaviourOnCollision: boolean = false
   skipSizeBehaviourOnCollision: boolean = false
-  priority = 100
+  priority = 10000
   distance = 10
   lines: { point1: { x: number; y: number }; point2: { x: number; y: number } }[] = [
     { point1: { x: 0, y: 0 }, point2: { x: 0, y: 0 } },

@@ -6,6 +6,7 @@ import TurbulencePool from '../util/turbulencePool'
 import Model from '../Model'
 
 export default class TurbulenceBehaviour extends Behaviour {
+  priority = 1000
   position = new Point()
   positionVariance = new Point()
   velocity = new Point()

@@ -11,6 +11,7 @@ import EmitDirectionBehaviour from './EmitDirectionBehaviour'
 import RotationBehaviour from './RotationBehaviour'
 import TurbulenceBehaviour from './TurbulenceBehaviour'
 import CollisionBehaviour from './CollisionBehaviour'
+import NoiseBasedMotionBehaviour from './NoiseBasedMotionBehaviour'
 
 export {
   EmitterBehaviours,
@@ -25,5 +26,6 @@ export {
   TurbulenceBehaviour,
   CollisionBehaviour,
   AttractionRepulsionBehaviour,
+  NoiseBasedMotionBehaviour,
   BehaviourNames,
 }

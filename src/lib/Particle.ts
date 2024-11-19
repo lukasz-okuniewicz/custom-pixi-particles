@@ -240,6 +240,8 @@ export default class Particle {
   backAmplitude: number = 10
   direction: number = 1
 
+  noiseOffset: Point = new Point()
+
   /**
    * Constructs a particle object
    */
@@ -323,6 +325,8 @@ export default class Particle {
     this.yStart = 0
     this.xTarget = 0
     this.yTarget = 0
+
+    this.noiseOffset = new Point()
   }
 
   /**
