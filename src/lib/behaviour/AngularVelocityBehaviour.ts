@@ -26,6 +26,7 @@ export default class AngularVelocityBehaviour extends Behaviour {
    * @memberof AngularVelocityBehaviour
    */
   init = (particle: Particle) => {
+    if (!this.enabled) return
     particle.radiansPerSecond = math.degreesToRadians(this.degrees + this.varianceFrom(this.degreesVariance))
     const radiusStart = this.maxRadius + this.varianceFrom(this.maxRadiusVariance)
     particle.radiusStart = radiusStart

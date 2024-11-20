@@ -12,6 +12,7 @@ export default class SizeBehaviour extends Behaviour {
   endVariance = 0
 
   init = (particle: Particle) => {
+    if (!this.enabled) return
     let variance = this.varianceFrom(this.startVariance)
 
     let sizeStartX = this.sizeStart.x + variance

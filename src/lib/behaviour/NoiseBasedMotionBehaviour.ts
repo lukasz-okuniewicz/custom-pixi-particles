@@ -74,6 +74,7 @@ export default class NoiseBasedMotionBehaviour extends Behaviour {
   }
 
   init = (particle: Particle) => {
+    if (!this.enabled) return
     particle.noiseOffset = new Point(Math.random() * this.gridSize, Math.random() * this.gridSize)
   }
 

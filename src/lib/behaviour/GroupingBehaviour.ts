@@ -21,6 +21,7 @@ export default class GroupingBehaviour extends Behaviour {
   private particleAngles: Map<number, number> = new Map() // Store unique angles for each particle
 
   init(particle: Particle) {
+    if (!this.enabled) return
     // Assign each particle an initial random angle within the group
     const initialAngle = Math.random() * Math.PI * 2
     this.particleAngles.set(particle.uid, initialAngle)

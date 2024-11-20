@@ -28,12 +28,14 @@ export default class TurbulenceBehaviour extends Behaviour {
   private vortexOrgSize: number = 128
 
   init = (particle: Particle, model: Model, turbulencePool: TurbulencePool) => {
+    if (!this.enabled) return
     particle.showVortices = this.showVortices
     particle.turbulence = this.turbulence
     this.turbulencePool = turbulencePool
   }
 
   apply = (particle: Particle) => {
+    if (!this.enabled) return
     if (particle.turbulence) return
 
     this.turbulencePool.list.forEach((vortex: Particle) => {

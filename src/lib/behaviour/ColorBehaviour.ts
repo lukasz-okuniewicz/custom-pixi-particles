@@ -13,6 +13,7 @@ export default class ColorBehaviour extends Behaviour {
   sinus = false
 
   init = (particle: Particle) => {
+    if (!this.enabled) return
     particle.colorStart.copyFrom(this.start)
     particle.colorStart.r += this.varianceFrom(this.startVariance.r)
     particle.colorStart.g += this.varianceFrom(this.startVariance.g)

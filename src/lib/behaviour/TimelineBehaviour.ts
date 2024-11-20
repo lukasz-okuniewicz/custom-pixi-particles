@@ -16,6 +16,7 @@ export default class TimelineBehaviour extends Behaviour {
   }[] = []
 
   init(particle: Particle) {
+    if (!this.enabled) return
     // Set initial properties based on the first timeline entry
     if (this.timeline.length > 0) {
       const initialProperties = this.timeline[0].properties

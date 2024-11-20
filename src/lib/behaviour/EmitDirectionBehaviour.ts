@@ -23,6 +23,7 @@ export default class EmitDirectionBehaviour extends Behaviour {
    * @memberof EmitDirectionBehaviour
    */
   init = (particle: Particle) => {
+    if (!this.enabled) return
     const directionAngle = this.angle + this.varianceFrom(this.variance)
     particle.directionCos = Math.cos(directionAngle)
     particle.directionSin = Math.sin(directionAngle)

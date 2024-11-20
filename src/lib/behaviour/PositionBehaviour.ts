@@ -46,6 +46,7 @@ export default class PositionBehaviour extends Behaviour {
    * @param {Model} model - The model of the particle
    */
   init = (particle: Particle, model: Model) => {
+    if (!this.enabled) return
     if (!this.fromAtoB) {
       particle.velocity.x = this.calculate(this.velocity.x, this.velocityVariance.x)
       particle.velocity.y = this.calculate(this.velocity.y, this.velocityVariance.y)
