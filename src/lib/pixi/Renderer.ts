@@ -115,6 +115,7 @@ export default class Renderer extends ParticleContainer {
     ticker.maxFPS = maxFPS
     ticker.speed = tickerSpeed
     ticker.stop()
+    // @ts-ignore
     ticker.add(this._updateTransform, this)
     ticker.start()
     this._ticker = ticker
@@ -301,9 +302,9 @@ export default class Renderer extends ParticleContainer {
    * @param {boolean} resetDuration - should duration be reset
    */
   updatePosition(position: { x: number; y: number }, resetDuration = true) {
-    const positionBehaviour = this.getByName(BehaviourNames.POSITION_BEHAVIOUR)
-    positionBehaviour.position.x = position.x
-    positionBehaviour.position.y = position.y
+    const behaviour = this.getByName(BehaviourNames.SPAWN_BEHAVIOUR)
+    behaviour.position.x = position.x
+    behaviour.position.y = position.y
     this.emitterParser?.update(this.config, this._model, resetDuration)
   }
 
@@ -350,7 +351,9 @@ export default class Renderer extends ParticleContainer {
       if (textures.length) {
         const animation: AnimatedSprite = new AnimatedSprite(textures)
         animation.anchor.set(this.anchor.x, this.anchor.y)
+        // @ts-ignore
         animation.loop = this.emitter?.animatedSprite.loop
+        // @ts-ignore
         animation.animationSpeed = this.emitter?.animatedSprite.frameRate
         return this.addChild(animation)
       }
@@ -551,7 +554,7 @@ export default class Renderer extends ParticleContainer {
   }
 
   private buildTurbulenceConfig(turbulenceConfig: any) {
-    const config = {
+    return {
       behaviours: [
         {
           enabled: true,
@@ -561,8 +564,9 @@ export default class Renderer extends ParticleContainer {
           name: 'LifeBehaviour',
         },
         {
-          enabled: true,
           priority: 100,
+          spawnType: 'Ring',
+          radius: 0,
           position: {
             x: turbulenceConfig.position.x || 0,
             y: turbulenceConfig.position.y || 0,
@@ -571,6 +575,11 @@ export default class Renderer extends ParticleContainer {
             x: turbulenceConfig.positionVariance.x || 0,
             y: turbulenceConfig.positionVariance.y || 0,
           },
+          name: 'SpawnBehaviour',
+        },
+        {
+          enabled: true,
+          priority: 100,
           velocity: {
             x: turbulenceConfig.velocity.x || 0,
             y: turbulenceConfig.velocity.y || 0,
@@ -628,6 +637,5 @@ export default class Renderer extends ParticleContainer {
       },
       duration: turbulenceConfig.duration || -1,
     }
-    return config
   }
 }

@@ -241,6 +241,7 @@ export default class Particle {
   direction: number = 1
 
   noiseOffset: Point = new Point()
+  timeline: any[] = []
 
   /**
    * Constructs a particle object
@@ -259,6 +260,8 @@ export default class Particle {
     this.x = 0
     this.y = 0
     this.z = 0
+
+    this.timeline = []
 
     this.skipPositionBehaviour = false
     this.skipAngularVelocityBehaviour = false

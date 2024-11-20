@@ -13,10 +13,15 @@ import TurbulenceBehaviour from './TurbulenceBehaviour'
 import CollisionBehaviour from './CollisionBehaviour'
 import NoiseBasedMotionBehaviour from './NoiseBasedMotionBehaviour'
 import ForceFieldsBehaviour from './ForceFieldsBehaviour'
+import SpawnBehaviour from './SpawnBehaviour'
+import TimelineBehaviour from './TimelineBehaviour'
+import GroupingBehaviour from './GroupingBehaviour'
+import SoundReactiveBehaviour from './SoundReactiveBehaviour'
 
 export {
   EmitterBehaviours,
   Behaviour,
+  SpawnBehaviour,
   LifeBehaviour,
   PositionBehaviour,
   ColorBehaviour,
@@ -29,5 +34,8 @@ export {
   AttractionRepulsionBehaviour,
   NoiseBasedMotionBehaviour,
   ForceFieldsBehaviour,
+  TimelineBehaviour,
+  GroupingBehaviour,
+  SoundReactiveBehaviour,
   BehaviourNames,
 }
