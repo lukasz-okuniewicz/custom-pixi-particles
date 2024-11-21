@@ -8,32 +8,9 @@ import Particle from '../Particle'
  * @extends Behaviour
  */
 export default class LifeBehaviour extends Behaviour {
-  /**
-   * Whether or not this behaviour is enabled.
-   *
-   * @type {boolean}
-   */
   enabled = true
-
-  /**
-   * The priority of this behaviour.
-   *
-   * @type {number}
-   */
   priority = 10000
-
-  /**
-   * The maximum life time of the particle that this behaviour will set.
-   *
-   * @type {number}
-   */
   maxLifeTime = 0
-
-  /**
-   * The variance of the particle's life time.
-   *
-   * @type {number}
-   */
   timeVariance = 0
 
   /**

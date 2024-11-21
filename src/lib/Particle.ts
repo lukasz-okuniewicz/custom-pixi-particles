@@ -242,6 +242,10 @@ export default class Particle {
 
   noiseOffset: Point = new Point()
   timeline: any[] = []
+  initialDirectionCos: number = 0
+  initialDirectionSin: number = 0
+  velocityScale: number = 1
+  rotationAcceleration: number = 0
 
   /**
    * Constructs a particle object
@@ -330,6 +334,10 @@ export default class Particle {
     this.yTarget = 0
 
     this.noiseOffset = new Point()
+    this.initialDirectionCos = 0
+    this.initialDirectionSin = 0
+    this.velocityScale = 1
+    this.rotationAcceleration = 0
   }
 
   /**

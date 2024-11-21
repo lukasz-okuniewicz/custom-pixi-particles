@@ -3,12 +3,6 @@ import math from '../util/maths'
 import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 
-/**
- * AngularVelocityBehaviour is a subclass of Behaviour and defines the angular velocity of a particle.
- *
- * @class AngularVelocityBehaviour
- * @extends {Behaviour}
- */
 export default class AngularVelocityBehaviour extends Behaviour {
   protected priority: number = 100
   private enabled: boolean = false
@@ -18,6 +12,11 @@ export default class AngularVelocityBehaviour extends Behaviour {
   private maxRadiusVariance: number = 0
   private minRadius: number = 0
   private minRadiusVariance: number = 0
+  private oscillate: boolean = false // Oscillate angular velocity
+  private oscillationSpeed: number = 1 // Speed of oscillation
+  private oscillationAmplitude: number = 10 // Amplitude of oscillation in degrees
+  private linearRadiusReduction: boolean = true // Linear or exponential radius reduction
+  private dynamicRadius: boolean = false // Allow dynamic radius changes during lifetime
 
   /**
    * Initializes particle properties of the behaviour
@@ -27,11 +26,15 @@ export default class AngularVelocityBehaviour extends Behaviour {
    */
   init = (particle: Particle) => {
     if (!this.enabled) return
-    particle.radiansPerSecond = math.degreesToRadians(this.degrees + this.varianceFrom(this.degreesVariance))
-    const radiusStart = this.maxRadius + this.varianceFrom(this.maxRadiusVariance)
-    particle.radiusStart = radiusStart
-    particle.radiusEnd = this.minRadius + this.varianceFrom(this.minRadiusVariance)
 
+    particle.radiansPerSecond = math.degreesToRadians(this.degrees + this.varianceFrom(this.degreesVariance))
+
+    const radiusStart = this.maxRadius + this.varianceFrom(this.maxRadiusVariance)
+    const radiusEnd = this.minRadius + this.varianceFrom(this.minRadiusVariance)
+
+    particle.radiusStart = radiusStart
+    particle.radiusEnd = radiusEnd
+    particle.velocityAngle = 0
     particle.x = 0
     particle.y = 0
     particle.radius = radiusStart
@@ -48,14 +51,39 @@ export default class AngularVelocityBehaviour extends Behaviour {
   apply = (particle: Particle, deltaTime: number) => {
     if (!this.enabled) return
     if (particle.skipAngularVelocityBehaviour) return
-    const { radiusStart, radiusEnd, radiansPerSecond, lifeProgress } = particle
-    const velocityAngle = particle.velocityAngle + radiansPerSecond * deltaTime
-    const radius = radiusStart + (radiusEnd - radiusStart) * lifeProgress
-    const movementX = Math.cos(velocityAngle) * radius
-    const movementY = Math.sin(velocityAngle) * radius
 
-    particle.velocityAngle = velocityAngle
-    particle.radius = radius
+    const { radiusStart, radiusEnd, radiansPerSecond, lifeProgress, velocityAngle } = particle
+
+    let angleVelocity = radiansPerSecond
+
+    // Oscillation logic
+    if (this.oscillate) {
+      const oscillationFactor = Math.sin(particle.lifeTime * this.oscillationSpeed) * this.oscillationAmplitude
+      angleVelocity += math.degreesToRadians(oscillationFactor)
+    }
+
+    // Update angle
+    const newVelocityAngle = velocityAngle + angleVelocity * deltaTime
+
+    // Radius calculation
+    let newRadius
+    if (this.linearRadiusReduction) {
+      newRadius = radiusStart + (radiusEnd - radiusStart) * lifeProgress
+    } else {
+      // Exponential radius reduction
+      const progressFactor = Math.pow(lifeProgress, 2)
+      newRadius = radiusStart + (radiusEnd - radiusStart) * progressFactor
+    }
+
+    if (this.dynamicRadius) {
+      newRadius += Math.sin(particle.lifeTime * 2 * Math.PI) * 5 // Example dynamic change
+    }
+
+    const movementX = Math.cos(newVelocityAngle) * newRadius
+    const movementY = Math.sin(newVelocityAngle) * newRadius
+
+    particle.velocityAngle = newVelocityAngle
+    particle.radius = newRadius
     particle.movement.x = movementX
     particle.movement.y = movementY
     particle.x = movementX
@@ -87,6 +115,11 @@ export default class AngularVelocityBehaviour extends Behaviour {
       maxRadiusVariance: this.maxRadiusVariance,
       minRadius: this.minRadius,
       minRadiusVariance: this.minRadiusVariance,
+      oscillate: this.oscillate,
+      oscillationSpeed: this.oscillationSpeed,
+      oscillationAmplitude: this.oscillationAmplitude,
+      linearRadiusReduction: this.linearRadiusReduction,
+      dynamicRadius: this.dynamicRadius,
       priority: this.priority,
       name: this.getName(),
     }

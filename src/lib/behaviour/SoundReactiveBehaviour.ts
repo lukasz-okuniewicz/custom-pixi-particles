@@ -5,6 +5,7 @@ export default class SoundReactiveBehaviour extends Behaviour {
   enabled = true
   priority = 0
 
+  isPlaying: boolean = false
   audioContext: AudioContext | null = null // Audio context for analysis
   analyser: AnalyserNode | null = null // Audio analyser node
   frequencyData: Uint8Array | null = null // Frequency data array
@@ -17,7 +18,7 @@ export default class SoundReactiveBehaviour extends Behaviour {
   }
 
   apply(particle: Particle, deltaTime: number) {
-    if (!this.enabled || !this.analyser || !this.frequencyData) return
+    if (!this.enabled || !this.analyser || !this.frequencyData || !this.isPlaying) return
 
     // Update frequency data
     this.analyser.getByteFrequencyData(this.frequencyData)
@@ -89,6 +90,7 @@ export default class SoundReactiveBehaviour extends Behaviour {
     return {
       enabled: this.enabled,
       priority: this.priority,
+      isPlaying: this.isPlaying,
       amplitudeFactor: this.amplitudeFactor,
       frequencyFactor: this.frequencyFactor,
       beatSensitivity: this.beatSensitivity,
