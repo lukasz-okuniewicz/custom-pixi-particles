@@ -8,32 +8,9 @@ import Particle from '../Particle'
  * @extends Behaviour
  */
 export default class LifeBehaviour extends Behaviour {
-  /**
-   * Whether or not this behaviour is enabled.
-   *
-   * @type {boolean}
-   */
   enabled = true
-
-  /**
-   * The priority of this behaviour.
-   *
-   * @type {number}
-   */
   priority = 10000
-
-  /**
-   * The maximum life time of the particle that this behaviour will set.
-   *
-   * @type {number}
-   */
   maxLifeTime = 0
-
-  /**
-   * The variance of the particle's life time.
-   *
-   * @type {number}
-   */
   timeVariance = 0
 
   /**
@@ -45,9 +22,7 @@ export default class LifeBehaviour extends Behaviour {
   init = (particle: Particle) => {
     particle.lifeTime = 0
     particle.lifeProgress = 0
-
-    particle.maxLifeTime = this.maxLifeTime + this.varianceFrom(this.timeVariance)
-    particle.maxLifeTime = Math.max(particle.maxLifeTime, 0.0)
+    particle.maxLifeTime = Math.max(this.maxLifeTime + this.varianceFrom(this.timeVariance), 0.0)
   }
 
   /**
@@ -58,10 +33,13 @@ export default class LifeBehaviour extends Behaviour {
    * @returns {void}
    */
   apply = (particle: Particle, deltaTime: number) => {
-    particle.lifeTime += deltaTime
+    const { maxLifeTime } = particle
+    const lifeTime = particle.lifeTime + deltaTime
 
-    if (particle.maxLifeTime > 0) {
-      particle.lifeProgress = Math.min(1.0, particle.lifeTime / particle.maxLifeTime)
+    particle.lifeTime = lifeTime
+
+    if (maxLifeTime > 0) {
+      particle.lifeProgress = Math.min(1.0, lifeTime / maxLifeTime)
     }
   }
 

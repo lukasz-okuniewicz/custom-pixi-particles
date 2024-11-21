@@ -6,6 +6,7 @@ import TurbulencePool from '../util/turbulencePool'
 import Model from '../Model'
 
 export default class TurbulenceBehaviour extends Behaviour {
+  priority = 1000
   position = new Point()
   positionVariance = new Point()
   velocity = new Point()
@@ -27,12 +28,14 @@ export default class TurbulenceBehaviour extends Behaviour {
   private vortexOrgSize: number = 128
 
   init = (particle: Particle, model: Model, turbulencePool: TurbulencePool) => {
+    if (!this.enabled) return
     particle.showVortices = this.showVortices
     particle.turbulence = this.turbulence
     this.turbulencePool = turbulencePool
   }
 
   apply = (particle: Particle) => {
+    if (!this.enabled) return
     if (particle.turbulence) return
 
     this.turbulencePool.list.forEach((vortex: Particle) => {
@@ -96,32 +99,32 @@ export default class TurbulenceBehaviour extends Behaviour {
         y: this.position.y,
       },
       positionVariance: {
-        x: this.position.x,
-        y: this.position.y,
+        x: this.positionVariance.x,
+        y: this.positionVariance.y,
       },
       velocity: {
-        x: this.position.x,
-        y: this.position.y,
+        x: this.velocity.x,
+        y: this.velocity.y,
       },
       velocityVariance: {
-        x: this.position.x,
-        y: this.position.y,
+        x: this.velocityVariance.x,
+        y: this.velocityVariance.y,
       },
       acceleration: {
-        x: this.position.x,
-        y: this.position.y,
+        x: this.acceleration.x,
+        y: this.acceleration.y,
       },
       accelerationVariance: {
-        x: this.position.x,
-        y: this.position.y,
+        x: this.accelerationVariance.x,
+        y: this.accelerationVariance.y,
       },
       sizeStart: {
         x: this.sizeStart.x,
         y: this.sizeStart.y,
       },
       sizeEnd: {
-        x: this.sizeStart.x,
-        y: this.sizeStart.y,
+        x: this.sizeEnd.x,
+        y: this.sizeEnd.y,
       },
       startVariance: this.startVariance,
       endVariance: this.endVariance,

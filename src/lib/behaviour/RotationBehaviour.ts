@@ -6,32 +6,31 @@ import Particle from '../Particle'
  * @extends Behaviour
  */
 export default class RotationBehaviour extends Behaviour {
-  /**
-   * @type {boolean} enabled - Enable or disable the Behaviour
-   */
   enabled = false
-
-  /**
-   * @type {number} priority - The priority of the Behaviour.
-   */
   priority = 0
-
-  /**
-   * @type {number} rotation - The amount of rotation to apply on each particle.
-   */
-  rotation = 0
-
-  /**
-   * @type {number} variance - The amount of variance to apply on the particle's rotation.
-   */
-  variance = 0
+  rotation = 0 // Base rotation speed
+  variance = 0 // Variance in rotation speed
+  oscillate = false // Enable oscillation
+  oscillationSpeed = 1 // Speed of oscillation
+  oscillationAmplitude = 0 // Amplitude of oscillation
+  useNoise = false // Use Perlin noise for rotation
+  noiseScale = 0.1 // Scale of Perlin noise
+  acceleration = 0 // Rotation acceleration (positive or negative)
+  clockwise = true // Clockwise or counterclockwise rotation
 
   /**
    * Initialise the Behaviour for a particle
    * @param {Particle} particle - The particle to be initialised
    */
   init = (particle: Particle) => {
-    particle.rotationDelta = this.rotation + this.varianceFrom(this.variance)
+    if (!this.enabled) return
+
+    // Set base rotation delta with variance
+    const baseRotation = this.rotation + this.varianceFrom(this.variance)
+    particle.rotationDelta = this.clockwise ? baseRotation : -baseRotation
+
+    // Initialize acceleration if enabled
+    particle.rotationAcceleration = this.acceleration
   }
 
   /**
@@ -40,7 +39,41 @@ export default class RotationBehaviour extends Behaviour {
    * @param {number} deltaTime - The delta time of the runtime
    */
   apply = (particle: Particle, deltaTime: number) => {
-    particle.rotation += particle.rotationDelta * deltaTime
+    if (!this.enabled) return
+    if (particle.skipRotationBehaviour) return
+
+    let deltaRotation = particle.rotationDelta
+
+    // Apply oscillation effect
+    if (this.oscillate) {
+      const oscillation = Math.sin(particle.lifeTime * this.oscillationSpeed) * this.oscillationAmplitude
+      deltaRotation += oscillation
+    }
+
+    // Apply noise-based rotation
+    if (this.useNoise) {
+      const noiseValue = this.pseudoRandomNoise(particle.lifeTime * this.noiseScale)
+      deltaRotation += noiseValue * 2 - 1 // Map noise from [0,1] to [-1,1]
+    }
+
+    // Apply rotation acceleration
+    if (particle.rotationAcceleration) {
+      particle.rotationDelta += particle.rotationAcceleration * deltaTime
+      deltaRotation = particle.rotationDelta
+    }
+
+    // Update particle rotation
+    particle.rotation += deltaRotation * deltaTime
+  }
+
+  /**
+   * Pseudo-random noise generator for smooth transitions
+   * @param {number} seed - Input seed for generating noise
+   * @returns {number} - Noise value between 0 and 1
+   */
+  pseudoRandomNoise(seed: number): number {
+    const x = Math.sin(seed * 10000) * 10000
+    return x - Math.floor(x)
   }
 
   /**
@@ -61,6 +94,13 @@ export default class RotationBehaviour extends Behaviour {
       priority: this.priority,
       rotation: this.rotation,
       variance: this.variance,
+      oscillate: this.oscillate,
+      oscillationSpeed: this.oscillationSpeed,
+      oscillationAmplitude: this.oscillationAmplitude,
+      useNoise: this.useNoise,
+      noiseScale: this.noiseScale,
+      acceleration: this.acceleration,
+      clockwise: this.clockwise,
       name: this.getName(),
     }
   }

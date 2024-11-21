@@ -3,13 +3,8 @@ import math from '../util/maths'
 import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 
-/**
- * AngularVelocityBehaviour is a subclass of Behaviour and defines the angular velocity of a particle.
- *
- * @class AngularVelocityBehaviour
- * @extends {Behaviour}
- */
 export default class AngularVelocityBehaviour extends Behaviour {
+  protected priority: number = 100
   private enabled: boolean = false
   private degrees: number = 0
   private degreesVariance: number = 0
@@ -17,7 +12,11 @@ export default class AngularVelocityBehaviour extends Behaviour {
   private maxRadiusVariance: number = 0
   private minRadius: number = 0
   private minRadiusVariance: number = 0
-  protected priority: number = 100
+  private oscillate: boolean = false // Oscillate angular velocity
+  private oscillationSpeed: number = 1 // Speed of oscillation
+  private oscillationAmplitude: number = 10 // Amplitude of oscillation in degrees
+  private linearRadiusReduction: boolean = true // Linear or exponential radius reduction
+  private dynamicRadius: boolean = false // Allow dynamic radius changes during lifetime
 
   /**
    * Initializes particle properties of the behaviour
@@ -26,13 +25,19 @@ export default class AngularVelocityBehaviour extends Behaviour {
    * @memberof AngularVelocityBehaviour
    */
   init = (particle: Particle) => {
-    particle.radiansPerSecond = math.degreesToRadians(this.degrees + this.varianceFrom(this.degreesVariance))
-    particle.radiusStart = this.maxRadius + this.varianceFrom(this.maxRadiusVariance)
-    particle.radiusEnd = this.minRadius + this.varianceFrom(this.minRadiusVariance)
+    if (!this.enabled) return
 
+    particle.radiansPerSecond = math.degreesToRadians(this.degrees + this.varianceFrom(this.degreesVariance))
+
+    const radiusStart = this.maxRadius + this.varianceFrom(this.maxRadiusVariance)
+    const radiusEnd = this.minRadius + this.varianceFrom(this.minRadiusVariance)
+
+    particle.radiusStart = radiusStart
+    particle.radiusEnd = radiusEnd
+    particle.velocityAngle = 0
     particle.x = 0
     particle.y = 0
-    particle.radius = particle.radiusStart
+    particle.radius = radiusStart
     particle.angle = 0
   }
 
@@ -44,14 +49,45 @@ export default class AngularVelocityBehaviour extends Behaviour {
    * @memberof AngularVelocityBehaviour
    */
   apply = (particle: Particle, deltaTime: number) => {
-    particle.velocityAngle += particle.radiansPerSecond * deltaTime
-    particle.radius = particle.radiusStart + (particle.radiusEnd - particle.radiusStart) * particle.lifeProgress
+    if (!this.enabled) return
+    if (particle.skipAngularVelocityBehaviour) return
 
-    particle.movement.x = Math.cos(particle.velocityAngle) * particle.radius
-    particle.movement.y = Math.sin(particle.velocityAngle) * particle.radius
+    const { radiusStart, radiusEnd, radiansPerSecond, lifeProgress, velocityAngle } = particle
 
-    particle.x = particle.movement.x
-    particle.y = particle.movement.y
+    let angleVelocity = radiansPerSecond
+
+    // Oscillation logic
+    if (this.oscillate) {
+      const oscillationFactor = Math.sin(particle.lifeTime * this.oscillationSpeed) * this.oscillationAmplitude
+      angleVelocity += math.degreesToRadians(oscillationFactor)
+    }
+
+    // Update angle
+    const newVelocityAngle = velocityAngle + angleVelocity * deltaTime
+
+    // Radius calculation
+    let newRadius
+    if (this.linearRadiusReduction) {
+      newRadius = radiusStart + (radiusEnd - radiusStart) * lifeProgress
+    } else {
+      // Exponential radius reduction
+      const progressFactor = Math.pow(lifeProgress, 2)
+      newRadius = radiusStart + (radiusEnd - radiusStart) * progressFactor
+    }
+
+    if (this.dynamicRadius) {
+      newRadius += Math.sin(particle.lifeTime * 2 * Math.PI) * 5 // Example dynamic change
+    }
+
+    const movementX = Math.cos(newVelocityAngle) * newRadius
+    const movementY = Math.sin(newVelocityAngle) * newRadius
+
+    particle.velocityAngle = newVelocityAngle
+    particle.radius = newRadius
+    particle.movement.x = movementX
+    particle.movement.y = movementY
+    particle.x = movementX
+    particle.y = movementY
   }
 
   /**
@@ -79,6 +115,11 @@ export default class AngularVelocityBehaviour extends Behaviour {
       maxRadiusVariance: this.maxRadiusVariance,
       minRadius: this.minRadius,
       minRadiusVariance: this.minRadiusVariance,
+      oscillate: this.oscillate,
+      oscillationSpeed: this.oscillationSpeed,
+      oscillationAmplitude: this.oscillationAmplitude,
+      linearRadiusReduction: this.linearRadiusReduction,
+      dynamicRadius: this.dynamicRadius,
       priority: this.priority,
       name: this.getName(),
     }

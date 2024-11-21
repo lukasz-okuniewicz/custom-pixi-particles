@@ -7,7 +7,7 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
-import { AnimatedSprite, Loader, ParticleContainer, Sprite, Texture, Ticker } from 'pixi.js-legacy'
+import { AnimatedSprite, Container, Loader, Sprite, Texture, Ticker } from 'pixi.js-legacy'
 import Model from '../Model'
 
 /**
@@ -15,7 +15,7 @@ import Model from '../Model'
  *
  * @class Renderer
  */
-export default class Renderer extends ParticleContainer {
+export default class TestRenderer extends Container {
   blendMode: any
   emitter: Emitter
   turbulenceEmitter: Emitter
@@ -46,23 +46,11 @@ export default class Renderer extends ParticleContainer {
       finishingTextures,
       animatedSpriteZeroPad,
       animatedSpriteIndexToStart,
-      vertices,
-      position,
-      rotation,
-      uvs,
-      tint,
-      maxParticles,
       maxFPS,
       tickerSpeed,
     } = settings
 
-    super(maxParticles, {
-      vertices,
-      position,
-      rotation,
-      uvs,
-      tint,
-    })
+    super()
 
     this.config = emitterConfig
     this.textures = textures

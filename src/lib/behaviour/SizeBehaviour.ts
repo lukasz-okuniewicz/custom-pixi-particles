@@ -5,40 +5,131 @@ import Particle from '../Particle'
 export default class SizeBehaviour extends Behaviour {
   enabled = true
   priority = 0
-  allowNegativeValues = false
   sizeStart = new Point(1, 1)
   sizeEnd = new Point(1, 1)
   startVariance = 0
   endVariance = 0
+  maxSize = new Point(Infinity, Infinity) // Maximum size clamp
+  uniformScaling = true // Toggle for uniform scaling
+  pulsate = false // Enable pulsating size effect
+  pulsationSpeed = 1 // Speed of pulsation
+  pulsationAmplitude = 0.2 // Amplitude of pulsation
+  useNoise = false // Use noise for size modulation
+  noiseScale = 0.1 // Scale of the noise effect
+  invertAtMidpoint = false // Invert size at midpoint
+  sizeSteps = [] // Array of size points for multi-step transitions
+  timeOffset = 0 // Delay or advance size scaling
+  xScalingFunction = 'linear' // Easing for x-axis
+  yScalingFunction = 'linear' // Easing for y-axis
+  sizeAlphaDependency = false // Link size to alpha value
 
   init = (particle: Particle) => {
+    if (!this.enabled) return
+
     let variance = this.varianceFrom(this.startVariance)
-    particle.sizeStart.x = this.sizeStart.x + variance
-    particle.sizeStart.y = this.sizeStart.y + variance
+    const sizeStartX = this.sizeStart.x + variance
+    const sizeStartY = this.sizeStart.y + variance
 
     variance = this.varianceFrom(this.endVariance)
-    particle.sizeEnd.x = this.sizeEnd.x + variance
-    particle.sizeEnd.y = this.sizeEnd.y + variance
+    const sizeEndX = this.sizeEnd.x + variance
+    const sizeEndY = this.sizeEnd.y + variance
 
-    if (!this.allowNegativeValues) {
-      particle.sizeStart.x = Math.max(particle.sizeStart.x, 0)
-      particle.sizeStart.y = Math.max(particle.sizeStart.y, 0)
-      particle.sizeEnd.x = Math.max(particle.sizeEnd.x, 0)
-      particle.sizeEnd.y = Math.max(particle.sizeEnd.y, 0)
+    particle.sizeDifference = {
+      x: sizeEndX - sizeStartX,
+      y: sizeEndY - sizeStartY,
     }
 
+    particle.sizeStart.x = sizeStartX
+    particle.sizeStart.y = sizeStartY
+    particle.sizeEnd.x = sizeEndX
+    particle.sizeEnd.y = sizeEndY
     particle.size.copyFrom(particle.sizeStart)
   }
 
-  apply = (particle: Particle) => {
-    particle.size.copyFrom(particle.sizeStart)
-    particle.size.x += (particle.sizeEnd.x - particle.sizeStart.x) * particle.lifeProgress
-    particle.size.y += (particle.sizeEnd.y - particle.sizeStart.y) * particle.lifeProgress
+  apply = (particle: Particle, deltaTime: number) => {
+    if (!this.enabled || particle.skipSizeBehaviour) return
 
-    if (!this.allowNegativeValues) {
-      particle.size.x = Math.max(0, particle.size.x)
-      particle.size.x = Math.max(0, particle.size.x)
+    let lifeProgress = particle.lifeProgress - this.timeOffset
+    if (lifeProgress < 0) return // Skip if delayed
+
+    if (this.invertAtMidpoint && lifeProgress > 0.5) {
+      lifeProgress = 1 - lifeProgress // Invert at midpoint
     }
+
+    // Handle multi-step transitions
+    if (this.sizeSteps.length > 0) {
+      this.applyMultiStepSize(particle, lifeProgress)
+      return
+    }
+
+    let sizeX = particle.sizeStart.x + particle.sizeDifference.x * this.applyEasing(lifeProgress, this.xScalingFunction)
+    let sizeY = this.uniformScaling
+      ? sizeX
+      : particle.sizeStart.y + particle.sizeDifference.y * this.applyEasing(lifeProgress, this.yScalingFunction)
+
+    // Apply pulsation effect
+    if (this.pulsate) {
+      const pulseFactor = 1 + Math.sin(particle.lifeTime * this.pulsationSpeed * Math.PI * 2) * this.pulsationAmplitude
+      sizeX *= pulseFactor
+      sizeY *= pulseFactor
+    }
+
+    // Apply noise modulation
+    if (this.useNoise) {
+      const noiseFactor = this.pseudoRandomNoise(particle.lifeTime * this.noiseScale)
+      sizeX *= noiseFactor
+      sizeY *= noiseFactor
+    }
+
+    // Size linked to alpha
+    if (this.sizeAlphaDependency) {
+      const alphaFactor = particle.color.alpha
+      sizeX *= alphaFactor
+      sizeY *= alphaFactor
+    }
+
+    // Clamp to maximum size
+    sizeX = Math.min(sizeX, this.maxSize.x)
+    sizeY = Math.min(sizeY, this.maxSize.y)
+
+    particle.size.x = sizeX
+    particle.size.y = sizeY
+  }
+
+  applyMultiStepSize = (particle: Particle, lifeProgress: number) => {
+    const stepCount = this.sizeSteps.length - 1
+    if (stepCount < 1) return // Skip if fewer than two steps
+
+    const currentStep = Math.floor(lifeProgress * stepCount)
+    const nextStep = Math.min(currentStep + 1, stepCount)
+
+    const t = (lifeProgress * stepCount) % 1
+    const sizeStart = this.sizeSteps[currentStep]
+    const sizeEnd = this.sizeSteps[nextStep]
+    // @ts-ignore
+    particle.size.x = sizeStart.x + (sizeEnd.x - sizeStart.x) * this.applyEasing(t, this.xScalingFunction)
+    // @ts-ignore
+    particle.size.y = sizeStart.y + (sizeEnd.y - sizeStart.y) * this.applyEasing(t, this.yScalingFunction)
+  }
+
+  applyEasing = (progress: number, easingType: string): number => {
+    switch (easingType) {
+      case 'easeIn':
+        return progress * progress
+      case 'easeOut':
+        return 1 - Math.pow(1 - progress, 2)
+      case 'easeInOut':
+        return progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2
+      case 'linear':
+      default:
+        return progress
+    }
+  }
+
+  pseudoRandomNoise = (seed: number): number => {
+    const prime = 2654435761 // A prime constant
+    const x = Math.sin(seed * prime) * 10000 // Scale the randomness
+    return x - Math.floor(x) // Ensure result is between 0 and 1
   }
 
   getName() {
@@ -49,17 +140,32 @@ export default class SizeBehaviour extends Behaviour {
     return {
       enabled: this.enabled,
       priority: this.priority,
-      allowNegativeValues: this.allowNegativeValues,
       sizeStart: {
         x: this.sizeStart.x,
         y: this.sizeStart.y,
       },
       sizeEnd: {
-        x: this.sizeStart.x,
-        y: this.sizeStart.y,
+        x: this.sizeEnd.x,
+        y: this.sizeEnd.y,
       },
       startVariance: this.startVariance,
       endVariance: this.endVariance,
+      maxSize: {
+        x: this.maxSize.x,
+        y: this.maxSize.y,
+      },
+      uniformScaling: this.uniformScaling,
+      pulsate: this.pulsate,
+      pulsationSpeed: this.pulsationSpeed,
+      pulsationAmplitude: this.pulsationAmplitude,
+      useNoise: this.useNoise,
+      noiseScale: this.noiseScale,
+      invertAtMidpoint: this.invertAtMidpoint,
+      sizeSteps: this.sizeSteps,
+      timeOffset: this.timeOffset,
+      xScalingFunction: this.xScalingFunction,
+      yScalingFunction: this.yScalingFunction,
+      sizeAlphaDependency: this.sizeAlphaDependency,
       name: this.getName(),
     }
   }

@@ -1,5 +1,6 @@
 import Renderer from './lib/pixi/Renderer'
 import { ICustomPixiParticlesSettings } from './lib/customPixiParticlesSettingsInterface'
+import TestRenderer from "./lib/pixi/TestRenderer";
 
 /**
  * Constructs a renderer for custom pixi particles
@@ -41,4 +42,27 @@ const customPixiParticles = {
   },
 }
 
-export { Renderer, customPixiParticles, ICustomPixiParticlesSettings }
+const _customPixiParticlesEditorOnly = {
+  create(settings: ICustomPixiParticlesSettings) {
+    const {
+      textures,
+      emitterConfig,
+      animatedSpriteZeroPad = 2,
+      animatedSpriteIndexToStart = 0,
+      finishingTextures = [],
+      maxFPS = 60,
+      tickerSpeed = 0.02,
+    } = settings
+    return new TestRenderer({
+      textures,
+      animatedSpriteZeroPad,
+      animatedSpriteIndexToStart,
+      emitterConfig,
+      finishingTextures,
+      maxFPS,
+      tickerSpeed,
+    })
+  },
+}
+
+export { Renderer, customPixiParticles, _customPixiParticlesEditorOnly, ICustomPixiParticlesSettings }

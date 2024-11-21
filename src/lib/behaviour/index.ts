@@ -4,15 +4,24 @@ import Behaviour from './Behaviour'
 import LifeBehaviour from './LifeBehaviour'
 import PositionBehaviour from './PositionBehaviour'
 import ColorBehaviour from './ColorBehaviour'
+import AttractionRepulsionBehaviour from './AttractionRepulsionBehaviour'
 import SizeBehaviour from './SizeBehaviour'
 import AngularVelocityBehaviour from './AngularVelocityBehaviour'
 import EmitDirectionBehaviour from './EmitDirectionBehaviour'
 import RotationBehaviour from './RotationBehaviour'
 import TurbulenceBehaviour from './TurbulenceBehaviour'
+import CollisionBehaviour from './CollisionBehaviour'
+import NoiseBasedMotionBehaviour from './NoiseBasedMotionBehaviour'
+import ForceFieldsBehaviour from './ForceFieldsBehaviour'
+import SpawnBehaviour from './SpawnBehaviour'
+import TimelineBehaviour from './TimelineBehaviour'
+import GroupingBehaviour from './GroupingBehaviour'
+import SoundReactiveBehaviour from './SoundReactiveBehaviour'
 
 export {
   EmitterBehaviours,
   Behaviour,
+  SpawnBehaviour,
   LifeBehaviour,
   PositionBehaviour,
   ColorBehaviour,
@@ -21,5 +30,12 @@ export {
   EmitDirectionBehaviour,
   RotationBehaviour,
   TurbulenceBehaviour,
+  CollisionBehaviour,
+  AttractionRepulsionBehaviour,
+  NoiseBasedMotionBehaviour,
+  ForceFieldsBehaviour,
+  TimelineBehaviour,
+  GroupingBehaviour,
+  SoundReactiveBehaviour,
   BehaviourNames,
 }
