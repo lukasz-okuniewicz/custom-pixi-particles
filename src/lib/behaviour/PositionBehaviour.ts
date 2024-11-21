@@ -46,7 +46,6 @@ export default class PositionBehaviour extends Behaviour {
    * @param {Model} model - The model of the particle
    */
   init = (particle: Particle, model: Model) => {
-    if (!this.enabled) return
     if (!this.fromAtoB) {
       particle.velocity.x = this.calculate(this.velocity.x, this.velocityVariance.x)
       particle.velocity.y = this.calculate(this.velocity.y, this.velocityVariance.y)
@@ -133,7 +132,6 @@ export default class PositionBehaviour extends Behaviour {
    * @param {Model} model - The model containing information about the particle's movement
    */
   apply = (particle: Particle, deltaTime: number, model: Model) => {
-    if (!this.enabled) return
     if (particle.skipPositionBehaviour) return
     if (!this.fromAtoB) {
       const { acceleration, sinXVal, sinYVal, z, warpSizeStart, movement } = particle
