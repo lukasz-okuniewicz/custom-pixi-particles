@@ -15,12 +15,12 @@ export default class ColorBehaviour extends Behaviour {
   // New properties
   colorStops: Color[] = [] // Multi-gradient stops
   usePerlin = false // Enable Perlin noise-based color changes
-  pulseSpeed = 1 // Speed of the pulse effect
-  pulseIntensity = 0.5 // Intensity of the pulse effect
+  pulseSpeed = 0 // Speed of the pulse effect
+  pulseIntensity = 0 // Intensity of the pulse effect
   mirrorTransition = false // Mirror the color transition midway
   fadeToGray = false // Desaturate color over time
   fadeToTransparent = false // Fade alpha over time
-  flickerIntensity = 0.3 // Intensity of random flickering
+  flickerIntensity = 0 // Intensity of random flickering
 
   init = (particle: Particle) => {
     if (!this.enabled) return
