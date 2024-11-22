@@ -4,6 +4,13 @@
 
 ---
 
+### Support My Work
+If you find **CustomPIXIParticles** useful and would like to support my work, you can buy me a coffee. Your contributions help me dedicate more time to improving this library and creating new features for the community. Thank you for your support! ☕💖
+
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20My%20Work-orange?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/lukasz.okuniewicz)
+
+---
+
 ## ✨ Features
 - **Simple API**: Effortlessly create particle emitters with minimal code.
 - **Highly Configurable**: Adjust particle behavior, appearance, animation, and more.
