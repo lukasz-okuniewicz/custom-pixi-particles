@@ -231,7 +231,7 @@ export default class PositionBehaviour extends Behaviour {
         } else {
           particle.x = xInterpolated + easedProgress
         }
-        // console.log(particle.there)
+
         if (particle.there.y === 'Sin') {
           particle.y = yInterpolated + Math.sin(progress * Math.PI) * particle.thereAmplitude
         } else if (particle.there.y === 'Cos') {
@@ -282,7 +282,7 @@ export default class PositionBehaviour extends Behaviour {
         } else {
           particle.x = xInterpolated + easedProgress
         }
-        // console.log(particle.there)
+
         if (particle.back.y === 'Sin') {
           particle.y = yInterpolated + Math.sin(progress * Math.PI) * particle.backAmplitude
         } else if (particle.back.y === 'Cos') {

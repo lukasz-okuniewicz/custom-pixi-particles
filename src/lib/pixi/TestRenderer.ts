@@ -553,16 +553,20 @@ export default class TestRenderer extends Container {
         },
         {
           priority: 100,
-          spawnType: 'Ring',
-          radius: 0,
-          position: {
-            x: turbulenceConfig.position.x || 0,
-            y: turbulenceConfig.position.y || 0,
-          },
-          positionVariance: {
-            x: turbulenceConfig.positionVariance.x || 0,
-            y: turbulenceConfig.positionVariance.y || 0,
-          },
+          customPoints: [
+            {
+              spawnType: 'Ring',
+              radius: 0,
+              position: {
+                x: turbulenceConfig.position.x || 0,
+                y: turbulenceConfig.position.y || 0,
+              },
+              positionVariance: {
+                x: turbulenceConfig.positionVariance.x || 0,
+                y: turbulenceConfig.positionVariance.y || 0,
+              },
+            },
+          ],
           name: 'SpawnBehaviour',
         },
         {

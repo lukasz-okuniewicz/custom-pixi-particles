@@ -85,6 +85,9 @@ export default class ColorBehaviour extends Behaviour {
     } else {
       if (!this.fadeToTransparent) {
         particle.color.alpha = Math.sin(effectiveProgress * 3.1)
+        if (particle.color.alpha > particle.superColorAlphaEnd) {
+          particle.color.alpha = particle.superColorAlphaEnd
+        }
       }
     }
 
@@ -104,7 +107,9 @@ export default class ColorBehaviour extends Behaviour {
     }
 
     // Flickering effect
-    this.applyFlickering(particle)
+    if (this.flickerIntensity) {
+      this.applyFlickering(particle)
+    }
   }
 
   applyColorStops = (particle: Particle, lifeProgress: number) => {
@@ -112,7 +117,6 @@ export default class ColorBehaviour extends Behaviour {
 
     // Ensure at least two color stops exist
     if (colorStops.length < 2) {
-      console.warn('ColorBehaviour: At least two color stops are required.')
       return
     }
 

@@ -21,9 +21,9 @@ export default class SpawnBehaviour extends Behaviour {
       fontMaxHeight: 750,
       textAlign: 'center',
       textBaseline: 'middle',
-      radius: 0,
-      radiusX: 0,
-      radiusY: 0,
+      radius: 100,
+      radiusX: 100,
+      radiusY: 100,
       starPoints: 5,
       rows: 10,
       columns: 10,
@@ -31,14 +31,22 @@ export default class SpawnBehaviour extends Behaviour {
       center: { x: 0, y: 0, z: 0 },
       apex: { x: 0, y: 0, z: 0 },
       spread: 360,
-      baseRadius: 0,
-      coneDirection: 0,
-      height: 0,
+      baseRadius: 100,
+      coneDirection: 1,
+      height: 100,
       coneAngle: 45,
       position: { x: 0, y: 0 },
       positionVariance: { x: 0, y: 0 },
       perspective: 0, // Distance for perspective
       maxZ: 0, // Maximum z distance for effects
+      frequency: { x: 3, y: 2 },
+      start: { x: 10, y: 10 },
+      end: { x: 20, y: 20 },
+      control1: { x: 0, y: 0 },
+      control2: { x: 0, y: 0 },
+      delta: 1,
+      pitch: 50, // Vertical distance between consecutive loops
+      turns: 5, // Number of turns in the helix
     },
   ]
 
@@ -141,8 +149,8 @@ export default class SpawnBehaviour extends Behaviour {
     } else if (point.spawnType === 'Grid') {
       const row = Math.floor(Math.random() * point.rows)
       const column = Math.floor(Math.random() * point.columns)
-      particle.movement.x = point.position.x + column * point.cellSize
-      particle.movement.y = point.position.y + row * point.cellSize
+      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + column * point.cellSize
+      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + row * point.cellSize
     } else if (point.spawnType === 'Word') {
       if (particleCount > 0 && pixelPositions.length > 0) {
         const selectedPixel = pixelPositions[Math.floor(Math.random() * particleCount)]
@@ -153,6 +161,59 @@ export default class SpawnBehaviour extends Behaviour {
         particle.movement.x += Math.random() * point.positionVariance.x - point.positionVariance.x / 2
         particle.movement.y += Math.random() * point.positionVariance.y - point.positionVariance.y / 2
       }
+    } else if (point.spawnType === 'Lissajous') {
+      const a = point.frequency.x // Frequency in x-axis
+      const b = point.frequency.y // Frequency in y-axis
+      const delta = point.delta || Math.PI / 2 // Phase difference
+      const t = particle.uid * 0.1
+      particle.movement.x =
+        this.calculate(point.position.x, point.positionVariance.x) + Math.sin(a * t + delta) * point.radius
+      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + Math.sin(b * t) * point.radius
+    } else if (point.spawnType === 'Bezier') {
+      const t = Math.random() // Progress along the curve
+      const cx1 = point.control1.x
+      const cy1 = point.control1.y
+      const cx2 = point.control2.x
+      const cy2 = point.control2.y
+      const x =
+        this.calculate(point.position.x, point.positionVariance.x) +
+        (1 - t) ** 3 * point.start.x +
+        3 * (1 - t) ** 2 * t * cx1 +
+        3 * (1 - t) * t ** 2 * cx2 +
+        t ** 3 * point.end.x
+      const y =
+        this.calculate(point.position.x, point.positionVariance.x) +
+        (1 - t) ** 3 * point.start.y +
+        3 * (1 - t) ** 2 * t * cy1 +
+        3 * (1 - t) * t ** 2 * cy2 +
+        t ** 3 * point.end.y
+      particle.movement.x = x
+      particle.movement.y = y
+    } else if (point.spawnType === 'Heart') {
+      // Heart shape formula: (x^2 + y^2 - 1)^3 - x^2 * y^3 = 0
+      const t = Math.random() * 2 * Math.PI // Parametric angle
+      const scale = point.radius || 100 // Scale based on radius
+      const x = scale * 16 * Math.sin(t) ** 3 // Parametric x-coordinate
+      const y = -scale * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))
+
+      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + x
+      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + y
+    } else if (point.spawnType === 'Helix') {
+      const turns = point.turns || 5 // Default number of turns
+      const pitch = point.pitch || 50 // Default pitch
+      const radius = point.radius || 100 // Default radius
+      const height = point.height || turns * pitch // Default height if not specified
+
+      const t = Math.random() * turns * Math.PI * 2 // Angle along the helix
+      const z = Math.random() * height // Random height within the helix
+
+      const x = radius * Math.cos(t) // X-coordinate based on angle
+      const y = radius * Math.sin(t) // Y-coordinate based on angle
+      const adjustedZ = z % pitch // Adjust z for particles within a pitch interval
+
+      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + x
+      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + y
+      particle.z = point.position.z + adjustedZ // Assign Z-coordinate to the particle
     }
 
     if (point.perspective && point.maxZ) {
@@ -162,7 +223,9 @@ export default class SpawnBehaviour extends Behaviour {
       particle.movement.y *= scale
 
       // Adjust particle opacity based on z
-      particle.color.alpha = 1 - particle.z / point.maxZ
+      particle.superColorAlphaEnd = 1 - particle.z / point.maxZ
+      particle.size.x = 1 - particle.z / point.maxZ
+      particle.size.y = 1 - particle.z / point.maxZ
     }
   }
 

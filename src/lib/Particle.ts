@@ -74,6 +74,7 @@ export default class Particle {
    * Stores the ending color of the particle
    */
   colorEnd = new Color()
+  superColorAlphaEnd = 1
 
   /**
    * Stores the maximum life time of the particle
@@ -306,6 +307,7 @@ export default class Particle {
     this.color.set(255, 255, 255, 1)
     this.colorStart.set(0, 0, 0, 1)
     this.colorEnd.set(0, 0, 0, 1)
+    this.superColorAlphaEnd = 1
 
     this.cameraZ = 0
     this.cameraZConverter = 10
