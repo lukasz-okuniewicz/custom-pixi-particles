@@ -47,6 +47,7 @@ export default class SpawnBehaviour extends Behaviour {
       delta: 1,
       pitch: 50, // Vertical distance between consecutive loops
       turns: 5, // Number of turns in the helix
+      pathPoints: [],
     },
   ]
 
@@ -214,6 +215,71 @@ export default class SpawnBehaviour extends Behaviour {
       particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + x
       particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + y
       particle.z = point.position.z + adjustedZ // Assign Z-coordinate to the particle
+    } else if (point.spawnType === 'Spring') {
+      const turns = point.turns || 5 // Number of loops in the spring
+      const pitch = point.pitch || 50 // Distance between consecutive loops
+      const radius = point.radius || 100 // Radius of the spring
+
+      // Generate random position along the spring
+      const t = Math.random() * turns * Math.PI * 2 // Angle in radians along the spring
+      const z = (t / (Math.PI * 2)) * pitch // Z position increases linearly with the angle
+
+      // Compute 3D positions
+      const x = Math.cos(t) * radius // X-coordinate on the circle
+      const y = Math.sin(t) * radius // Y-coordinate on the circle
+
+      // Apply perspective scaling if enabled
+      if (point.perspective > 0 && point.maxZ > 0) {
+        const scale = point.perspective / (point.perspective + z) // Perspective scaling
+
+        // Apply perspective scaling to coordinates
+        particle.movement.x = (this.calculate(point.position.x, point.positionVariance.x) + x) * scale
+        particle.movement.y = (this.calculate(point.position.y, point.positionVariance.y) + y) * scale
+
+        // Adjust particle size and alpha based on depth
+        particle.size.x = scale
+        particle.size.y = scale
+        particle.superColorAlphaEnd = 1 - z / point.maxZ
+      } else {
+        // No perspective: flat 2D visualization
+        particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + x
+        particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + y
+      }
+
+      // Assign Z-coordinate for reference
+      particle.z = z
+    } else if (point.spawnType === 'Path') {
+      const pathPoints = point.pathPoints || [] // List of path points [{ x, y, z }]
+      if (pathPoints.length < 2) return // Ensure at least two points for a path
+
+      // Choose a random segment along the path
+      const segmentIndex = Math.floor(Math.random() * (pathPoints.length - 1))
+      const start = pathPoints[segmentIndex]
+      const end = pathPoints[segmentIndex + 1]
+
+      // Interpolate between the start and end points
+      const t = Math.random() // Random position along the segment (0 to 1)
+      const x = start.x + t * (end.x - start.x)
+      const y = start.y + t * (end.y - start.y)
+      const z = start.z + t * (end.z - start.z || 0) // Support z if defined
+
+      // Apply perspective scaling if enabled
+      if (point.perspective > 0 && point.maxZ > 0) {
+        const scale = point.perspective / (point.perspective + z)
+        particle.movement.x = (this.calculate(point.position.x, point.positionVariance.x) + x) * scale
+        particle.movement.y = (this.calculate(point.position.y, point.positionVariance.y) + y) * scale
+
+        // Adjust particle size and alpha based on depth
+        particle.size.x = scale
+        particle.size.y = scale
+        particle.superColorAlphaEnd = 1 - z / point.maxZ
+      } else {
+        // Flat 2D path
+        particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + x
+        particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + y
+      }
+
+      particle.z = z // Assign Z-coordinate
     }
 
     if (point.perspective && point.maxZ) {

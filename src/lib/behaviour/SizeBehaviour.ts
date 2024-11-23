@@ -9,7 +9,7 @@ export default class SizeBehaviour extends Behaviour {
   sizeEnd = new Point(1, 1)
   startVariance = 0
   endVariance = 0
-  maxSize = new Point(Infinity, Infinity) // Maximum size clamp
+  maxSize = new Point(2, 2) // Maximum size clamp
   uniformScaling = true // Toggle for uniform scaling
   pulsate = false // Enable pulsating size effect
   pulsationSpeed = 1 // Speed of pulsation
