@@ -291,8 +291,8 @@ export default class TestRenderer extends Container {
    */
   updatePosition(position: { x: number; y: number }, resetDuration = true) {
     const behaviour = this.getByName(BehaviourNames.SPAWN_BEHAVIOUR)
-    behaviour.position.x = position.x
-    behaviour.position.y = position.y
+    behaviour.customPoints[0].position.x = position.x
+    behaviour.customPoints[0].position.y = position.y
     this.emitterParser?.update(this.config, this._model, resetDuration)
   }
 
