@@ -17,6 +17,8 @@ import SpawnBehaviour from './SpawnBehaviour'
 import TimelineBehaviour from './TimelineBehaviour'
 import GroupingBehaviour from './GroupingBehaviour'
 import SoundReactiveBehaviour from './SoundReactiveBehaviour'
+import LightEffectBehaviour from './LightEffectBehaviour'
+import StretchBehaviour from './StretchBehaviour'
 
 export {
   EmitterBehaviours,
@@ -37,5 +39,7 @@ export {
   TimelineBehaviour,
   GroupingBehaviour,
   SoundReactiveBehaviour,
+  LightEffectBehaviour,
+  StretchBehaviour,
   BehaviourNames,
 }

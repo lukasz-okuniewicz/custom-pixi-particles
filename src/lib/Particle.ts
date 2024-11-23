@@ -317,6 +317,8 @@ export default class Particle {
     this.warpStretch = 5
     this.warpDistanceScaleConverter = 2000
 
+    this.sizeDifference = { x: 1, y: 1 }
+
     this.fromAtoB = false
     this.fromAtoBTwoWays = false
     this.pointA.set(0, 0)

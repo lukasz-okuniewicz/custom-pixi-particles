@@ -15,6 +15,8 @@ const behaviourNames = {
   TIMELINE_BEHAVIOUR: 'TimelineBehaviour',
   GROUPING_BEHAVIOUR: 'GroupingBehaviour',
   SOUND_REACTIVE_BEHAVIOUR: 'SoundReactiveBehaviour',
+  LIGHT_EFFECT_BEHAVIOUR: 'LightEffectBehaviour',
+  STRETCH_BEHAVIOUR: 'StretchBehaviour',
 }
 
 export default behaviourNames

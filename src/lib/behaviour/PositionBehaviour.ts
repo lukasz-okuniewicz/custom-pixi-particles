@@ -17,7 +17,6 @@ export default class PositionBehaviour extends Behaviour {
   sinYVal = new Point()
   sinXValVariance = new Point()
   sinYValVariance = new Point()
-  position = new Point()
   positionVariance = new Point()
   velocity = new Point()
   velocityVariance = new Point()
@@ -447,10 +446,6 @@ export default class PositionBehaviour extends Behaviour {
       sinYVal: this.sinYVal,
       sinXValVariance: this.sinXValVariance,
       sinYValVariance: this.sinYValVariance,
-      position: {
-        x: this.position.x,
-        y: this.position.y,
-      },
       positionVariance: {
         x: this.positionVariance.x,
         y: this.positionVariance.y,
@@ -473,7 +468,7 @@ export default class PositionBehaviour extends Behaviour {
       },
       warpSpeed: this.warpSpeed,
       warpBaseSpeed: this.warpBaseSpeed,
-      cameraZConverter: this.warpBaseSpeed,
+      cameraZConverter: this.cameraZConverter,
       warpFov: this.warpFov,
       warpStretch: this.warpStretch,
       warpDistanceScaleConverter: this.warpDistanceScaleConverter,
