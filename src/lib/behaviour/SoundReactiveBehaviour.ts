@@ -1,6 +1,6 @@
 import { Behaviour, BehaviourNames } from './index'
 import Particle from '../Particle'
-import { Color } from '../util'
+import { Color, Point } from '../util'
 
 export default class SoundReactiveBehaviour extends Behaviour {
   enabled = true
@@ -20,6 +20,7 @@ export default class SoundReactiveBehaviour extends Behaviour {
   frequencyFactor = 1 // Scale factor for frequency effects
   rotationFactor = 0.05 // Scale factor for rotation effects
   beatSensitivity = 1 // Sensitivity to detect beats
+  velocityFactor = new Point(1, 1) // Sensitivity to detect beats
 
   init() {
     //
@@ -43,8 +44,8 @@ export default class SoundReactiveBehaviour extends Behaviour {
 
     if (this.useVelocity) {
       // Apply frequency effect to velocity or position
-      particle.velocity.x += dominantFrequency * this.frequencyFactor * deltaTime
-      particle.velocity.y += dominantFrequency * this.frequencyFactor * deltaTime
+      particle.velocity.x += dominantFrequency * this.frequencyFactor * deltaTime * this.velocityFactor.x
+      particle.velocity.y += dominantFrequency * this.frequencyFactor * deltaTime * this.velocityFactor.y
     }
 
     if (this.useRotation) {
@@ -135,6 +136,7 @@ export default class SoundReactiveBehaviour extends Behaviour {
       frequencyFactor: this.frequencyFactor,
       rotationFactor: this.rotationFactor,
       beatSensitivity: this.beatSensitivity,
+      velocityFactor: this.velocityFactor,
       name: this.getName(),
     }
   }

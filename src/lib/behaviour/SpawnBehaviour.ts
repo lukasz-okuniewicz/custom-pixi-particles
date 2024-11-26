@@ -51,7 +51,7 @@ export default class SpawnBehaviour extends Behaviour {
     },
   ]
 
-  lastWord: string = ''
+  lastWordSettings: any = {}
 
   /**
    * Initialize particles for each custom point.
@@ -66,8 +66,27 @@ export default class SpawnBehaviour extends Behaviour {
     // Assign particle z-coordinate within the max range
     particle.z = Math.random() * point.maxZ
 
-    if (point.spawnType === 'Word' && this.lastWord !== point.word) {
-      this.lastWord = point.word
+    if (
+      point.spawnType === 'Word' &&
+      (this.lastWordSettings.word !== point.word ||
+        point.fontSize !== this.lastWordSettings.fontSize ||
+        point.fontSpacing !== this.lastWordSettings.fontSpacing ||
+        point.particleDensity !== this.lastWordSettings.particleDensity ||
+        point.textAlign !== this.lastWordSettings.textAlign ||
+        point.textBaseline !== this.lastWordSettings.textBaseline ||
+        point.fontMaxWidth !== this.lastWordSettings.fontMaxWidth ||
+        point.fontMaxHeight !== this.lastWordSettings.fontMaxHeight)
+    ) {
+      this.lastWordSettings = {
+        word: point.word,
+        fontSize: point.fontSize,
+        fontSpacing: point.fontSpacing,
+        particleDensity: point.particleDensity,
+        textAlign: point.textAlign,
+        textBaseline: point.textBaseline,
+        fontMaxWidth: point.fontMaxWidth,
+        fontMaxHeight: point.fontMaxHeight,
+      }
       this.calculateCtx(point)
       particle.reset() // Reset the particle's position and movement
     }
@@ -292,31 +311,6 @@ export default class SpawnBehaviour extends Behaviour {
       particle.superColorAlphaEnd = 1 - particle.z / point.maxZ
       particle.size.x = 1 - particle.z / point.maxZ
       particle.size.y = 1 - particle.z / point.maxZ
-    }
-  }
-
-  /**
-   * Handle word spawn type for a custom point.
-   * @param {Object} point - The custom point configuration.
-   * @param {Particle} particle - The particle to initialize.
-   */
-  handleWordSpawn = (point: any, particle: Particle) => {
-    if (point.word && point.word !== '') {
-      // Recalculate context if the word changes
-      if (point.word !== point.lastWord) {
-        point.lastWord = point.word
-        this.calculateCtx(point)
-      }
-
-      if (particleCount > 0 && pixelPositions.length > 0) {
-        const selectedPixel = pixelPositions[Math.floor(Math.random() * particleCount)]
-        particle.movement.x = point.position.x + selectedPixel.x - canvas.width / 2
-        particle.movement.y = point.position.y + selectedPixel.y - canvas.height / 2
-
-        // Add random jitter
-        particle.movement.x += Math.random() * point.positionVariance.x - point.positionVariance.x / 2
-        particle.movement.y += Math.random() * point.positionVariance.y - point.positionVariance.y / 2
-      }
     }
   }
 

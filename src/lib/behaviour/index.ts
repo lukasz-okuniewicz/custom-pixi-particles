@@ -19,6 +19,7 @@ import GroupingBehaviour from './GroupingBehaviour'
 import SoundReactiveBehaviour from './SoundReactiveBehaviour'
 import LightEffectBehaviour from './LightEffectBehaviour'
 import StretchBehaviour from './StretchBehaviour'
+import TemperatureBehaviour from './TemperatureBehaviour'
 
 export {
   EmitterBehaviours,
@@ -41,5 +42,6 @@ export {
   SoundReactiveBehaviour,
   LightEffectBehaviour,
   StretchBehaviour,
+  TemperatureBehaviour,
   BehaviourNames,
 }

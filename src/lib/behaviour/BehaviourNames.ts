@@ -17,6 +17,7 @@ const behaviourNames = {
   SOUND_REACTIVE_BEHAVIOUR: 'SoundReactiveBehaviour',
   LIGHT_EFFECT_BEHAVIOUR: 'LightEffectBehaviour',
   STRETCH_BEHAVIOUR: 'StretchBehaviour',
+  TEMPERATURE_BEHAVIOUR: 'TemperatureBehaviour',
 }
 
 export default behaviourNames
