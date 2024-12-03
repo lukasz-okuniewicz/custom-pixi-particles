@@ -47,6 +47,7 @@ export default class TestRenderer extends Container {
       animatedSpriteZeroPad,
       animatedSpriteIndexToStart,
       maxFPS,
+      minFPS,
       tickerSpeed,
     } = settings
 
@@ -101,6 +102,7 @@ export default class TestRenderer extends Container {
 
     const ticker = new Ticker()
     ticker.maxFPS = maxFPS
+    ticker.minFPS = minFPS
     ticker.speed = tickerSpeed
     ticker.stop()
     // @ts-ignore

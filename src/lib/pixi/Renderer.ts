@@ -53,6 +53,7 @@ export default class Renderer extends ParticleContainer {
       tint,
       maxParticles,
       maxFPS,
+      minFPS,
       tickerSpeed,
     } = settings
 
@@ -113,6 +114,7 @@ export default class Renderer extends ParticleContainer {
 
     const ticker = new Ticker()
     ticker.maxFPS = maxFPS
+    ticker.minFPS = minFPS
     ticker.speed = tickerSpeed
     ticker.stop()
     // @ts-ignore

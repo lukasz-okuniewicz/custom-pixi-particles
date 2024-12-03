@@ -116,4 +116,15 @@ export default class EmitterBehaviours {
       this.behaviours[i].apply(particle, deltaTime, model)
     }
   }
+
+  /**
+   * Update once per frame
+   *
+   * @param {number} deltaTime The delta time
+   */
+  update = (deltaTime: number) => {
+    for (let i = 0; i < this.behaviours.length; ++i) {
+      if (this.behaviours[i].update) this.behaviours[i].update(deltaTime)
+    }
+  }
 }

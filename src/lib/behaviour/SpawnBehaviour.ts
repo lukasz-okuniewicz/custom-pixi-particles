@@ -10,6 +10,15 @@ let pixelPositions: Point[] = []
 export default class SpawnBehaviour extends Behaviour {
   enabled: boolean = true
   priority = 0
+  overOne: boolean = false
+  trailProgress: number = 0 // Progress along the trail (0-1)
+  trailingEnabled: boolean = false // Enable trailing
+  spawnAlongTrail: boolean = false // Spawn particles along the entire trail
+  trailSpeed: number = 1 // Speed of the trail
+  trailRepeat: boolean = true // Loop the trail
+  trailStart: number = 0 // Start the trail at 20% of its path
+  currentProgress: number = 0
+
   customPoints: any[] = [
     {
       spawnType: 'Rectangle',
@@ -63,8 +72,79 @@ export default class SpawnBehaviour extends Behaviour {
     // Choose a random custom point
     const point = this.customPoints[Math.floor(Math.random() * this.customPoints.length)]
 
+    if (this.trailingEnabled) {
+      const { positions, probabilities } = this.spawnAlongTrail
+        ? this.calculateTrailRangePositions(point)
+        : { positions: [this.calculateTrailPosition(point)], probabilities: [1] }
+
+      // Use weighted random selection for position
+      const positionIndex = this.weightedRandomIndex(probabilities)
+      const position = positions[positionIndex]
+
+      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + position.x
+      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + position.y
+      particle.z = Math.random() * point.maxZ
+    } else {
+      // Normal spawning logic
+      this.spawnParticleAtPoint(particle, point)
+    }
+
+    if (point.perspective && point.maxZ) {
+      // Apply perspective scaling based on z
+      const scale = point.perspective / (point.perspective + particle.z)
+      particle.movement.x *= scale
+      particle.movement.y *= scale
+
+      // Adjust particle opacity based on z
+      particle.superColorAlphaEnd = 1 - particle.z / point.maxZ
+      particle.size.x = 1 - particle.z / point.maxZ
+      particle.size.y = 1 - particle.z / point.maxZ
+    }
+  }
+
+  apply = () => {
+    // do nothing
+  }
+
+  /**
+   * Calculate trail positions along the range from trailStart to currentProgress.
+   * @param {Object} point - The custom point configuration.
+   * @returns {Point[]} List of positions along the trail.
+   */
+  calculateTrailRangePositions = (point: any) => {
+    const positions = []
+    const segments = 20 // Increase segments for finer granularity
+    const trailStart = this.trailStart || 0
+    const weights = [] // Store probabilities for positions
+
+    const startProgress = Math.max(trailStart, 0)
+    const endProgress = Math.min(this.currentProgress, 1)
+
+    for (let i = startProgress; i <= endProgress; i += (endProgress - startProgress) / segments) {
+      const position = this.calculateTrailPosition(point, i)
+      positions.push(position)
+
+      // Assign a weight inversely proportional to distance from trail center
+      const weightFactor = 4 // Higher values give steeper drops
+      const distanceToTrail = Math.abs(i - this.currentProgress)
+      weights.push(Math.exp(-distanceToTrail * weightFactor))
+    }
+
+    // Normalize weights to create probabilities
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0)
+    const probabilities = weights.map((w) => w / totalWeight)
+
+    return { positions, probabilities }
+  }
+
+  /**
+   * Spawn particle at the specified point configuration.
+   * @param {Particle} particle - The particle to be initialized.
+   * @param {Object} point - The custom point configuration.
+   */
+  spawnParticleAtPoint = (particle: Particle, point: any) => {
     // Assign particle z-coordinate within the max range
-    particle.z = Math.random() * point.maxZ
+    // particle.z = Math.random() * point.maxZ
 
     if (
       point.spawnType === 'Word' &&
@@ -299,18 +379,14 @@ export default class SpawnBehaviour extends Behaviour {
       }
 
       particle.z = z // Assign Z-coordinate
-    }
+    } else if (point.spawnType === 'Oval') {
+      const angle = Math.random() * Math.PI * 2 // Random angle around the ellipse
+      const radiusX = point.radiusX || 100 // Default radiusX
+      const radiusY = point.radiusY || 50 // Default radiusY
 
-    if (point.perspective && point.maxZ) {
-      // Apply perspective scaling based on z
-      const scale = point.perspective / (point.perspective + particle.z)
-      particle.movement.x *= scale
-      particle.movement.y *= scale
+      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + Math.cos(angle) * radiusX
 
-      // Adjust particle opacity based on z
-      particle.superColorAlphaEnd = 1 - particle.z / point.maxZ
-      particle.size.x = 1 - particle.z / point.maxZ
-      particle.size.y = 1 - particle.z / point.maxZ
+      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + Math.sin(angle) * radiusY
     }
   }
 
@@ -359,8 +435,312 @@ export default class SpawnBehaviour extends Behaviour {
     particleCount = Math.floor(pixelPositions.length * point.particleDensity)
   }
 
-  apply = (particle: Particle, deltaTime: number) => {
-    // No updates here for now
+  calculateTrailPosition = (point: any, overrideProgress?: number) => {
+    const progress = overrideProgress !== undefined ? overrideProgress : this.currentProgress
+
+    switch (point.spawnType) {
+      case 'Rectangle': {
+        const totalSegments = 4 // Rectangle has four edges
+        const segmentLength = (2 * point.radiusX + 2 * point.radiusY) * progress
+        const perimeter = 2 * point.radiusX + 2 * point.radiusY
+        const localPosition = segmentLength % perimeter
+
+        let x = point.position.x
+        let y = point.position.y
+
+        if (localPosition <= point.radiusX) {
+          // Top edge
+          x += localPosition - point.radiusX
+          y -= point.radiusY
+        } else if (localPosition <= point.radiusX + point.radiusY) {
+          // Right edge
+          x += point.radiusX
+          y += localPosition - point.radiusX - point.radiusY
+        } else if (localPosition <= 2 * point.radiusX + point.radiusY) {
+          // Bottom edge
+          x += point.radiusX - (localPosition - point.radiusX - point.radiusY)
+          y += point.radiusY
+        } else {
+          // Left edge
+          x -= point.radiusX
+          y += point.radiusY - (localPosition - 2 * point.radiusX - point.radiusY)
+        }
+
+        return { x, y, z: 0 }
+      }
+
+      case 'Ring': {
+        const angle = progress * Math.PI * 2 // Progress is proportional to angle
+        const x = point.position.x + Math.cos(angle) * point.radius
+        const y = point.position.y + Math.sin(angle) * point.radius
+        return { x, y, z: 0 }
+      }
+
+      case 'Star': {
+        const totalPoints = point.starPoints * 2 // Include outer and inner points
+        const pointIndex = Math.floor(progress * totalPoints)
+        const localProgress = (progress * totalPoints) % 1
+
+        const angle = (Math.PI * 2 * pointIndex) / totalPoints
+        const nextAngle = (Math.PI * 2 * (pointIndex + 1)) / totalPoints
+
+        const radius = pointIndex % 2 === 0 ? point.radius : point.radius / 2
+        const nextRadius = (pointIndex + 1) % 2 === 0 ? point.radius : point.radius / 2
+
+        const x =
+          point.position.x +
+          Math.cos(angle) * radius * (1 - localProgress) +
+          Math.cos(nextAngle) * nextRadius * localProgress
+        const y =
+          point.position.y +
+          Math.sin(angle) * radius * (1 - localProgress) +
+          Math.sin(nextAngle) * nextRadius * localProgress
+
+        return { x, y, z: 0 }
+      }
+
+      case 'Path': {
+        const pathPoints = point.pathPoints || []
+        if (pathPoints.length < 2) return { x: 0, y: 0, z: 0 }
+
+        const totalSegments = pathPoints.length - 1
+        const segmentIndex = Math.floor(progress * totalSegments)
+        const localProgress = (progress * totalSegments) % 1
+
+        const start = pathPoints[segmentIndex]
+        const end = pathPoints[segmentIndex + 1]
+
+        const x = start.x + localProgress * (end.x - start.x)
+        const y = start.y + localProgress * (end.y - start.y)
+        const z = start.z + localProgress * (end.z - start.z || 0)
+
+        return { x, y, z }
+      }
+
+      case 'Lissajous': {
+        const a = point.frequency.x
+        const b = point.frequency.y
+        const delta = point.delta || Math.PI / 2
+
+        const t = progress * Math.PI * 2
+        const x = point.position.x + Math.sin(a * t + delta) * point.radius
+        const y = point.position.y + Math.sin(b * t) * point.radius
+
+        return { x, y, z: 0 }
+      }
+
+      case 'Helix': {
+        const turns = point.turns || 5
+        const pitch = point.pitch || 50
+        const angle = progress * turns * Math.PI * 2
+
+        const x = point.position.x + Math.cos(angle) * point.radius
+        const y = point.position.y + Math.sin(angle) * point.radius
+        const z = point.position.z + progress * turns * pitch
+
+        return { x, y, z }
+      }
+
+      case 'Heart': {
+        const t = progress * Math.PI * 2 // Map progress to parametric angle
+        const scale = point.radius || 100 // Scale based on radius
+
+        // Parametric heart shape equations
+        const x = scale * 16 * Math.sin(t) ** 3
+        const y = -scale * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))
+
+        // Apply position offset and variance
+        return {
+          x: point.position.x + x,
+          y: point.position.y + y,
+          z: 0,
+        }
+      }
+
+      case 'Bezier': {
+        const t = progress // Use progress directly as the parameter for the curve
+        const { start, end, control1, control2 } = point
+
+        // Calculate position along the Bezier curve
+        const x =
+          (1 - t) ** 3 * start.x +
+          3 * (1 - t) ** 2 * t * control1.x +
+          3 * (1 - t) * t ** 2 * control2.x +
+          t ** 3 * end.x
+        const y =
+          (1 - t) ** 3 * start.y +
+          3 * (1 - t) ** 2 * t * control1.y +
+          3 * (1 - t) * t ** 2 * control2.y +
+          t ** 3 * end.y
+
+        return { x, y, z: 0 } // Bezier is 2D, so z is 0
+      }
+
+      case 'Frame': {
+        const perimeter = 2 * (point.radiusX + point.radiusY) // Total perimeter of the frame
+        const segmentLength = perimeter * progress // Length covered by progress
+        const localPosition = segmentLength % perimeter
+
+        let x = point.position.x
+        let y = point.position.y
+
+        if (localPosition <= point.radiusX) {
+          // Top edge
+          x += localPosition
+          y -= point.radiusY
+        } else if (localPosition <= point.radiusX + point.radiusY) {
+          // Right edge
+          x += point.radiusX
+          y += localPosition - point.radiusX
+        } else if (localPosition <= 2 * point.radiusX + point.radiusY) {
+          // Bottom edge
+          x += point.radiusX - (localPosition - point.radiusX - point.radiusY)
+          y += point.radiusY
+        } else {
+          // Left edge
+          x -= localPosition - 2 * point.radiusX - point.radiusY
+          y -= point.radiusY
+        }
+
+        return { x, y, z: 0 } // Frame is 2D, so z is 0
+      }
+
+      case 'FrameRectangle': {
+        const perimeter = 2 * (point.radiusX + point.radiusY) // Total perimeter of the rectangular frame
+        const segmentLength = perimeter * progress // Length covered by progress
+        const localPosition = segmentLength % perimeter
+
+        let x = point.position.x
+        let y = point.position.y
+
+        if (localPosition <= point.radiusX) {
+          // Top edge
+          x += localPosition
+          y -= point.radiusY / 2
+        } else if (localPosition <= point.radiusX + point.radiusY) {
+          // Right edge
+          x += point.radiusX / 2
+          y += localPosition - point.radiusX - point.radiusY / 2
+        } else if (localPosition <= 2 * point.radiusX + point.radiusY) {
+          // Bottom edge
+          x += point.radiusX / 2 - (localPosition - point.radiusX - point.radiusY)
+          y += point.radiusY / 2
+        } else {
+          // Left edge
+          x -= localPosition - 2 * point.radiusX - point.radiusY
+          y -= point.radiusY / 2
+        }
+
+        return { x, y, z: 0 } // FrameRectangle is 2D, so z is 0
+      }
+
+      case 'Oval': {
+        const angle = progress * Math.PI * 2 // Progress determines angle
+        const radiusX = point.radiusX || 100
+        const radiusY = point.radiusY || 50
+
+        const x = point.position.x + Math.cos(angle) * radiusX
+        const y = point.position.y + Math.sin(angle) * radiusY
+
+        return { x, y, z: 0 }
+      }
+
+      case 'Word': {
+        if (!pixelPositions || pixelPositions.length === 0) {
+          return { x: point.position.x, y: point.position.y, z: 0 } // Fallback if no pixel data is available
+        }
+
+        // Determine the number of pixels to reveal based on trailProgress
+        const maxPixelIndex = Math.floor(progress * pixelPositions.length)
+
+        // Slice the pixels to include only those within the current progress
+        const revealedPixels = pixelPositions.slice(0, maxPixelIndex)
+
+        // If no pixels are revealed yet, return the starting position
+        if (revealedPixels.length === 0) {
+          return { x: point.position.x - canvas.width / 2, y: point.position.y - canvas.height / 2, z: 0 }
+        }
+
+        // Choose the first pixel in the revealed portion for a left-to-right effect
+        const selectedPixel = revealedPixels[revealedPixels.length - 1] || { x: 0, y: 0 }
+
+        // Map the pixel position to the particle's position
+        const x = point.position.x + selectedPixel.x - canvas.width / 2
+        const y = point.position.y + selectedPixel.y - canvas.height / 2
+
+        return { x, y, z: 0 }
+      }
+
+      default:
+        return { x: 0, y: 0, z: 0 }
+    }
+  }
+
+  /**
+   * Update trail progress once per frame.
+   * @param {number} deltaTime - Time since the last update
+   */
+  updateTrailProgress = (deltaTime: number) => {
+    if (!this.trailingEnabled) return
+
+    const trailStart = this.trailStart || 0
+
+    // Increment trail progress
+    this.trailProgress += this.trailSpeed * deltaTime
+
+    if (trailStart > 0) {
+      const remainingDistance = 1 - trailStart
+      if (!this.overOne) {
+        if (this.trailProgress > remainingDistance) {
+          if (this.trailRepeat) {
+            this.overOne = true
+            this.trailProgress = 0
+          } else {
+            this.trailProgress = remainingDistance
+          }
+        }
+        this.currentProgress = trailStart + (this.trailProgress / remainingDistance) * remainingDistance
+      } else {
+        if (this.trailProgress > 1) {
+          if (this.trailRepeat) {
+            this.trailProgress %= 1
+          } else {
+            this.trailingEnabled = false
+            this.trailProgress = 1
+          }
+        }
+        this.currentProgress = this.trailProgress
+      }
+    } else {
+      if (this.trailProgress > 1) {
+        if (this.trailRepeat) {
+          this.trailProgress %= 1
+        } else {
+          this.trailingEnabled = false
+          this.trailProgress = 1
+        }
+      }
+      this.currentProgress = this.trailProgress
+    }
+  }
+
+  // Utility function for weighted random selection
+  weightedRandomIndex = (probabilities: any) => {
+    const cumulative = probabilities.reduce((acc: any, prob: number, i: number) => {
+      acc.push(prob + (acc[i - 1] || 0))
+      return acc
+    }, [])
+
+    const randomValue = Math.random()
+    return cumulative.findIndex((c: number) => randomValue <= c)
+  }
+
+  /**
+   * Update method to be called once per frame.
+   * @param {number} deltaTime - Time since the last frame
+   */
+  update = (deltaTime: number) => {
+    this.updateTrailProgress(deltaTime) // Update trail once per frame
   }
 
   /**
@@ -389,6 +769,11 @@ export default class SpawnBehaviour extends Behaviour {
     return {
       enabled: this.enabled,
       priority: this.priority,
+      trailingEnabled: this.trailingEnabled,
+      spawnAlongTrail: this.spawnAlongTrail,
+      trailSpeed: this.trailSpeed,
+      trailRepeat: this.trailRepeat,
+      trailStart: this.trailStart,
       customPoints: this.customPoints,
       name: this.getName(),
     }

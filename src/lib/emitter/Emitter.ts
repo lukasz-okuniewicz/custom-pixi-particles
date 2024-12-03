@@ -46,6 +46,7 @@ export default class Emitter extends eventemitter3 {
   async update(deltaTime: number) {
     if (!this._play) return
 
+    this.behaviours.update(deltaTime)
     this.emitParticles(deltaTime)
     this.updateParticles(deltaTime)
     this.duration.update(deltaTime)

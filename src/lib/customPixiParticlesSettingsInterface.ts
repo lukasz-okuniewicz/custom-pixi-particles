@@ -14,5 +14,6 @@ export interface ICustomPixiParticlesSettings {
   tint?: boolean
   maxParticles?: number
   maxFPS: number
+  minFPS: number
   tickerSpeed: number
 }
