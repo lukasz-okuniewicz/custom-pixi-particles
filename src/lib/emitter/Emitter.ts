@@ -6,7 +6,7 @@ import { EmitterParser } from '../parser'
 import List from '../util/List'
 import * as emission from '../emission'
 import Particle from '../Particle'
-import { AnimatedSprite, BLEND_MODES } from 'pixi.js-legacy'
+import { AnimatedSprite, BLEND_MODES } from 'pixi.js'
 import Model from '../Model'
 import TurbulencePool from '../util/turbulencePool'
 
