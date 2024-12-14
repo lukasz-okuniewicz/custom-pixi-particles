@@ -15,7 +15,7 @@ If you find **CustomPIXIParticles** useful and would like to support my work, yo
 - **Simple API**: Effortlessly create particle emitters with minimal code.
 - **Highly Configurable**: Adjust particle behavior, appearance, animation, and more.
 - **Performance Optimized**: Handle thousands of particles with minimal performance overhead.
-- **PIXI.js Compatibility**: Fully compatible with **PIXI.js v7**, with legacy support for v5.x and v6.x.
+- **PIXI.js Compatibility**: Fully compatible with **PIXI.js v8**, **PIXI.js v7**, with legacy support for v5.x and v6.x.
 - **Real-Time Customization**: Dynamically update textures, positions, configurations, and emitters on the fly.
 
 ---
@@ -146,6 +146,7 @@ particles.clearPool()
 |-------------|---------------------|
 | v5.x - v6.x | v4.x                |
 | v7.x        | v7.x                |
+| v8.x        | v8.x                |
 
 ---
 
