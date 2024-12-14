@@ -142,9 +142,10 @@ particles.clearPool()
 ---
 
 ## 🖥️ Versions Compatibility
-| PixiJS | CustomPIXIParticles |
-|---|---|
-| v5.x - v6.x | v4.x |
+| PixiJS      | CustomPIXIParticles |
+|-------------|---------------------|
+| v5.x - v6.x | v4.x                |
+| v7.x        | v7.x                |
 
 ---
 
