@@ -23,7 +23,7 @@ export default class Emitter extends eventemitter3 {
   animatedSprite: { loop: boolean; frameRate: number; randomFrameStart: number }
   alpha: number = 1
   anchor: { x: number; y: number } = { x: 0.5, y: 0.5 }
-  blendMode: BLEND_MODES = BLEND_MODES.NORMAL
+  blendMode: BLEND_MODES = 'normal'
   behaviours: EmitterBehaviours = new EmitterBehaviours()
   emitController: any
   turbulencePool: TurbulencePool = new TurbulencePool()

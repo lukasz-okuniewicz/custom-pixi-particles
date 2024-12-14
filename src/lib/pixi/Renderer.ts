@@ -7,7 +7,7 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
-import { AnimatedSprite, Assets, ParticleContainer, Sprite, Texture, Ticker, utils } from 'pixi.js'
+import { AnimatedSprite, Assets, Container, Sprite, Texture, Ticker } from 'pixi.js'
 import Model from '../Model'
 
 /**
@@ -15,7 +15,8 @@ import Model from '../Model'
  *
  * @class Renderer
  */
-export default class Renderer extends ParticleContainer {
+export default class Renderer extends Container {
+  // @ts-ignore
   blendMode: any
   emitter: Emitter
   turbulenceEmitter: Emitter
@@ -57,13 +58,7 @@ export default class Renderer extends ParticleContainer {
       tickerSpeed,
     } = settings
 
-    super(maxParticles, {
-      vertices,
-      position,
-      rotation,
-      uvs,
-      tint,
-    })
+    super()
 
     this.config = emitterConfig
     this.textures = textures
@@ -382,9 +377,9 @@ export default class Renderer extends ParticleContainer {
       }
       try {
         const fileName = `${prefix}${frame}.${imageFileExtension}`
-        const file = utils.TextureCache[fileName]
+        const file = Assets.get(fileName)
         if (file) {
-          texture = Assets.get(fileName)
+          texture = file
           textures.push(texture)
           indexFrame += 1
         } else {

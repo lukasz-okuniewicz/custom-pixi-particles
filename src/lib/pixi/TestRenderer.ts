@@ -7,7 +7,7 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
-import { AnimatedSprite, Assets, Container, Sprite, Texture, Ticker, utils } from 'pixi.js'
+import { AnimatedSprite, Assets, Container, Sprite, Texture, Ticker } from 'pixi.js'
 import Model from '../Model'
 
 /**
@@ -16,6 +16,7 @@ import Model from '../Model'
  * @class Renderer
  */
 export default class TestRenderer extends Container {
+  // @ts-ignore
   blendMode: any
   emitter: Emitter
   turbulenceEmitter: Emitter
@@ -370,7 +371,7 @@ export default class TestRenderer extends Container {
       }
       try {
         const fileName = `${prefix}${frame}.${imageFileExtension}`
-        const file = utils.TextureCache[fileName]
+        const file = Assets.get(fileName)
         if (file) {
           texture = Assets.get(fileName)
           textures.push(texture)
