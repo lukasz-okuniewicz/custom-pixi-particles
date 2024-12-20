@@ -17,7 +17,8 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
-    "eventemitter3": "^4.0.7"
+    "eventemitter3": "^4.0.7",
+    "simplex-noise": "^4.0.3"
   },
   "files": [
     "dist"
@@ -42,5 +43,5 @@
     "lint": "tslint 'src/**/*.ts'",
     "lint:fix": "tslint --fix 'src/**/*.ts'"
   },
-  "version": "7.0.0"
+  "version": "7.1.0"
 }
