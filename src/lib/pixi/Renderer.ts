@@ -113,9 +113,9 @@ export default class Renderer extends ParticleContainer {
     document.addEventListener('visibilitychange', this._visibilitychangeBinding)
 
     const ticker = new Ticker()
-    ticker.maxFPS = maxFPS
-    ticker.minFPS = minFPS
-    ticker.speed = tickerSpeed
+    ticker.maxFPS = maxFPS || 60
+    ticker.minFPS = minFPS || 60
+    ticker.speed = tickerSpeed || 0.02
     ticker.stop()
     // @ts-ignore
     ticker.add(this._updateTransform, this)
