@@ -25,18 +25,37 @@ export default class ColorBehaviour extends Behaviour {
   init = (particle: Particle) => {
     if (!this.enabled) return
 
+    function clamp(val: number, min: number, max: number) {
+      return Math.min(Math.max(val, min), max)
+    }
+
+    // Copy base color
     particle.colorStart.copyFrom(this.start)
+    // Add random variance
     particle.colorStart.r += this.varianceFrom(this.startVariance.r)
     particle.colorStart.g += this.varianceFrom(this.startVariance.g)
     particle.colorStart.b += this.varianceFrom(this.startVariance.b)
     particle.colorStart.alpha += this.varianceFrom(this.startVariance.alpha)
 
+    // Clamp color channels to [0..255]
+    particle.colorStart.r = clamp(particle.colorStart.r, 0, 255)
+    particle.colorStart.g = clamp(particle.colorStart.g, 0, 255)
+    particle.colorStart.b = clamp(particle.colorStart.b, 0, 255)
+    particle.colorStart.alpha = clamp(particle.colorStart.alpha, 0, 255)
+
+    // Repeat for colorEnd
     particle.colorEnd.copyFrom(this.end)
     particle.colorEnd.r += this.varianceFrom(this.endVariance.r)
     particle.colorEnd.g += this.varianceFrom(this.endVariance.g)
     particle.colorEnd.b += this.varianceFrom(this.endVariance.b)
     particle.colorEnd.alpha += this.varianceFrom(this.endVariance.alpha)
 
+    particle.colorEnd.r = clamp(particle.colorEnd.r, 0, 255)
+    particle.colorEnd.g = clamp(particle.colorEnd.g, 0, 255)
+    particle.colorEnd.b = clamp(particle.colorEnd.b, 0, 255)
+    particle.colorEnd.alpha = clamp(particle.colorEnd.alpha, 0, 255)
+
+    // Initialize particle color to start
     particle.color.copyFrom(particle.colorStart)
   }
 

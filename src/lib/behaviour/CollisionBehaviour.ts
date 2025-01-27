@@ -1,6 +1,5 @@
 import { Behaviour, BehaviourNames } from './index'
 import Particle from '../Particle'
-import Model from '../Model'
 
 export default class CollisionBehaviour extends Behaviour {
   enabled = false
@@ -19,20 +18,16 @@ export default class CollisionBehaviour extends Behaviour {
 
   /**
    * Function that initializes a particle
-   * @param {Particle} particle - The particle to be initialized
-   * @param {Model} model - The model of the particle
    */
-  init = (particle: Particle, model: Model) => {
+  init = () => {
     // do nothing
   }
 
   /**
    * Applies the particle's velocity and acceleration to move it and calculate its size, rotation, and position.
    * @param {Particle} particle - The particle to be moved
-   * @param {number} deltaTime - The time delta for the movement calculation
-   * @param {Model} model - The model containing information about the particle's movement
    */
-  apply = (particle: Particle, deltaTime: number, model: Model) => {
+  apply = (particle: Particle) => {
     if (!this.enabled) return
     this.checkCollisionAndReflect(particle)
   }
