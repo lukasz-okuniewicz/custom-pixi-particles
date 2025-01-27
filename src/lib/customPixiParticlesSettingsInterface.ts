@@ -13,7 +13,7 @@ export interface ICustomPixiParticlesSettings {
   uvs?: boolean
   tint?: boolean
   maxParticles?: number
-  maxFPS: number
-  minFPS: number
-  tickerSpeed: number
+  maxFPS?: number
+  minFPS?: number
+  tickerSpeed?: number
 }
