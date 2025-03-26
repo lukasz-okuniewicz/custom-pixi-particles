@@ -1,5 +1,5 @@
-import { Point } from '../util'
-import { Behaviour, BehaviourNames } from './index'
+import {Point} from '../util'
+import {Behaviour, BehaviourNames} from './index'
 import Particle from '../Particle'
 import Model from '../Model'
 import MinMax from '../util/MinMax'
@@ -424,20 +424,20 @@ export default class PositionBehaviour extends Behaviour {
         y: this.pointB.y,
       },
       thereDuration: {
-        x: this.thereDuration.min,
-        y: this.thereDuration.max,
+        min: this.thereDuration.min,
+        max: this.thereDuration.max,
       },
       thereAmplitude: {
-        x: this.thereAmplitude.min,
-        y: this.thereAmplitude.max,
+        min: this.thereAmplitude.min,
+        max: this.thereAmplitude.max,
       },
       backDuration: {
-        x: this.backDuration.min,
-        y: this.backDuration.max,
+        min: this.backDuration.min,
+        max: this.backDuration.max,
       },
       backAmplitude: {
-        x: this.backAmplitude.min,
-        y: this.backAmplitude.max,
+        min: this.backAmplitude.min,
+        max: this.backAmplitude.max,
       },
       warp: this.warp,
       sinX: this.sinX,
