@@ -22,6 +22,16 @@ export default class MoveToPointBehaviour extends Behaviour {
    */
   speed: number = 100
   /**
+   * If true, particles will be marked as "dead" (lifeTime >= maxLifeTime)
+   * once they reach the targetPoint while this behaviour is active.
+   */
+  killOnArrival: boolean = false
+  resetMaxLifeTime: boolean = false
+  /**
+   * The distance threshold to consider a particle "at" the target point.
+   */
+  arrivalThreshold: number = 1.0
+  /**
    * Priority determines execution order. A lower number means it runs later.
    * This should run after default position behaviours to override the particle's position.
    * PositionBehaviour is 100, EmitDirection is 0. Set to -10 to run after them.
@@ -58,6 +68,11 @@ export default class MoveToPointBehaviour extends Behaviour {
       return
     }
 
+    // If the particle is already considered dead by other means, don't process further.
+    if (particle.isDead()) {
+      return
+    }
+
     const dx = this.targetPoint.x - particle.x
     const dy = this.targetPoint.y - particle.y
     const distance = Math.sqrt(dx * dx + dy * dy)
@@ -69,16 +84,43 @@ export default class MoveToPointBehaviour extends Behaviour {
     particle.acceleration.set(0, 0)
 
     // If particle is already at or very close to the target
-    if (distance < 1.0) {
-      // Using a small threshold to prevent jittering
+    if (distance < this.arrivalThreshold) {
       particle.x = this.targetPoint.x
       particle.y = this.targetPoint.y
+      if (this.killOnArrival) {
+        // Mark the particle as dead. The Emitter will pick this up and remove it.
+        // Ensure maxLifeTime is positive; otherwise, this won't "kill" it effectively.
+        if (particle.maxLifeTime > 0) {
+          particle.lifeTime = particle.maxLifeTime
+          if (this.resetMaxLifeTime) {
+            particle.maxLifeTime = 0
+          }
+        } else {
+          // If maxLifeTime is 0 or negative (infinite),
+          // we can't use it to kill. Consider an alternative
+          // or ensure particles using this feature have a finite life.
+          // For now, we'll just set it to a high value, but ideally,
+          // this feature is for particles with defined lifespans.
+          // Or, one could introduce a specific "killNow" flag on the particle
+          // if the Emitter was modified to check for it.
+          // Simplest for now is to rely on a positive maxLifeTime.
+          // If maxLifeTime is not > 0, the particle won't be "killed" by this mechanism.
+        }
+      }
     } else {
       const moveAmount = this.speed * deltaTime
       if (moveAmount >= distance) {
         // If the movement step is enough to reach the target, snap to target
         particle.x = this.targetPoint.x
         particle.y = this.targetPoint.y
+        if (this.killOnArrival) {
+          if (particle.maxLifeTime > 0) {
+            particle.lifeTime = particle.maxLifeTime
+            if (this.resetMaxLifeTime) {
+              particle.maxLifeTime = 0
+            }
+          }
+        }
       } else {
         // Move towards the target
         particle.x += (dx / distance) * moveAmount
@@ -111,6 +153,9 @@ export default class MoveToPointBehaviour extends Behaviour {
       active: this.active,
       targetPoint: { x: this.targetPoint.x, y: this.targetPoint.y },
       speed: this.speed,
+      killOnArrival: this.killOnArrival,
+      resetMaxLifeTime: this.resetMaxLifeTime,
+      arrivalThreshold: this.arrivalThreshold,
       priority: this.priority,
       name: this.getName(),
     }
