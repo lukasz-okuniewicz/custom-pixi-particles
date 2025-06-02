@@ -20,6 +20,7 @@ import SoundReactiveBehaviour from './SoundReactiveBehaviour'
 import LightEffectBehaviour from './LightEffectBehaviour'
 import StretchBehaviour from './StretchBehaviour'
 import TemperatureBehaviour from './TemperatureBehaviour'
+import MoveToPointBehaviour from './MoveToPointBehaviour'
 
 export {
   EmitterBehaviours,
@@ -44,4 +45,5 @@ export {
   StretchBehaviour,
   TemperatureBehaviour,
   BehaviourNames,
+  MoveToPointBehaviour,
 }

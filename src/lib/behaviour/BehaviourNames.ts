@@ -18,6 +18,7 @@ const behaviourNames = {
   LIGHT_EFFECT_BEHAVIOUR: 'LightEffectBehaviour',
   STRETCH_BEHAVIOUR: 'StretchBehaviour',
   TEMPERATURE_BEHAVIOUR: 'TemperatureBehaviour',
+  MOVE_TO_POINT_BEHAVIOUR: 'MoveToPointBehaviour',
 }
 
 export default behaviourNames
