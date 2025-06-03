@@ -1,3 +1,4 @@
+// src/lib/emitter/Emitter.ts
 import Duration from './Duration'
 import { EmitterBehaviours } from '../behaviour'
 import eventemitter3 from 'eventemitter3'
@@ -117,6 +118,7 @@ export default class Emitter extends eventemitter3 {
    */
   removeParticle(particle: Particle) {
     this.emit(Emitter.REMOVE, particle)
+    this.behaviours.onParticleRemoved(particle) // Notify behaviours
     this.list.remove(particle)
     particle.reset()
     ParticlePool.global.push(particle)

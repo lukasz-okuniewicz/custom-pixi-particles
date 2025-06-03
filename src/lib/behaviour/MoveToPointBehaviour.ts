@@ -1,10 +1,11 @@
+// src/lib/behaviour/MoveToPointBehaviour.ts
 import { Behaviour, BehaviourNames } from './index'
 import Particle from '../Particle'
 import { Point } from '../util'
 
 /**
  * MoveToPointBehaviour makes particles move towards a specified target point
- * when active.
+ * when active, with options for different path types.
  * @extends Behaviour
  */
 export default class MoveToPointBehaviour extends Behaviour {
@@ -38,6 +39,24 @@ export default class MoveToPointBehaviour extends Behaviour {
    */
   priority: number = -10
 
+  /**
+   * Type of path the particle will follow.
+   * 'linear': Straight line to the target.
+   * 'sinusoidal': Moves towards the target with a sine wave perpendicular to the path.
+   */
+  pathType: 'linear' | 'sinusoidal' = 'linear'
+  /**
+   * Amplitude of the sine wave for 'sinusoidal' pathType.
+   */
+  sinusoidalAmplitude: number = 20
+  /**
+   * Frequency of the sine wave for 'sinusoidal' pathType (in radians per unit of pathTime).
+   */
+  sinusoidalFrequency: number = 5
+
+  // Internal state to manage pathTime reset on activation
+  private _wasActiveLastFrame: Map<number, boolean> = new Map()
+
   constructor() {
     super()
     // Ensure targetPoint is initialized as a Point instance for copyFromRawData in parser
@@ -46,93 +65,124 @@ export default class MoveToPointBehaviour extends Behaviour {
 
   /**
    * Initializes particle properties for the behaviour.
-   * This behaviour doesn't require specific per-particle initialization at creation time,
-   * as its effect is mostly global and trigger-based.
+   * particle.pathTime is reset to 0 by Particle.reset().
    * @param {Particle} particle - The particle to initialize.
    */
   init = (particle: Particle) => {
-    // No particle-specific setup needed when it's created,
-    // as the movement is controlled by the 'active' state of the behaviour.
+    // particle.pathTime is initialized to 0 in Particle.reset()
+    // No specific particle init needed here beyond what Particle.reset() does for pathTime.
   }
 
   /**
    * Applies the behaviour to the particle. If active, moves the particle
-   * towards the targetPoint.
+   * towards the targetPoint along the specified path.
    * @param {Particle} particle - The particle to apply the behaviour to.
    * @param {number} deltaTime - Time elapsed since the last frame.
    */
   apply = (particle: Particle, deltaTime: number) => {
-    if (!this.enabled || !this.active) {
-      // If the behaviour is not enabled or not active, do nothing.
-      // The particle will continue its movement based on other behaviours.
+    if (!this.enabled) {
+      if (this._wasActiveLastFrame.has(particle.uid)) {
+        // If behaviour was active and is now disabled, ensure cleanup for this particle
+        this._wasActiveLastFrame.delete(particle.uid)
+        // Optionally reset pathTime if deactivation should clear path progress
+        // particle.pathTime = 0;
+      }
       return
     }
 
-    // If the particle is already considered dead by other means, don't process further.
-    if (particle.isDead()) {
+    const isActiveThisFrame = this.active
+    const wasActivePreviously = this._wasActiveLastFrame.get(particle.uid) ?? false
+
+    if (!isActiveThisFrame) {
+      if (wasActivePreviously) {
+        // Behaviour was active, now it's not. Reset pathTime for next activation.
+        particle.pathTime = 0
+        this._wasActiveLastFrame.set(particle.uid, false) // Or delete if preferred
+      }
       return
     }
+
+    // Behaviour is active this frame
+    if (!wasActivePreviously) {
+      // Behaviour just became active for this particle
+      particle.pathTime = 0 // Reset path progress
+    }
+    this._wasActiveLastFrame.set(particle.uid, true)
+
+    // Take control of particle's direct movement
+    particle.velocity.set(0, 0)
+    particle.acceleration.set(0, 0)
 
     const dx = this.targetPoint.x - particle.x
     const dy = this.targetPoint.y - particle.y
     const distance = Math.sqrt(dx * dx + dy * dy)
 
-    // When this behaviour is active, it takes full control of the particle's position.
-    // We also zero out current velocity and acceleration to prevent interference
-    // from other behaviours for this frame's positioning.
-    particle.velocity.set(0, 0)
-    particle.acceleration.set(0, 0)
-
-    // If particle is already at or very close to the target
     if (distance < this.arrivalThreshold) {
       particle.x = this.targetPoint.x
       particle.y = this.targetPoint.y
+      particle.pathTime = 0 // Reset pathTime on arrival
       if (this.killOnArrival) {
-        // Mark the particle as dead. The Emitter will pick this up and remove it.
-        // Ensure maxLifeTime is positive; otherwise, this won't "kill" it effectively.
         if (particle.maxLifeTime > 0) {
           particle.lifeTime = particle.maxLifeTime
           if (this.resetMaxLifeTime) {
             particle.maxLifeTime = 0
           }
-        } else {
-          // If maxLifeTime is 0 or negative (infinite),
-          // we can't use it to kill. Consider an alternative
-          // or ensure particles using this feature have a finite life.
-          // For now, we'll just set it to a high value, but ideally,
-          // this feature is for particles with defined lifespans.
-          // Or, one could introduce a specific "killNow" flag on the particle
-          // if the Emitter was modified to check for it.
-          // Simplest for now is to rely on a positive maxLifeTime.
-          // If maxLifeTime is not > 0, the particle won't be "killed" by this mechanism.
+        }
+      }
+      // Note: _wasActiveLastFrame remains true; if active remains true, it will just stay at target.
+      return
+    }
+
+    const moveAmount = this.speed * deltaTime
+
+    if (moveAmount >= distance) {
+      // Will reach or pass target this step
+      particle.x = this.targetPoint.x
+      particle.y = this.targetPoint.y
+      particle.pathTime = 0 // Reset pathTime on arrival
+      if (this.killOnArrival) {
+        if (particle.maxLifeTime > 0) {
+          particle.lifeTime = particle.maxLifeTime
+          if (this.resetMaxLifeTime) {
+            particle.maxLifeTime = 0
+          }
         }
       }
     } else {
-      const moveAmount = this.speed * deltaTime
-      if (moveAmount >= distance) {
-        // If the movement step is enough to reach the target, snap to target
-        particle.x = this.targetPoint.x
-        particle.y = this.targetPoint.y
-        if (this.killOnArrival) {
-          if (particle.maxLifeTime > 0) {
-            particle.lifeTime = particle.maxLifeTime
-            if (this.resetMaxLifeTime) {
-              particle.maxLifeTime = 0
-            }
-          }
-        }
+      const normDx = dx / distance
+      const normDy = dy / distance
+
+      if (this.pathType === 'sinusoidal') {
+        const perpDx = -normDy // Perpendicular vector component
+        const perpDy = normDx // Perpendicular vector component
+
+        // Calculate sinusoidal offset magnitude
+        const sinMagnitude = this.sinusoidalAmplitude * Math.sin(particle.pathTime * this.sinusoidalFrequency)
+
+        // Apply movement along direct path + sinusoidal offset
+        particle.x += normDx * moveAmount + perpDx * sinMagnitude
+        particle.y += normDy * moveAmount + perpDy * sinMagnitude
+
+        particle.pathTime += deltaTime
       } else {
-        // Move towards the target
-        particle.x += (dx / distance) * moveAmount
-        particle.y += (dy / distance) * moveAmount
+        // 'linear' path (default)
+        particle.x += normDx * moveAmount
+        particle.y += normDy * moveAmount
       }
     }
 
-    // Sync particle.movement to the new x, y. This helps if this behaviour
-    // becomes inactive, allowing other behaviours like PositionBehaviour
-    // to resume more smoothly from the particle's current position.
+    // Sync particle.movement to the new x, y.
     particle.movement.x = particle.x
     particle.movement.y = particle.y
+  }
+
+  /**
+   * Called by the Emitter when a particle is removed.
+   * Used here to clean up internal state for the removed particle.
+   * @param {Particle} particle - The particle being removed.
+   */
+  onParticleRemoved = (particle: Particle) => {
+    this._wasActiveLastFrame.delete(particle.uid)
   }
 
   /**
@@ -157,6 +207,9 @@ export default class MoveToPointBehaviour extends Behaviour {
       resetMaxLifeTime: this.resetMaxLifeTime,
       arrivalThreshold: this.arrivalThreshold,
       priority: this.priority,
+      pathType: this.pathType,
+      sinusoidalAmplitude: this.sinusoidalAmplitude,
+      sinusoidalFrequency: this.sinusoidalFrequency,
       name: this.getName(),
     }
   }

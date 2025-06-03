@@ -1,3 +1,4 @@
+// src/lib/behaviour/EmitterBehaviours.ts
 // tslint:disable:prefer-for-of
 
 import Particle from '../Particle'
@@ -125,6 +126,19 @@ export default class EmitterBehaviours {
   update = (deltaTime: number) => {
     for (let i = 0; i < this.behaviours.length; ++i) {
       if (this.behaviours[i].update) this.behaviours[i].update(deltaTime)
+    }
+  }
+
+  /**
+   * Called when a particle is removed from the emitter.
+   * Allows behaviours to clean up any per-particle state.
+   * @param {Particle} particle The particle being removed.
+   */
+  onParticleRemoved = (particle: Particle) => {
+    for (let i = 0; i < this.behaviours.length; ++i) {
+      if (typeof this.behaviours[i].onParticleRemoved === 'function') {
+        this.behaviours[i].onParticleRemoved(particle)
+      }
     }
   }
 }
