@@ -34,7 +34,7 @@ export default class TestRenderer extends Container {
   private _model: Model = new Model()
   private _ticker: Ticker | undefined
   private _visibilitychangeBinding: any
-  private _firstParticle: Particle | null = null
+  private _firstParticleHasBeenDestroyed = false
 
   /**
    * Creates an instance of Renderer.
@@ -188,7 +188,7 @@ export default class TestRenderer extends Container {
    * @function start
    */
   start() {
-    this._firstParticle = null
+    this._firstParticleHasBeenDestroyed = false
     this.emitter?.resetAndPlay()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.resetAndPlay()
@@ -200,7 +200,7 @@ export default class TestRenderer extends Container {
    * @function play
    */
   play() {
-    this._firstParticle = null
+    this._firstParticleHasBeenDestroyed = false
     this.emitter?.resetWithoutRemovingAndPlay()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.resetWithoutRemovingAndPlay()
@@ -247,7 +247,6 @@ export default class TestRenderer extends Container {
     this.onComplete = undefined
     this.onCompleteFN = undefined
     this.onFirstParticleDestroy = undefined
-    this._firstParticle = null
     this.config = undefined
     // @ts-ignore
     this.textures = undefined
@@ -274,7 +273,6 @@ export default class TestRenderer extends Container {
    * Resets the emitters to their initial state
    */
   resetEmitter() {
-    this._firstParticle = null
     this.emitter?.reset()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.reset()
@@ -428,9 +426,6 @@ export default class TestRenderer extends Container {
   }
 
   private onCreate(particle: Particle) {
-    if (!this._firstParticle) {
-      this._firstParticle = particle
-    }
     const sprite = this.getOrCreateSprite()
     sprite.visible = true
     sprite.alpha = 1
@@ -506,12 +501,13 @@ export default class TestRenderer extends Container {
   }
 
   private onRemove(particle: Particle) {
-    if (particle === this._firstParticle) {
+    if (!this._firstParticleHasBeenDestroyed) {
       if (this.onFirstParticleDestroy) {
         this.onFirstParticleDestroy()
       }
-      this._firstParticle = null
+      this._firstParticleHasBeenDestroyed = true
     }
+
     const sprite = particle.sprite
     if (!particle.showVortices && sprite) {
       sprite.visible = false
