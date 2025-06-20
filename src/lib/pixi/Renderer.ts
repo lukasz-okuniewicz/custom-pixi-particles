@@ -19,6 +19,7 @@ export default class Renderer extends ParticleContainer {
   blendMode: any
   emitter: Emitter
   turbulenceEmitter: Emitter
+  private static readonly BASE_TICKER_SPEED = 0.02
   private _paused: boolean = false
   private _internalPaused: boolean = false
   private textures: string[]
@@ -116,7 +117,7 @@ export default class Renderer extends ParticleContainer {
     const ticker = new Ticker()
     ticker.maxFPS = maxFPS || 60
     ticker.minFPS = minFPS || 60
-    ticker.speed = tickerSpeed || 0.02
+    ticker.speed = tickerSpeed || Renderer.BASE_TICKER_SPEED
     ticker.stop()
     // @ts-ignore
     ticker.add(this._updateTransform, this)
@@ -134,6 +135,17 @@ export default class Renderer extends ParticleContainer {
 
   public onFirstParticleDestroy: any = () => {
     /**/
+  }
+
+  setTickerSpeed = (speedMultiplier: number) => {
+    if (speedMultiplier < 0) {
+      console.warn('Speed multiplier cannot be negative. Using 0.')
+      speedMultiplier = 0
+    }
+
+    if (this._ticker) {
+      this._ticker.speed = Renderer.BASE_TICKER_SPEED * speedMultiplier
+    }
   }
 
   /**
