@@ -30,6 +30,7 @@ export default class SoundReactiveBehaviour extends Behaviour {
     if (!this.enabled || !this.analyser || !this.frequencyData || !this.isPlaying) return
 
     // Update frequency data
+    // @ts-ignore
     this.analyser.getByteFrequencyData(this.frequencyData)
 
     // Compute amplitude and frequency effects
