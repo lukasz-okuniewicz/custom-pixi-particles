@@ -19,6 +19,7 @@ export default class TestRenderer extends Container {
   blendMode: any
   emitter: Emitter
   turbulenceEmitter: Emitter
+  private static readonly BASE_TICKER_SPEED = 0.02
   private _paused: boolean = false
   private _internalPaused: boolean = false
   private textures: string[]
@@ -33,6 +34,7 @@ export default class TestRenderer extends Container {
   private _model: Model = new Model()
   private _ticker: Ticker | undefined
   private _visibilitychangeBinding: any
+  private _firstParticleHasBeenDestroyed = false
 
   /**
    * Creates an instance of Renderer.
@@ -103,7 +105,7 @@ export default class TestRenderer extends Container {
     const ticker = new Ticker()
     ticker.maxFPS = maxFPS || 60
     ticker.minFPS = minFPS || 60
-    ticker.speed = tickerSpeed || 0.02
+    ticker.speed = tickerSpeed || TestRenderer.BASE_TICKER_SPEED
     ticker.stop()
     // @ts-ignore
     ticker.add(this._updateTransform, this)
@@ -117,6 +119,21 @@ export default class TestRenderer extends Container {
 
   onCompleteFN: any = () => {
     /**/
+  }
+
+  public onFirstParticleDestroy: any = () => {
+    /**/
+  }
+
+  setTickerSpeed = (speedMultiplier: number) => {
+    if (speedMultiplier < 0) {
+      console.warn('Speed multiplier cannot be negative. Using 0.')
+      speedMultiplier = 0
+    }
+
+    if (this._ticker) {
+      this._ticker.speed = TestRenderer.BASE_TICKER_SPEED * speedMultiplier
+    }
   }
 
   /**
@@ -171,6 +188,7 @@ export default class TestRenderer extends Container {
    * @function start
    */
   start() {
+    this._firstParticleHasBeenDestroyed = false
     this.emitter?.resetAndPlay()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.resetAndPlay()
@@ -182,6 +200,7 @@ export default class TestRenderer extends Container {
    * @function play
    */
   play() {
+    this._firstParticleHasBeenDestroyed = false
     this.emitter?.resetWithoutRemovingAndPlay()
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.resetWithoutRemovingAndPlay()
@@ -227,6 +246,7 @@ export default class TestRenderer extends Container {
     this._model = undefined
     this.onComplete = undefined
     this.onCompleteFN = undefined
+    this.onFirstParticleDestroy = undefined
     this.config = undefined
     // @ts-ignore
     this.textures = undefined
@@ -461,6 +481,13 @@ export default class TestRenderer extends Container {
   }
 
   private onRemove(particle: Particle) {
+    if (!this._firstParticleHasBeenDestroyed) {
+      if (this.onFirstParticleDestroy) {
+        this.onFirstParticleDestroy()
+      }
+      this._firstParticleHasBeenDestroyed = true
+    }
+
     const sprite = particle.sprite
     if (!particle.showVortices && sprite) {
       sprite.visible = false

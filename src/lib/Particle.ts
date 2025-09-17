@@ -1,3 +1,4 @@
+// src/lib/Particle.ts
 import { Sprite } from 'pixi.js'
 import { Color, Point } from './util'
 import ThereBack from './util/ThereBack'
@@ -247,6 +248,13 @@ export default class Particle {
   initialDirectionSin: number = 0
   velocityScale: number = 1
   rotationAcceleration: number = 0
+  pathTime: number = 0 // For behaviours like MoveToPoint sinusoidal path
+
+  // For MoveToPointBehaviour with easing
+  moveToPointInitialX: number = 0
+  moveToPointInitialY: number = 0
+  moveToPointTotalDistance: number = 0
+  moveToPointAccumulatedLinearDistance: number = 0
 
   /**
    * Constructs a particle object
@@ -342,6 +350,12 @@ export default class Particle {
     this.initialDirectionSin = 0
     this.velocityScale = 1
     this.rotationAcceleration = 0
+    this.pathTime = 0
+
+    this.moveToPointInitialX = 0
+    this.moveToPointInitialY = 0
+    this.moveToPointTotalDistance = 0
+    this.moveToPointAccumulatedLinearDistance = 0
   }
 
   /**

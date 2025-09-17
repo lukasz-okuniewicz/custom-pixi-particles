@@ -1,3 +1,4 @@
+// src/lib/emitter/Emitter.ts
 import Duration from './Duration'
 import { EmitterBehaviours } from '../behaviour'
 import eventemitter3 from 'eventemitter3'
@@ -101,12 +102,17 @@ export default class Emitter extends eventemitter3 {
   updateParticle(particle: Particle, deltaTime: number) {
     if (particle.isDead()) {
       this.removeParticle(particle)
-    } else if (particle.isAlmostDead()) {
-      this.behaviours.apply(particle, deltaTime, this._model)
-      this.emit(Emitter.FINISHING, particle)
-      this.emit(Emitter.UPDATE, particle)
+      return
+    }
+
+    this.behaviours.apply(particle, deltaTime, this._model)
+
+    if (particle.isDead()) {
+      this.removeParticle(particle)
     } else {
-      this.behaviours.apply(particle, deltaTime, this._model)
+      if (particle.isAlmostDead()) {
+        this.emit(Emitter.FINISHING, particle)
+      }
       this.emit(Emitter.UPDATE, particle)
     }
   }
@@ -117,6 +123,7 @@ export default class Emitter extends eventemitter3 {
    */
   removeParticle(particle: Particle) {
     this.emit(Emitter.REMOVE, particle)
+    this.behaviours.onParticleRemoved(particle) // Notify behaviours
     this.list.remove(particle)
     particle.reset()
     ParticlePool.global.push(particle)
