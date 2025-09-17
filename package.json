@@ -17,7 +17,7 @@
   "dependencies": {
     "gsap": "^3.12.5",
     "eventemitter3": "^4.0.7",
-    "pixi.js": "^8.6.6",
+    "pixi.js": "^8.13.2",
     "simplex-noise": "^4.0.3"
   },
   "files": [
@@ -42,5 +42,5 @@
     "lint": "tslint 'src/**/*.ts'",
     "lint:fix": "tslint --fix 'src/**/*.ts'"
   },
-  "version": "8.4.1"
+  "version": "8.5.0"
 }
