@@ -16,8 +16,6 @@ import Model from '../Model'
  * @class Renderer
  */
 export default class Renderer extends Container {
-  // @ts-ignore
-  blendMode: any
   emitter: Emitter
   turbulenceEmitter: Emitter
   private static readonly BASE_TICKER_SPEED = 0.02

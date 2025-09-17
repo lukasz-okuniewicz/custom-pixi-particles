@@ -37,10 +37,10 @@
     "url": "git@github.com:lukasz-okuniewicz/custom-pixi-particles.git"
   },
   "scripts": {
-    "build": "npm run clean-dist && tsc && node copy.js",
+    "build": "npm run clean-dist && tsc",
     "clean-dist": "rimraf dist/*",
     "lint": "tslint 'src/**/*.ts'",
     "lint:fix": "tslint --fix 'src/**/*.ts'"
   },
-  "version": "8.4.0"
+  "version": "8.4.1"
 }
