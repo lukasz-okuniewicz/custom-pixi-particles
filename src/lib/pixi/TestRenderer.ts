@@ -157,12 +157,12 @@ export default class TestRenderer extends Container {
   /**
    * Updates the transform of the ParticleContainer and updates the emitters.
    */
-  _updateTransform(deltaTime: number) {
+  _updateTransform(deltaTime: { deltaTime: number }): void {
     if (this._paused) return
 
-    this.emitter?.update(deltaTime)
+    this.emitter?.update(deltaTime.deltaTime)
     if (this.turbulenceEmitter) {
-      this.turbulenceEmitter.update(deltaTime)
+      this.turbulenceEmitter.update(deltaTime.deltaTime)
     }
   }
 
