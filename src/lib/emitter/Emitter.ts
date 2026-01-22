@@ -80,7 +80,14 @@ export default class Emitter extends eventemitter3 {
     for (let i = 0; i < particlesToEmit; ++i) {
       const particle: Particle = this.list.add(ParticlePool.global.pop())
       this.behaviours.init(particle, this._model, this.turbulencePool)
-      this.emit(Emitter.CREATE, particle)
+
+      this.behaviours.apply(particle, deltaTime, this._model)
+
+      if (particle.isDead()) {
+        this.removeParticle(particle)
+      } else {
+        this.emit(Emitter.CREATE, particle)
+      }
     }
   }
 

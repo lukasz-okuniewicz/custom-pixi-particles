@@ -21,12 +21,23 @@ export default class UniformEmission extends AbstractEmission {
    * @returns {number} The number of particles to emit in the current frame.
    */
   howMany(deltaTime: number, particlesCount: number) {
+    if (particlesCount >= this._maxParticles) {
+      this._frames = 0
+      return 0
+    }
+
     const ratio = this._emitPerSecond * deltaTime
     this._frames += ratio
 
     let numberToEmit = 0
     if (this._frames >= 1.0) {
-      numberToEmit = Math.round(this._frames)
+      numberToEmit = Math.floor(this._frames)
+      this._frames -= numberToEmit
+    }
+
+    const capacity = this._maxParticles - particlesCount
+    if (numberToEmit > capacity) {
+      numberToEmit = Math.max(0, capacity)
       this._frames = 0
     }
 
