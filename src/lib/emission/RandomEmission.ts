@@ -23,11 +23,11 @@ export default class RandomEmission extends AbstractEmission {
    */
   howMany(deltaTime: number, particlesCount: number) {
     if (particlesCount < this.maxParticles) {
-      const count = Math.round(Random.uniform(0, Math.ceil(this.emissionRate * deltaTime)))
-      const total = particlesCount + count
-      return total > this._maxParticles ? this.maxParticles - particlesCount : count
-    }
+      const potential = Math.ceil(this.emissionRate * deltaTime)
+      const count = Math.round(Random.uniform(0, potential))
 
+      return Math.min(count, this.maxParticles - particlesCount)
+    }
     return 0
   }
 
