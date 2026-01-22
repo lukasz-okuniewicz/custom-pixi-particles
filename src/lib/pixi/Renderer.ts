@@ -362,15 +362,17 @@ export default class Renderer extends ParticleContainer {
   private getOrCreateSprite() {
     if (this.unusedSprites.length > 0) {
       const sprite = this.unusedSprites.pop()
-      if (this.finishingTextureNames && this.finishingTextureNames.length) {
-        sprite.texture = Assets.get(this.getRandomTexture())
+      if (sprite) {
+        if (this.finishingTextureNames && this.finishingTextureNames.length) {
+          sprite.texture = Assets.get(this.getRandomTexture())
+        }
+        return sprite
       }
-      return sprite
     }
 
     if (this.emitter?.animatedSprite) {
       const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
-      if (textures.length) {
+      if (textures && textures.length > 0) {
         const animation: AnimatedSprite = new AnimatedSprite(textures)
         animation.anchor.set(this.anchor.x, this.anchor.y)
         // @ts-ignore
@@ -494,22 +496,24 @@ export default class Renderer extends ParticleContainer {
 
   private onRemove(particle: Particle) {
     if (!this._firstParticleHasBeenDestroyed) {
-      if (this.onFirstParticleDestroy) {
-        this.onFirstParticleDestroy()
-      }
+      if (this.onFirstParticleDestroy) this.onFirstParticleDestroy()
       this._firstParticleHasBeenDestroyed = true
     }
 
     const sprite = particle.sprite
-    if (!particle.showVortices && sprite) {
-      sprite.visible = false
-      sprite.alpha = 0
+    if (sprite) {
+      if (!particle.showVortices) {
+        sprite.visible = false
+        sprite.alpha = 0
+      }
+      if (sprite instanceof AnimatedSprite) {
+        sprite.stop()
+      }
+      this.unusedSprites.push(sprite)
     }
+
     particle.finishingTexture = 0
-    this.unusedSprites.push(sprite)
-    if (sprite instanceof AnimatedSprite) {
-      sprite.stop()
-    }
+    ;(particle as any).sprite = null
   }
 
   private onRemoveTurbulence(particle: Particle) {

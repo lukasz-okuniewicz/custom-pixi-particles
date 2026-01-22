@@ -70,15 +70,24 @@ export default class StandardEmission extends AbstractEmission {
    * @return {number} - The number of particles to be emitted.
    */
   howMany(deltaTime: number, particlesCount: number) {
+    if (this.emissionRate <= 0) return 0
+
     const rate = 1.0 / this.emissionRate
     let count = 0
-    if (particlesCount < this.maxParticles) {
-      this._emitCounter += deltaTime
-    }
 
-    while (particlesCount < this.maxParticles && this._emitCounter > rate) {
+    let virtualCount = particlesCount
+
+    this._emitCounter += deltaTime
+
+    while (virtualCount < this._maxParticles && this._emitCounter >= rate) {
       count++
+      virtualCount++
       this._emitCounter -= rate
+
+      if (count > 1000) {
+        this._emitCounter = 0
+        break
+      }
     }
 
     return count
