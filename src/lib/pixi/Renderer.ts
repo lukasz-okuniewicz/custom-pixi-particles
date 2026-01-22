@@ -360,7 +360,7 @@ export default class Renderer extends ParticleContainer {
   }
 
   private getOrCreateSprite() {
-    if (this.unusedSprites.length > 0) {
+    while (this.unusedSprites.length > 0) {
       const sprite = this.unusedSprites.pop()
       if (sprite) {
         if (this.finishingTextureNames && this.finishingTextureNames.length) {
@@ -372,7 +372,7 @@ export default class Renderer extends ParticleContainer {
 
     if (this.emitter?.animatedSprite) {
       const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
-      if (textures && textures.length > 0) {
+      if (textures.length) {
         const animation: AnimatedSprite = new AnimatedSprite(textures)
         animation.anchor.set(this.anchor.x, this.anchor.y)
         // @ts-ignore
@@ -530,10 +530,10 @@ export default class Renderer extends ParticleContainer {
         sprite.stop()
       }
       this.unusedSprites.push(sprite)
+      ;(particle as any).sprite = null
     }
 
     particle.finishingTexture = 0
-    ;(particle as any).sprite = null
   }
 
   private onRemoveTurbulence(particle: Particle) {
