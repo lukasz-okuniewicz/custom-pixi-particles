@@ -1,6 +1,7 @@
 import * as controller from './emission'
 import * as behaviour from './behaviour'
 import * as parser from './parser'
+import * as effects from './effects'
 import Particle from './Particle'
 import ParticlePool from './ParticlePool'
 import { Duration, Emitter } from './emitter'
@@ -12,6 +13,7 @@ const cpp = {
   parser,
   controller,
   behaviour,
+  effects,
   Color,
   Point,
   Random,

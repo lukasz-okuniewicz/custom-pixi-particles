@@ -17,6 +17,7 @@ If you find **CustomPIXIParticles** useful and would like to support my work, yo
 - **Performance Optimized**: Handle thousands of particles with minimal performance overhead.
 - **PIXI.js Compatibility**: Fully compatible with **PIXI.js v8**, **PIXI.js v7**, with legacy support for v5.x and v6.x.
 - **Real-Time Customization**: Dynamically update textures, positions, configurations, and emitters on the fly.
+- **Shatter Effect**: Create dramatic sprite shattering effects with realistic physics and automatic cleanup.
 
 ---
 
@@ -138,6 +139,54 @@ Clears internal object pools to free memory.
 ```javascript
 particles.clearPool()
 ```
+
+### Shatter Effect
+Create a dramatic shattering effect that slices a sprite into fragments with realistic physics.
+
+```javascript
+import { ShatterEffect } from 'custom-pixi-particles'
+import { Sprite, Texture } from 'pixi.js'
+
+// Create a sprite to shatter
+const sprite = new Sprite(Texture.from('my-image.png'))
+sprite.anchor.set(0.5, 0.5)
+sprite.x = 400
+sprite.y = 300
+
+// Create shatter effect with custom options
+const shatterEffect = new ShatterEffect(sprite, {
+  gridCols: 10,           // Number of horizontal grid divisions (default: 8)
+  gridRows: 10,           // Number of vertical grid divisions (default: 8)
+  baseVelocity: 400,      // Base velocity magnitude for fragments (default: 300)
+  velocityVariance: 0.5,  // Random variance for velocity (default: 0.5)
+  rotationSpeed: 2,       // Base rotation speed in radians per second (default: 2)
+  rotationVariance: 1,    // Random variance for rotation speed (default: 1)
+  gravity: 600,           // Gravity force applied to fragments (default: 500)
+  lifetime: 2.5,          // Lifetime of fragments in seconds (default: 2)
+  fadeOutDuration: 0.3    // Fade out duration at the end of lifetime (default: 0.3)
+})
+
+// Add to stage
+app.stage.addChild(shatterEffect)
+
+// Trigger explosion with optional completion callback
+shatterEffect.Explode(() => {
+  console.log('Shatter animation complete!')
+  shatterEffect.destroy()
+})
+```
+
+**ShatterEffect Methods:**
+- `Explode(onComplete?)` - Triggers the shatter animation. Optionally accepts a callback when animation completes.
+- `reset()` - Resets the effect to its initial state, allowing it to be triggered again.
+- `destroy()` - Destroys the effect and cleans up all resources.
+
+**Features:**
+- Automatically slices sprites into a grid of fragments
+- Each fragment radiates outward from the sprite's center with random variance
+- Realistic physics with gravity and rotation
+- Automatic cleanup and memory management using object pooling
+- Smooth fade-out animation at the end of fragment lifetime
 
 ---
 
