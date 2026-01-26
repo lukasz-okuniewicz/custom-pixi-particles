@@ -1,6 +1,8 @@
 import Renderer from './lib/pixi/Renderer'
 import { ICustomPixiParticlesSettings } from './lib/customPixiParticlesSettingsInterface'
 import TestRenderer from './lib/pixi/TestRenderer'
+import { ShatterEffect } from './lib/effects'
+export type { IShatterEffectOptions, ShatterMode } from './lib/effects'
 
 /**
  * Constructs a renderer for custom pixi particles
@@ -69,4 +71,4 @@ const _customPixiParticlesEditorOnly = {
   },
 }
 
-export { Renderer, customPixiParticles, _customPixiParticlesEditorOnly, ICustomPixiParticlesSettings }
+export { Renderer, customPixiParticles, _customPixiParticlesEditorOnly, ICustomPixiParticlesSettings, ShatterEffect }
