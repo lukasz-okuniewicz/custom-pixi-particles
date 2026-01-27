@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture, Ticker, Rectangle } from 'pixi.js-legacy'
+import { Sprite, Texture, Ticker, Rectangle, ParticleContainer } from 'pixi.js-legacy'
 import ParticlePool from '../ParticlePool'
 import Particle from '../Particle'
 import Random from '../util/Random'
@@ -30,10 +30,9 @@ interface Fragment {
   initialScale: number
   vz: number
   z: number
-  startTint?: number
 }
 
-export default class ShatterEffect extends Container {
+export default class ShatterEffect extends ParticleContainer {
   private sourceSprite: Sprite
   private fragments: Fragment[] = []
   private isExploded: boolean = false
@@ -43,12 +42,25 @@ export default class ShatterEffect extends Container {
   private explodeResolve?: () => void
 
   constructor(sourceSprite: Sprite, options: IShatterEffectOptions = {}) {
-    super()
+    const cols = options.gridCols ?? 10;
+    const rows = options.gridRows ?? 10;
+    const needsRotation = options.enableRotation ?? true;
+    const needsAlpha = (options.fadeOutDuration ?? 0.5) > 0;
+    const needsTint = options.endTint !== undefined && options.endTint !== 0xFFFFFF;
 
-    this.sourceSprite = sourceSprite
+    super(cols * rows, {
+      vertices: true,
+      position: true,
+      uvs: true,
+      rotation: needsRotation,
+      alpha: needsAlpha,
+      tint: needsTint,
+    });
+
+    this.sourceSprite = sourceSprite;
     this.options = {
-      gridCols: options.gridCols ?? 10,
-      gridRows: options.gridRows ?? 10,
+      gridCols: cols,
+      gridRows: rows,
       explosionPower: options.explosionPower ?? 1000,
       friction: options.friction ?? 0.96,
       gravity: options.gravity ?? 800,
@@ -61,22 +73,16 @@ export default class ShatterEffect extends Container {
       swirlStrength: options.swirlStrength ?? 0,
       randomizeScale: options.randomizeScale ?? false,
       endTint: options.endTint ?? 0xFFFFFF,
-      enableRotation: options.enableRotation ?? true,
+      enableRotation: needsRotation,
       rotationStrength: options.rotationStrength ?? 1.0
-    }
+    };
 
-    this.x = this.sourceSprite.x
-    this.y = this.sourceSprite.y
-    this.rotation = this.sourceSprite.rotation
-
-    // Hide original sprite immediately
-    this.sourceSprite.visible = false
+    this.x = this.sourceSprite.x;
+    this.y = this.sourceSprite.y;
+    this.rotation = this.sourceSprite.rotation;
+    this.sourceSprite.visible = false;
   }
 
-  /**
-   * Internal method to slice the sprite and setup particles.
-   * Called automatically by Explode().
-   */
   private createFragments(): void {
     const texture = this.sourceSprite.texture
     if (!texture || !texture.valid) return
@@ -101,6 +107,7 @@ export default class ShatterEffect extends Container {
 
         if (currentFragW <= 0 || currentFragH <= 0) continue
 
+        // Create a sub-texture for this fragment
         const fragRect = new Rectangle(texFrame.x + x1, texFrame.y + y1, currentFragW, currentFragH)
         const fragTex = new Texture(texture.baseTexture, fragRect)
         const sprite = new Sprite(fragTex)
@@ -144,12 +151,8 @@ export default class ShatterEffect extends Container {
         particle.acceleration.set(0, this.options.gravity)
         particle.maxLifeTime = this.options.lifetime * Random.uniform(0.8, 1.2)
         particle.lifeTime = 0
-
-        if (this.options.enableRotation) {
-          particle.radiansPerSecond = Random.uniform(-12, 12) * this.options.rotationStrength
-        } else {
-          particle.radiansPerSecond = 0
-        }
+        // tslint:disable-next-line:max-line-length
+        particle.radiansPerSecond = this.options.enableRotation ? Random.uniform(-12, 12) * this.options.rotationStrength : 0
 
         this.fragments.push({
           sprite,
@@ -166,14 +169,9 @@ export default class ShatterEffect extends Container {
   public Explode(): Promise<void> {
     if (this.isExploded) return Promise.resolve()
     this.isExploded = true
-
     this.createFragments()
-
     Ticker.shared.add(this.update, this)
-
-    return new Promise((resolve) => {
-      this.explodeResolve = resolve
-    })
+    return new Promise((resolve) => { this.explodeResolve = resolve })
   }
 
   private update(): void {
@@ -183,23 +181,26 @@ export default class ShatterEffect extends Container {
     for (let i = this.fragments.length - 1; i >= 0; i--) {
       const f = this.fragments[i]
       const p = f.particle
+
       p.lifeTime += dt
       p.velocity.x *= this.options.friction
       p.velocity.y *= this.options.friction
       p.velocity.y += p.acceleration.y * dt
       p.x += p.velocity.x * dt
       p.y += p.velocity.y * dt
-
       p.rotation += p.radiansPerSecond * dt
       f.z += f.vz * dt
 
-      const depthScale = Math.max(0.1, 1 + (f.z / 200))
+      const progress = p.lifeTime / p.maxLifeTime
+
+      // Update Sprite Properties
       f.sprite.x = p.x
       f.sprite.y = p.y
       f.sprite.rotation = p.rotation
+
+      const depthScale = Math.max(0.1, 1 + (f.z / 200))
       f.sprite.scale.set(f.initialScale * depthScale)
 
-      const progress = p.lifeTime / p.maxLifeTime
       if (this.options.endTint !== 0xFFFFFF) {
         f.sprite.tint = this.lerpColor(0xFFFFFF, this.options.endTint, progress);
       }
@@ -219,14 +220,6 @@ export default class ShatterEffect extends Container {
     }
   }
 
-  private finish(): void {
-    Ticker.shared.remove(this.update, this)
-    if (this.explodeResolve) {
-      this.explodeResolve()
-      this.explodeResolve = undefined
-    }
-  }
-
   private lerpColor(start: number, end: number, t: number): number {
     // tslint:disable-next-line:one-variable-per-declaration no-bitwise
     const r1 = (start >> 16) & 0xff, g1 = (start >> 8) & 0xff, b1 = start & 0xff;
@@ -243,31 +236,25 @@ export default class ShatterEffect extends Container {
     if (f.particle) ParticlePool.global.push(f.particle)
     if (f.sprite) {
       this.removeChild(f.sprite)
+      // Note: We destroy the unique fragment texture to prevent memory leaks,
+      // but NOT the baseTexture.
+      f.sprite.texture.destroy(false)
       f.sprite.destroy()
     }
     this.fragments.splice(index, 1)
   }
 
-  private cleanup(): void {
-    if (this.isCleanedUp) return
-    this.isCleanedUp = true
+  private finish(): void {
     Ticker.shared.remove(this.update, this)
-    this.fragments.forEach(f => {
-      if (f.sprite) {
-        if (f.sprite.parent) f.sprite.parent.removeChild(f.sprite)
-        f.sprite.destroy()
-      }
-      if (f.particle) ParticlePool.global.push(f.particle)
-    })
-    this.fragments = []
-    if (this.explodeResolve) {
-      this.explodeResolve()
-      this.explodeResolve = undefined
-    }
+    this.explodeResolve?.()
+    this.explodeResolve = undefined
   }
 
   public destroy(options?: any): void {
-    this.cleanup()
+    this.isCleanedUp = true
+    Ticker.shared.remove(this.update, this)
+    this.fragments.forEach((f, i) => this.removeFragment(i))
+    this.fragments = []
     super.destroy(options)
   }
 
@@ -276,7 +263,6 @@ export default class ShatterEffect extends Container {
     const effect = new ShatterEffect(sprite, options);
     const index = sprite.parent.getChildIndex(sprite);
     sprite.parent.addChildAt(effect, index);
-
     await effect.Explode();
     effect.destroy();
   }

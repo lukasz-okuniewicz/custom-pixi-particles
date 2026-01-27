@@ -1,8 +1,9 @@
 import Renderer from './lib/pixi/Renderer'
 import { ICustomPixiParticlesSettings } from './lib/customPixiParticlesSettingsInterface'
 import TestRenderer from './lib/pixi/TestRenderer'
-import { ShatterEffect } from './lib/effects'
-export type { IShatterEffectOptions, ShatterMode } from './lib/effects'
+import { ShatterEffect, DissolveEffect, MagneticAssemblyEffect, GhostEffect, GlitchEffect, MeltEffect } from './lib/effects'
+
+export type { IShatterEffectOptions, ShatterMode, IDissolveEffectOptions, DissolveDirection, IMagneticAssemblyOptions, AssemblyMode, IGhostEffectOptions, IGlitchEffectOptions, IMeltEffectOptions } from './lib/effects'
 
 /**
  * Constructs a renderer for custom pixi particles
@@ -71,4 +72,15 @@ const _customPixiParticlesEditorOnly = {
   },
 }
 
-export { Renderer, customPixiParticles, _customPixiParticlesEditorOnly, ICustomPixiParticlesSettings, ShatterEffect }
+export {
+  Renderer,
+  customPixiParticles,
+  _customPixiParticlesEditorOnly,
+  ICustomPixiParticlesSettings,
+  ShatterEffect,
+  DissolveEffect,
+  MagneticAssemblyEffect,
+  GhostEffect,
+  GlitchEffect,
+  MeltEffect,
+}

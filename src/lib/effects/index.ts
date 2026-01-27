@@ -1,2 +1,12 @@
-// src/lib/effects/index.ts
-export { default as ShatterEffect, IShatterEffectOptions, ShatterMode } from './ShatterEffect'
+export { default as ShatterEffect } from './ShatterEffect';
+export { default as DissolveEffect } from './DissolveEffect';
+export { default as MagneticAssemblyEffect } from './MagneticAssemblyEffect';
+export { default as GhostEffect } from './GhostEffect';
+export { default as GlitchEffect } from './GlitchEffect';
+export { default as MeltEffect } from './MeltEffect';
+export * from './ShatterEffect';
+export * from './DissolveEffect';
+export * from './MagneticAssemblyEffect';
+export * from './GhostEffect';
+export * from './GlitchEffect';
+export * from './MeltEffect';
