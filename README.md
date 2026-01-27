@@ -157,23 +157,35 @@ sprite.y = 300
 const shatterEffect = new ShatterEffect(sprite, {
   gridCols: 10,           // Number of horizontal grid divisions (default: 8)
   gridRows: 10,           // Number of vertical grid divisions (default: 8)
-  baseVelocity: 400,      // Base velocity magnitude for fragments (default: 300)
-  velocityVariance: 0.5,  // Random variance for velocity (default: 0.5)
-  rotationSpeed: 2,       // Base rotation speed in radians per second (default: 2)
-  rotationVariance: 1,    // Random variance for rotation speed (default: 1)
+  mode: 'radial',         // 'radial', 'directional', or 'swirl'.
+  explosionPower: 1000,   // Velocity of the fragments (default: 1000)
+  enableRotation: true,   // Whether fragments spin (default: true)
+  rotationStrength: 1.0,  // Multiplier for fragment spin speed (default: 1.0)
   gravity: 600,           // Gravity force applied to fragments (default: 500)
+  friction: 0.96,         // Velocity air resistance (default: 0.96)
+  turbulence: 0.2,        // Randomness of fragment angles (default: 0.2)
   lifetime: 2.5,          // Lifetime of fragments in seconds (default: 2)
-  fadeOutDuration: 0.3    // Fade out duration at the end of lifetime (default: 0.3)
+  fadeOutDuration: 0.3,   // Fade out duration at the end of lifetime (default: 0.3)
+  endTint: 0xFFFFFF       // Color to lerp toward as fragments die (default: 0xFFFFFF)
 })
 
 // Add to stage
 app.stage.addChild(shatterEffect)
 
 // Trigger explosion with optional completion callback
-shatterEffect.Explode(() => {
-  console.log('Shatter animation complete!')
-  shatterEffect.destroy()
-})
+shatterEffect.Explode().then(() => {
+  console.log("Boom! Animation complete.");
+  effect.destroy();
+});
+
+// Or Simple Usage (Static Method)
+await ShatterEffect.shatter(mySprite, {
+  gridCols: 10,
+  gridRows: 10,
+  explosionPower: 1200,
+  enableRotation: true,
+  rotationStrength: 1.5
+});
 ```
 
 **ShatterEffect Methods:**
