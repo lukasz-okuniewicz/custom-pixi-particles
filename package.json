@@ -3,7 +3,7 @@
   "bugs": {
     "url": "https://github.com/lukasz-okuniewicz/custom-pixi-particles/issues"
   },
-  "description": "custom pixi particles",
+  "description": "A highly customizable particle system for PixiJS designed for performance and flexibility.",
   "devDependencies": {
     "@types/file-saver": "^2.0.7",
     "copy-dir": "^1.3.0",
@@ -25,9 +25,12 @@
   ],
   "homepage": "https://github.com/lukasz-okuniewicz/custom-pixi-particles",
   "keywords": [
-    "custom",
     "pixi",
-    "particles"
+    "pixijs",
+    "particles",
+    "emitter",
+    "webgl",
+    "custom-pixi-particles"
   ],
   "license": "GNU",
   "main": "dist/index.js",
@@ -43,5 +46,5 @@
     "lint": "tslint 'src/**/*.ts'",
     "lint:fix": "tslint --fix 'src/**/*.ts'"
   },
-  "version": "7.6.1"
+  "version": "7.6.2"
 }
