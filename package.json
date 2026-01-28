@@ -43,5 +43,5 @@
     "lint": "tslint 'src/**/*.ts'",
     "lint:fix": "tslint --fix 'src/**/*.ts'"
   },
-  "version": "7.5.0"
+  "version": "7.6.0"
 }
