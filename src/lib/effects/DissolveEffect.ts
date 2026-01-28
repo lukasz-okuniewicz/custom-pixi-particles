@@ -1,4 +1,4 @@
-import { ParticleContainer, Sprite, Texture, Ticker } from 'pixi.js'
+import { Container, Sprite, Texture, Ticker } from 'pixi.js'
 import ParticlePool from '../ParticlePool'
 import Particle from '../Particle'
 
@@ -24,7 +24,7 @@ interface DustFragment {
   initialY: number
 }
 
-export default class DissolveEffect extends ParticleContainer {
+export default class DissolveEffect extends Container {
   private fragments: DustFragment[] = []
   private isProcessing: boolean = false
   private options: Required<IDissolveEffectOptions>
@@ -35,18 +35,10 @@ export default class DissolveEffect extends ParticleContainer {
     private sourceSprite: Sprite,
     options: IDissolveEffectOptions = {},
   ) {
+    super()
     // Determine bounds to set container size
     const bounds = sourceSprite.getLocalBounds()
     const pixelSize = options.pixelSize ?? 2
-    const maxParticles = Math.ceil((bounds.width * bounds.height) / (pixelSize * pixelSize))
-
-    super(maxParticles, {
-      vertices: true,
-      position: true,
-      uvs: true,
-      alpha: true,
-      tint: true,
-    })
 
     this.options = {
       pixelSize,
@@ -66,7 +58,7 @@ export default class DissolveEffect extends ParticleContainer {
 
   private prepare(): void {
     const texture = this.sourceSprite.texture
-    if (!texture || !texture.valid) return
+    if (!texture || !texture.source) return
 
     const canvas = document.createElement('canvas')
     const { width, height } = texture.frame
@@ -74,12 +66,13 @@ export default class DissolveEffect extends ParticleContainer {
     canvas.height = height
 
     const ctx = canvas.getContext('2d')!
-    const baseTex = texture.baseTexture.resource as any
+    const source = texture.source
+    const resource = (source as any).resource
 
-    if (baseTex && (baseTex.source || baseTex.data)) {
+    if (resource && (resource.source || resource.data)) {
       // tslint:disable-next-line:max-line-length
       ctx.drawImage(
-        baseTex.source || baseTex.data,
+        resource.source || resource.data,
         texture.frame.x,
         texture.frame.y,
         width,

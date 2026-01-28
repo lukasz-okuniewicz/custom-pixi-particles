@@ -1,4 +1,4 @@
-import { BLEND_MODES, ParticleContainer, Rectangle, Sprite, Texture, Ticker } from 'pixi.js'
+import { Container, Rectangle, Sprite, Texture, Ticker } from 'pixi.js'
 import ParticlePool from '../ParticlePool'
 import Particle from '../Particle'
 
@@ -18,7 +18,7 @@ interface GlitchSlice {
   initialY: number
 }
 
-export default class GlitchEffect extends ParticleContainer {
+export default class GlitchEffect extends Container {
   private fragments: GlitchSlice[] = []
   private options: Required<IGlitchEffectOptions>
   private currentTime: number = 0
@@ -30,17 +30,9 @@ export default class GlitchEffect extends ParticleContainer {
     private sourceSprite: Sprite,
     options: IGlitchEffectOptions = {},
   ) {
+    super()
     const slices = options.slices ?? 15
     const isRGB = options.rgbSplit ?? true
-
-    // Max particles: slices * 3 (if RGB)
-    super(slices * (isRGB ? 3 : 1), {
-      vertices: true,
-      position: true,
-      uvs: true,
-      alpha: true,
-      tint: true,
-    })
 
     this.options = {
       slices,
@@ -59,7 +51,7 @@ export default class GlitchEffect extends ParticleContainer {
 
   private prepare(): void {
     const texture = this.sourceSprite.texture
-    if (!texture || !texture.valid) return
+    if (!texture || !texture.source) return
 
     const { slices, rgbSplit } = this.options
     const texFrame = texture.frame
@@ -71,7 +63,7 @@ export default class GlitchEffect extends ParticleContainer {
     for (let i = 0; i < slices; i++) {
       const yOffset = i * sliceHeight
       const fragRect = new Rectangle(texFrame.x, texFrame.y + yOffset, texFrame.width, sliceHeight)
-      const fragTex = new Texture(texture.baseTexture, fragRect)
+      const fragTex = new Texture({ source: texture.source, frame: fragRect })
 
       const sliceSprites: Sprite[] = []
       const tints = rgbSplit ? [0xff0000, 0x00ff00, 0x0000ff] : [0xffffff]
@@ -81,7 +73,7 @@ export default class GlitchEffect extends ParticleContainer {
         sprite.anchor.set(anchorX, 0) // Anchor top-left of slice
         sprite.scale.set(scale)
         sprite.tint = tint
-        if (rgbSplit) sprite.blendMode = BLEND_MODES.ADD
+        if (rgbSplit) sprite.blendMode = 'add'
 
         sliceSprites.push(sprite)
         this.addChild(sprite)

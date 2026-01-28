@@ -1,4 +1,4 @@
-import { ParticleContainer, Rectangle, Sprite, Texture, Ticker } from 'pixi.js'
+import { Container, Rectangle, Sprite, Texture, Ticker } from 'pixi.js'
 import ParticlePool from '../ParticlePool'
 import Particle from '../Particle'
 import Random from '../util/Random'
@@ -26,7 +26,7 @@ interface AssemblyFragment {
   delay: number // Staggered start time
 }
 
-export default class MagneticAssemblyEffect extends ParticleContainer {
+export default class MagneticAssemblyEffect extends Container {
   private fragments: AssemblyFragment[] = []
   private isProcessing: boolean = false
   private options: Required<IMagneticAssemblyOptions>
@@ -37,16 +37,9 @@ export default class MagneticAssemblyEffect extends ParticleContainer {
     private sourceSprite: Sprite,
     options: IMagneticAssemblyOptions = {},
   ) {
+    super()
     const cols = options.gridCols ?? 10
     const rows = options.gridRows ?? 10
-
-    super(cols * rows, {
-      vertices: true,
-      position: true,
-      uvs: true,
-      alpha: true,
-      rotation: true,
-    })
 
     this.options = {
       gridCols: cols,
@@ -67,7 +60,7 @@ export default class MagneticAssemblyEffect extends ParticleContainer {
 
   private prepare(): void {
     const texture = this.sourceSprite.texture
-    if (!texture || !texture.valid) return
+    if (!texture || !texture.source) return
 
     const { gridCols, gridRows, scatterRange, mode, stagger } = this.options
     const texFrame = texture.frame
@@ -84,7 +77,7 @@ export default class MagneticAssemblyEffect extends ParticleContainer {
 
         // Create sub-texture
         const fragRect = new Rectangle(texFrame.x + x1, texFrame.y + y1, stepW, stepH)
-        const fragTex = new Texture(texture.baseTexture, fragRect)
+        const fragTex = new Texture({ source: texture.source, frame: fragRect })
         const sprite = new Sprite(fragTex)
         sprite.anchor.set(0.5)
         sprite.scale.set(scale)

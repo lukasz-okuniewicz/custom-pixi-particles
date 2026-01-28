@@ -9,7 +9,7 @@ export interface IGhostEffectOptions {
   endAlpha?: number // Final transparency before removal
   startTint?: number // Hex color (0xFFFFFF for original)
   endTint?: number // Target color (e.g., 0x00AAFF for blue trail)
-  blendMode?: BLEND_MODES // Typically NORMAL or ADD
+  blendMode?: BLEND_MODES // Typically 'normal' or 'add'
   maxGhosts?: number // Safety limit on number of active echoes
 }
 
@@ -41,7 +41,7 @@ export default class GhostEffect extends Container {
       endAlpha: options.endAlpha ?? 0,
       startTint: options.startTint ?? 0xffffff,
       endTint: options.endTint ?? 0x00ffff,
-      blendMode: options.blendMode ?? BLEND_MODES.NORMAL,
+      blendMode: options.blendMode ?? 'normal',
       maxGhosts: options.maxGhosts ?? 20,
     }
   }
@@ -104,7 +104,7 @@ export default class GhostEffect extends Container {
 
   private createGhost(): void {
     if (this.instances.length >= this.options.maxGhosts) return
-    if (!this.target.texture || !this.target.texture.valid) return
+    if (!this.target.texture || !this.target.texture.source) return
 
     const sprite = new Sprite(this.target.texture)
     sprite.anchor.copyFrom(this.target.anchor)
@@ -113,6 +113,7 @@ export default class GhostEffect extends Container {
     sprite.blendMode = this.options.blendMode
 
     // Convert target global position to local position of this container
+    if (!this.parent) return
     const globalPos = this.target.getGlobalPosition()
     const localPos = this.parent.toLocal(globalPos)
     sprite.x = localPos.x

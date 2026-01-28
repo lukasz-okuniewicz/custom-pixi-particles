@@ -1,4 +1,4 @@
-import { Container, Filter, ParticleContainer, Rectangle, Sprite, Texture, Ticker } from 'pixi.js'
+import { Container, Filter, GlProgram, Rectangle, Sprite, Texture, Ticker } from 'pixi.js'
 import ParticlePool from '../ParticlePool'
 import Particle from '../Particle'
 import Random from '../util/Random'
@@ -14,10 +14,34 @@ export interface IMeltEffectOptions {
   threshold?: number // Alpha clipping point (0-1, default: 0.5)
 }
 
+// Default vertex shader for PixiJS v8 filters
+const defaultVertex = `
+  in vec2 aPosition;
+  out vec2 vTextureCoord;
+  uniform vec4 uInputSize;
+  uniform vec4 uOutputFrame;
+  uniform vec4 uOutputTexture;
+
+  vec4 filterVertexPosition(void) {
+    vec2 position = aPosition * uOutputFrame.zw + uOutputFrame.xy;
+    position.x = position.x * (2.0 / uOutputTexture.x) - 1.0;
+    position.y = position.y * (2.0 * uOutputTexture.z / uOutputTexture.y) - uOutputTexture.z;
+    return vec4(position, 0.0, 1.0);
+  }
+
+  vec2 filterTextureCoord(void) {
+    return aPosition * (uOutputFrame.zw * uInputSize.zw);
+  }
+
+  void main(void) {
+    gl_Position = filterVertexPosition();
+    vTextureCoord = filterTextureCoord();
+  }
+`
+
 // Simple blur shader (box blur)
 const blurFrag = `
-  precision mediump float;
-  varying vec2 vTextureCoord;
+  in vec2 vTextureCoord;
   uniform sampler2D uSampler;
   uniform float uBlur;
 
@@ -29,7 +53,7 @@ const blurFrag = `
     for(int i = -1; i <= 1; i++) {
       for(int j = -1; j <= 1; j++) {
         vec2 offset = vec2(float(i), float(j)) * blurAmount;
-        sum += texture2D(uSampler, vTextureCoord + offset);
+        sum += texture(uSampler, vTextureCoord + offset);
       }
     }
 
@@ -39,11 +63,11 @@ const blurFrag = `
 
 // Simple threshold shader to create the "Metaball" effect
 const thresholdFrag = `
-  varying vec2 vTextureCoord;
+  in vec2 vTextureCoord;
   uniform sampler2D uSampler;
   uniform float threshold;
   void main(void) {
-    vec4 color = texture2D(uSampler, vTextureCoord);
+    vec4 color = texture(uSampler, vTextureCoord);
     if (color.a > threshold) {
        color.a = 1.0;
     } else {
@@ -63,7 +87,7 @@ export default class MeltEffect extends Container {
   private isProcessing: boolean = false
   private options: Required<IMeltEffectOptions>
   private meltResolve?: () => void
-  private pContainer: ParticleContainer
+  private pContainer: Container
   private currentTime: number = 0
 
   constructor(
@@ -85,14 +109,8 @@ export default class MeltEffect extends Container {
       threshold: options.threshold ?? 0.5,
     }
 
-    // We use a internal ParticleContainer so we can apply filters to it
-    this.pContainer = new ParticleContainer(cols * rows, {
-      vertices: true,
-      position: true,
-      uvs: true,
-      alpha: true,
-      tint: true,
-    })
+    // We use a internal Container so we can apply filters to it
+    this.pContainer = new Container()
 
     this.addChild(this.pContainer)
     this.x = sourceSprite.x
@@ -100,12 +118,24 @@ export default class MeltEffect extends Container {
     this.rotation = sourceSprite.rotation
 
     // Apply the Metaball Hook: Blur + Threshold
-    const blurFilter = new Filter(undefined, blurFrag, {
-      uBlur: this.options.blurAmount,
+    const blurFilter = new Filter({
+      glProgram: new GlProgram({
+        fragment: blurFrag,
+        vertex: defaultVertex,
+      }),
+      resources: {
+        uBlur: { value: this.options.blurAmount },
+      },
     })
 
-    const thresholdFilter = new Filter(undefined, thresholdFrag, {
-      threshold: this.options.threshold,
+    const thresholdFilter = new Filter({
+      glProgram: new GlProgram({
+        fragment: thresholdFrag,
+        vertex: defaultVertex,
+      }),
+      resources: {
+        threshold: { value: this.options.threshold },
+      },
     })
 
     this.pContainer.filters = [blurFilter, thresholdFilter]
@@ -113,7 +143,7 @@ export default class MeltEffect extends Container {
 
   private prepare(): void {
     const texture = this.sourceSprite.texture
-    if (!texture || !texture.valid) return
+    if (!texture || !texture.source) return
 
     const { gridCols, gridRows, horizontalSpread } = this.options
     const texFrame = texture.frame
@@ -129,7 +159,7 @@ export default class MeltEffect extends Container {
         const y1 = Math.floor(row * stepH)
 
         const fragRect = new Rectangle(texFrame.x + x1, texFrame.y + y1, stepW, stepH)
-        const fragTex = new Texture(texture.baseTexture, fragRect)
+        const fragTex = new Texture({ source: texture.source, frame: fragRect })
         const sprite = new Sprite(fragTex)
         sprite.anchor.set(0.5)
         sprite.scale.set(scale)

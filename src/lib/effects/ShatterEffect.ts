@@ -1,4 +1,4 @@
-import { ParticleContainer, Rectangle, Sprite, Texture, Ticker } from 'pixi.js'
+import { Container, Rectangle, Sprite, Texture, Ticker } from 'pixi.js'
 import ParticlePool from '../ParticlePool'
 import Particle from '../Particle'
 import Random from '../util/Random'
@@ -32,7 +32,7 @@ interface Fragment {
   z: number
 }
 
-export default class ShatterEffect extends ParticleContainer {
+export default class ShatterEffect extends Container {
   private sourceSprite: Sprite
   private fragments: Fragment[] = []
   private isExploded: boolean = false
@@ -42,20 +42,10 @@ export default class ShatterEffect extends ParticleContainer {
   private explodeResolve?: () => void
 
   constructor(sourceSprite: Sprite, options: IShatterEffectOptions = {}) {
+    super()
     const cols = options.gridCols ?? 10
     const rows = options.gridRows ?? 10
     const needsRotation = options.enableRotation ?? true
-    const needsAlpha = (options.fadeOutDuration ?? 0.5) > 0
-    const needsTint = options.endTint !== undefined && options.endTint !== 0xffffff
-
-    super(cols * rows, {
-      vertices: true,
-      position: true,
-      uvs: true,
-      rotation: needsRotation,
-      alpha: needsAlpha,
-      tint: needsTint,
-    })
 
     this.sourceSprite = sourceSprite
     this.options = {
@@ -85,7 +75,7 @@ export default class ShatterEffect extends ParticleContainer {
 
   private createFragments(): void {
     const texture = this.sourceSprite.texture
-    if (!texture || !texture.valid) return
+    if (!texture || !texture.source) return
 
     const scale = this.sourceSprite.scale.x
     const texFrame = texture.frame
@@ -109,7 +99,7 @@ export default class ShatterEffect extends ParticleContainer {
 
         // Create a sub-texture for this fragment
         const fragRect = new Rectangle(texFrame.x + x1, texFrame.y + y1, currentFragW, currentFragH)
-        const fragTex = new Texture(texture.baseTexture, fragRect)
+        const fragTex = new Texture({ source: texture.source, frame: fragRect })
         const sprite = new Sprite(fragTex)
         sprite.anchor.set(0.5)
 
@@ -251,8 +241,8 @@ export default class ShatterEffect extends ParticleContainer {
     if (f.sprite) {
       this.removeChild(f.sprite)
       // Note: We destroy the unique fragment texture to prevent memory leaks,
-      // but NOT the baseTexture.
-      f.sprite.texture.destroy(false)
+      // but NOT the source.
+      f.sprite.texture.destroy()
       f.sprite.destroy()
     }
     this.fragments.splice(index, 1)
