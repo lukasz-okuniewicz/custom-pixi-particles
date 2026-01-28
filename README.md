@@ -82,6 +82,7 @@ const particles = customPixiParticles.create({
   tint: Boolean,                  // Apply tint to particles
   maxParticles: Number,           // Maximum particles allowed
   maxFPS: Number,                 // Cap emitter update frequency
+  minFPS: Number,                 // Minimum FPS threshold (default: 30)
   tickerSpeed: Number,            // Speed of the PIXI ticker
 })
 ```
@@ -199,6 +200,191 @@ await ShatterEffect.shatter(mySprite, {
 - Realistic physics with gravity and rotation
 - Automatic cleanup and memory management using object pooling
 - Smooth fade-out animation at the end of fragment lifetime
+
+### Dissolve Effect
+Create a smooth dissolving effect that breaks sprites into pixelated fragments that drift away.
+
+```javascript
+import { DissolveEffect } from 'custom-pixi-particles'
+import { Sprite, Texture } from 'pixi.js'
+
+const sprite = new Sprite(Texture.from('my-image.png'))
+sprite.anchor.set(0.5, 0.5)
+sprite.x = 400
+sprite.y = 300
+
+const dissolveEffect = new DissolveEffect(sprite, {
+  pixelSize: 2,              // Size of each fragment (default: 2)
+  edgeSoftness: 0.5,         // Softness of dissolve edges (default: 0.5)
+  driftStrength: 50,        // How far fragments drift (default: 50)
+  noiseIntensity: 0.3,       // Randomness in dissolve pattern (default: 0.3)
+  lifetime: 2.5,             // How long fragments last (default: 2.5)
+  fadeOutDuration: 0.3,      // Fade out time at end (default: 0.3)
+  direction: 'center-out',   // 'left-to-right' | 'right-to-left' | 'top-to-bottom' | 'bottom-to-top' | 'center-out' (default: 'center-out')
+  windAngle: 0               // Wind direction in radians (default: 0)
+})
+
+app.stage.addChild(dissolveEffect)
+
+// Trigger dissolve with optional completion callback
+dissolveEffect.dissolve().then(() => {
+  console.log("Dissolve complete!")
+  dissolveEffect.destroy()
+})
+```
+
+**DissolveEffect Methods:**
+- `dissolve(onComplete?)` - Triggers the dissolve animation. Optionally accepts a callback when animation completes.
+- `reset()` - Resets the effect to its initial state.
+- `destroy()` - Destroys the effect and cleans up all resources.
+
+### Magnetic Assembly Effect
+Create an effect where fragments assemble together to form a sprite, with various assembly modes.
+
+```javascript
+import { MagneticAssemblyEffect } from 'custom-pixi-particles'
+import { Sprite, Texture } from 'pixi.js'
+
+const sprite = new Sprite(Texture.from('my-image.png'))
+sprite.anchor.set(0.5, 0.5)
+sprite.x = 400
+sprite.y = 300
+
+const assemblyEffect = new MagneticAssemblyEffect(sprite, {
+  gridCols: 10,              // Number of horizontal divisions (default: 10)
+  gridRows: 10,              // Number of vertical divisions (default: 10)
+  duration: 1.5,             // Assembly duration in seconds (default: 1.5)
+  easing: 'back.out',       // Easing function: 'back.out' | 'power1.inOut' | 'bounce.out' | 'linear' (default: 'back.out')
+  scatterRange: 200,         // How far fragments start from target (default: 200)
+  stagger: 0.1,              // Delay between fragments (0-1, default: 0.1)
+  mode: 'random-scatter',    // 'random-scatter' | 'from-center' | 'off-screen' | 'vortex' (default: 'random-scatter')
+  startAlpha: 0              // Initial alpha of fragments (default: 0)
+})
+
+app.stage.addChild(assemblyEffect)
+
+// Trigger assembly
+assemblyEffect.assemble().then(() => {
+  console.log("Assembly complete!")
+})
+```
+
+**MagneticAssemblyEffect Methods:**
+- `assemble(onComplete?)` - Triggers the assembly animation. Optionally accepts a callback when animation completes.
+- `reset()` - Resets the effect to its initial state.
+- `destroy()` - Destroys the effect and cleans up all resources.
+
+### Ghost Effect
+Create a trailing ghost/echo effect that follows a sprite's movement, perfect for motion trails.
+
+```javascript
+import { GhostEffect } from 'custom-pixi-particles'
+import { Sprite, Texture, BLEND_MODES } from 'pixi.js'
+
+const sprite = new Sprite(Texture.from('my-image.png'))
+sprite.anchor.set(0.5, 0.5)
+
+const ghostEffect = new GhostEffect(sprite, {
+  spawnInterval: 0.05,       // Seconds between echo spawns (default: 0.05)
+  ghostLifetime: 0.5,        // How long each echo stays visible (default: 0.5)
+  startAlpha: 0.6,           // Initial transparency (default: 0.6)
+  endAlpha: 0,               // Final transparency (default: 0)
+  startTint: 0xFFFFFF,       // Initial color (default: 0xFFFFFF)
+  endTint: 0x00AAFF,         // Target color (default: 0x00AAFF)
+  blendMode: BLEND_MODES.ADD, // Blend mode (default: BLEND_MODES.NORMAL)
+  maxGhosts: 20              // Maximum active echoes (default: 20)
+})
+
+app.stage.addChild(ghostEffect)
+app.stage.addChild(sprite)
+
+// Start tracking (ghosts will follow sprite movement)
+ghostEffect.start()
+
+// Stop tracking
+ghostEffect.stop()
+
+// Clean up
+ghostEffect.destroy()
+```
+
+**GhostEffect Methods:**
+- `start()` - Begins generating ghost echoes.
+- `stop()` - Stops generating new echoes (existing ones fade out).
+- `destroy()` - Destroys the effect and cleans up all resources.
+
+### Glitch Effect
+Create a digital glitch effect with RGB splitting, flickering, and horizontal displacement.
+
+```javascript
+import { GlitchEffect } from 'custom-pixi-particles'
+import { Sprite, Texture } from 'pixi.js'
+
+const sprite = new Sprite(Texture.from('my-image.png'))
+sprite.anchor.set(0.5, 0.5)
+sprite.x = 400
+sprite.y = 300
+
+const glitchEffect = new GlitchEffect(sprite, {
+  slices: 15,                 // Number of horizontal strips (default: 15)
+  offsetRange: 30,            // Max horizontal shift in pixels (default: 30)
+  flickerIntensity: 0.3,      // Probability of slice disappearing (0-1, default: 0.3)
+  rgbSplit: true,             // Enable RGB channel separation (default: true)
+  rgbOffset: 10,              // How far R/G/B channels drift apart (default: 10)
+  duration: 1.0,              // How long the glitch lasts (default: 1.0)
+  refreshRate: 0.05           // How often patterns change in seconds (default: 0.05)
+})
+
+app.stage.addChild(glitchEffect)
+
+// Trigger glitch
+glitchEffect.glitch().then(() => {
+  console.log("Glitch complete!")
+  glitchEffect.destroy()
+})
+```
+
+**GlitchEffect Methods:**
+- `glitch(onComplete?)` - Triggers the glitch animation. Optionally accepts a callback when animation completes.
+- `reset()` - Resets the effect to its initial state.
+- `destroy()` - Destroys the effect and cleans up all resources.
+
+### Melt Effect
+Create a liquid melting effect where sprites appear to melt and drip downward with realistic physics.
+
+```javascript
+import { MeltEffect } from 'custom-pixi-particles'
+import { Sprite, Texture } from 'pixi.js'
+
+const sprite = new Sprite(Texture.from('my-image.png'))
+sprite.anchor.set(0.5, 0.5)
+sprite.x = 400
+sprite.y = 300
+
+const meltEffect = new MeltEffect(sprite, {
+  gridCols: 10,               // Number of horizontal divisions (default: 10)
+  gridRows: 10,               // Number of vertical divisions (default: 10)
+  gravity: 1200,              // Downward force (default: 1200)
+  viscosity: 0.98,            // Friction/resistance (default: 0.98)
+  horizontalSpread: 50,       // Sideways movement amount (default: 50)
+  duration: 3.0,              // Effect duration (default: 3.0)
+  blurAmount: 6,              // Liquid blur intensity (default: 6)
+  threshold: 0.5              // Alpha clipping point 0-1 (default: 0.5)
+})
+
+app.stage.addChild(meltEffect)
+
+// Trigger melt
+meltEffect.melt().then(() => {
+  console.log("Melt complete!")
+  meltEffect.destroy()
+})
+```
+
+**MeltEffect Methods:**
+- `melt(onComplete?)` - Triggers the melt animation. Optionally accepts a callback when animation completes.
+- `reset()` - Resets the effect to its initial state.
+- `destroy()` - Destroys the effect and cleans up all resources.
 
 ---
 

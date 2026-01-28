@@ -1,26 +1,26 @@
-import { Sprite, Texture, Ticker, Container, BLEND_MODES } from 'pixi.js-legacy'
+import { BLEND_MODES, Container, Sprite, Ticker } from 'pixi.js-legacy'
 import ParticlePool from '../ParticlePool'
 import Particle from '../Particle'
 
 export interface IGhostEffectOptions {
-  spawnInterval?: number;   // Seconds between echo spawns (default: 0.05)
-  ghostLifetime?: number;   // How long each echo stays visible (default: 0.5)
-  startAlpha?: number;      // Initial transparency of the echo
-  endAlpha?: number;        // Final transparency before removal
-  startTint?: number;       // Hex color (0xFFFFFF for original)
-  endTint?: number;         // Target color (e.g., 0x00AAFF for blue trail)
-  blendMode?: BLEND_MODES;  // Typically NORMAL or ADD
-  maxGhosts?: number;       // Safety limit on number of active echoes
+  spawnInterval?: number // Seconds between echo spawns (default: 0.05)
+  ghostLifetime?: number // How long each echo stays visible (default: 0.5)
+  startAlpha?: number // Initial transparency of the echo
+  endAlpha?: number // Final transparency before removal
+  startTint?: number // Hex color (0xFFFFFF for original)
+  endTint?: number // Target color (e.g., 0x00AAFF for blue trail)
+  blendMode?: BLEND_MODES // Typically NORMAL or ADD
+  maxGhosts?: number // Safety limit on number of active echoes
 }
 
 interface GhostInstance {
-  sprite: Sprite;
-  particle: Particle;
-  initialX: number;
-  initialY: number;
-  initialRotation: number;
-  initialScaleX: number;
-  initialScaleY: number;
+  sprite: Sprite
+  particle: Particle
+  initialX: number
+  initialY: number
+  initialRotation: number
+  initialScaleX: number
+  initialScaleY: number
 }
 
 export default class GhostEffect extends Container {
@@ -29,15 +29,18 @@ export default class GhostEffect extends Container {
   private options: Required<IGhostEffectOptions>
   private isTracking: boolean = false
 
-  constructor(private target: Sprite, options: IGhostEffectOptions = {}) {
+  constructor(
+    private target: Sprite,
+    options: IGhostEffectOptions = {},
+  ) {
     super()
     this.options = {
       spawnInterval: options.spawnInterval ?? 0.05,
       ghostLifetime: options.ghostLifetime ?? 0.5,
       startAlpha: options.startAlpha ?? 0.6,
       endAlpha: options.endAlpha ?? 0,
-      startTint: options.startTint ?? 0xFFFFFF,
-      endTint: options.endTint ?? 0x00FFFF,
+      startTint: options.startTint ?? 0xffffff,
+      endTint: options.endTint ?? 0x00ffff,
       blendMode: options.blendMode ?? BLEND_MODES.NORMAL,
       maxGhosts: options.maxGhosts ?? 20,
     }
@@ -81,9 +84,9 @@ export default class GhostEffect extends Container {
 
       // Apply Fading
       g.sprite.alpha = this.options.startAlpha + (this.options.endAlpha - this.options.startAlpha) * progress
-      
+
       // Apply Color Shifting
-      if (this.options.startTint !== this.options.endTint || this.options.startTint !== 0xFFFFFF) {
+      if (this.options.startTint !== this.options.endTint || this.options.startTint !== 0xffffff) {
         g.sprite.tint = this.lerpColor(this.options.startTint, this.options.endTint, progress)
       }
 
@@ -108,7 +111,7 @@ export default class GhostEffect extends Container {
     sprite.scale.copyFrom(this.target.scale)
     sprite.rotation = this.target.rotation
     sprite.blendMode = this.options.blendMode
-    
+
     // Convert target global position to local position of this container
     const globalPos = this.target.getGlobalPosition()
     const localPos = this.parent.toLocal(globalPos)
@@ -127,16 +130,26 @@ export default class GhostEffect extends Container {
       initialY: sprite.y,
       initialRotation: sprite.rotation,
       initialScaleX: sprite.scale.x,
-      initialScaleY: sprite.scale.y
+      initialScaleY: sprite.scale.y,
     })
 
     this.addChild(sprite)
   }
 
   private lerpColor(start: number, end: number, t: number): number {
-    const r1 = (start >> 16) & 0xff, g1 = (start >> 8) & 0xff, b1 = start & 0xff
-    const r2 = (end >> 16) & 0xff, g2 = (end >> 8) & 0xff, b2 = end & 0xff
-    const r = r1 + (r2 - r1) * t, g = g1 + (g2 - g1) * t, b = b1 + (b2 - b1) * t
+    // tslint:disable-next-line:one-variable-per-declaration no-bitwise
+    const r1 = (start >> 16) & 0xff,
+      g1 = (start >> 8) & 0xff,
+      b1 = start & 0xff
+    // tslint:disable-next-line:one-variable-per-declaration no-bitwise
+    const r2 = (end >> 16) & 0xff,
+      g2 = (end >> 8) & 0xff,
+      b2 = end & 0xff
+    // tslint:disable-next-line:one-variable-per-declaration no-bitwise
+    const r = r1 + (r2 - r1) * t,
+      g = g1 + (g2 - g1) * t,
+      b = b1 + (b2 - b1) * t
+    // tslint:disable-next-line:no-bitwise
     return (r << 16) | (g << 8) | b
   }
 

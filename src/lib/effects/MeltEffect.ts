@@ -1,17 +1,17 @@
-import { Sprite, Texture, Ticker, Rectangle, ParticleContainer, Filter, Container } from 'pixi.js-legacy'
+import { Container, Filter, ParticleContainer, Rectangle, Sprite, Texture, Ticker } from 'pixi.js-legacy'
 import ParticlePool from '../ParticlePool'
 import Particle from '../Particle'
 import Random from '../util/Random'
 
 export interface IMeltEffectOptions {
-  gridCols?: number;
-  gridRows?: number;
-  gravity?: number;       // Downward force (default: 1200)
-  viscosity?: number;     // Friction/Resistance (default: 0.98)
-  horizontalSpread?: number; // How much they move sideways (default: 50)
-  duration?: number;
-  blurAmount?: number;    // How "blobby" the liquid is (default: 6)
-  threshold?: number;     // Alpha clipping point (0-1, default: 0.5)
+  gridCols?: number
+  gridRows?: number
+  gravity?: number // Downward force (default: 1200)
+  viscosity?: number // Friction/Resistance (default: 0.98)
+  horizontalSpread?: number // How much they move sideways (default: 50)
+  duration?: number
+  blurAmount?: number // How "blobby" the liquid is (default: 6)
+  threshold?: number // Alpha clipping point (0-1, default: 0.5)
 }
 
 // Simple blur shader (box blur)
@@ -20,11 +20,11 @@ const blurFrag = `
   varying vec2 vTextureCoord;
   uniform sampler2D uSampler;
   uniform float uBlur;
-  
+
   void main(void) {
     vec4 sum = vec4(0.0);
     float blurAmount = uBlur * 0.01; // Scale blur amount
-    
+
     // Sample 9 pixels in a 3x3 grid
     for(int i = -1; i <= 1; i++) {
       for(int j = -1; j <= 1; j++) {
@@ -32,10 +32,10 @@ const blurFrag = `
         sum += texture2D(uSampler, vTextureCoord + offset);
       }
     }
-    
+
     gl_FragColor = sum / 9.0;
   }
-`;
+`
 
 // Simple threshold shader to create the "Metaball" effect
 const thresholdFrag = `
@@ -51,11 +51,11 @@ const thresholdFrag = `
     }
     gl_FragColor = color;
   }
-`;
+`
 
 interface MeltFragment {
-  sprite: Sprite;
-  particle: Particle;
+  sprite: Sprite
+  particle: Particle
 }
 
 export default class MeltEffect extends Container {
@@ -63,13 +63,16 @@ export default class MeltEffect extends Container {
   private isProcessing: boolean = false
   private options: Required<IMeltEffectOptions>
   private meltResolve?: () => void
-  private pContainer: ParticleContainer;
-  private currentTime: number = 0;
+  private pContainer: ParticleContainer
+  private currentTime: number = 0
 
-  constructor(private sourceSprite: Sprite, options: IMeltEffectOptions = {}) {
-    super();
-    const cols = options.gridCols ?? 15;
-    const rows = options.gridRows ?? 15;
+  constructor(
+    private sourceSprite: Sprite,
+    options: IMeltEffectOptions = {},
+  ) {
+    super()
+    const cols = options.gridCols ?? 15
+    const rows = options.gridRows ?? 15
 
     this.options = {
       gridCols: cols,
@@ -80,7 +83,7 @@ export default class MeltEffect extends Container {
       duration: options.duration ?? 2.5,
       blurAmount: options.blurAmount ?? 6,
       threshold: options.threshold ?? 0.5,
-    };
+    }
 
     // We use a internal ParticleContainer so we can apply filters to it
     this.pContainer = new ParticleContainer(cols * rows, {
@@ -89,128 +92,128 @@ export default class MeltEffect extends Container {
       uvs: true,
       alpha: true,
       tint: true,
-    });
+    })
 
-    this.addChild(this.pContainer);
-    this.x = sourceSprite.x;
-    this.y = sourceSprite.y;
-    this.rotation = sourceSprite.rotation;
+    this.addChild(this.pContainer)
+    this.x = sourceSprite.x
+    this.y = sourceSprite.y
+    this.rotation = sourceSprite.rotation
 
     // Apply the Metaball Hook: Blur + Threshold
     const blurFilter = new Filter(undefined, blurFrag, {
-      uBlur: this.options.blurAmount
-    });
-    
-    const thresholdFilter = new Filter(undefined, thresholdFrag, {
-      threshold: this.options.threshold
-    });
+      uBlur: this.options.blurAmount,
+    })
 
-    this.pContainer.filters = [blurFilter, thresholdFilter];
+    const thresholdFilter = new Filter(undefined, thresholdFrag, {
+      threshold: this.options.threshold,
+    })
+
+    this.pContainer.filters = [blurFilter, thresholdFilter]
   }
 
   private prepare(): void {
-    const texture = this.sourceSprite.texture;
-    if (!texture || !texture.valid) return;
+    const texture = this.sourceSprite.texture
+    if (!texture || !texture.valid) return
 
-    const { gridCols, gridRows, horizontalSpread } = this.options;
-    const texFrame = texture.frame;
-    const stepW = texFrame.width / gridCols;
-    const stepH = texFrame.height / gridRows;
-    const scale = this.sourceSprite.scale.x;
-    const anchorX = this.sourceSprite.anchor.x;
-    const anchorY = this.sourceSprite.anchor.y;
+    const { gridCols, gridRows, horizontalSpread } = this.options
+    const texFrame = texture.frame
+    const stepW = texFrame.width / gridCols
+    const stepH = texFrame.height / gridRows
+    const scale = this.sourceSprite.scale.x
+    const anchorX = this.sourceSprite.anchor.x
+    const anchorY = this.sourceSprite.anchor.y
 
     for (let row = 0; row < gridRows; row++) {
       for (let col = 0; col < gridCols; col++) {
-        const x1 = Math.floor(col * stepW);
-        const y1 = Math.floor(row * stepH);
-        
-        const fragRect = new Rectangle(texFrame.x + x1, texFrame.y + y1, stepW, stepH);
-        const fragTex = new Texture(texture.baseTexture, fragRect);
-        const sprite = new Sprite(fragTex);
-        sprite.anchor.set(0.5);
-        sprite.scale.set(scale);
+        const x1 = Math.floor(col * stepW)
+        const y1 = Math.floor(row * stepH)
 
-        const lx = (x1 - (texFrame.width * anchorX) + stepW / 2) * scale;
-        const ly = (y1 - (texFrame.height * anchorY) + stepH / 2) * scale;
+        const fragRect = new Rectangle(texFrame.x + x1, texFrame.y + y1, stepW, stepH)
+        const fragTex = new Texture(texture.baseTexture, fragRect)
+        const sprite = new Sprite(fragTex)
+        sprite.anchor.set(0.5)
+        sprite.scale.set(scale)
 
-        const p = ParticlePool.global.pop();
-        p.reset();
-        p.x = lx;
-        p.y = ly;
+        const lx = (x1 - texFrame.width * anchorX + stepW / 2) * scale
+        const ly = (y1 - texFrame.height * anchorY + stepH / 2) * scale
+
+        const p = ParticlePool.global.pop()
+        p.reset()
+        p.x = lx
+        p.y = ly
         // High gravity, low horizontal velocity
-        p.velocity.set(Random.uniform(-horizontalSpread, horizontalSpread), Random.uniform(0, 50));
+        p.velocity.set(Random.uniform(-horizontalSpread, horizontalSpread), Random.uniform(0, 50))
 
-        this.fragments.push({ sprite, particle: p });
-        this.pContainer.addChild(sprite);
+        this.fragments.push({ sprite, particle: p })
+        this.pContainer.addChild(sprite)
       }
     }
-    this.sourceSprite.visible = false;
+    this.sourceSprite.visible = false
   }
 
   public async start(): Promise<void> {
-    this.prepare();
-    this.isProcessing = true;
+    this.prepare()
+    this.isProcessing = true
     return new Promise((resolve) => {
-      this.meltResolve = resolve;
-      Ticker.shared.add(this.update, this);
-    });
+      this.meltResolve = resolve
+      Ticker.shared.add(this.update, this)
+    })
   }
 
   private update(): void {
-    if (!this.isProcessing) return;
-    const dt = Ticker.shared.deltaMS / 1000;
-    this.currentTime += dt;
+    if (!this.isProcessing) return
+    const dt = Ticker.shared.deltaMS / 1000
+    this.currentTime += dt
 
     for (let i = this.fragments.length - 1; i >= 0; i--) {
-      const f = this.fragments[i];
-      const p = f.particle;
+      const f = this.fragments[i]
+      const p = f.particle
 
       // Gravity and Viscosity
-      p.velocity.y += this.options.gravity * dt;
-      p.velocity.x *= this.options.viscosity;
-      p.velocity.y *= this.options.viscosity;
+      p.velocity.y += this.options.gravity * dt
+      p.velocity.x *= this.options.viscosity
+      p.velocity.y *= this.options.viscosity
 
-      p.x += p.velocity.x * dt;
-      p.y += p.velocity.y * dt;
+      p.x += p.velocity.x * dt
+      p.y += p.velocity.y * dt
 
-      f.sprite.x = p.x;
-      f.sprite.y = p.y;
+      f.sprite.x = p.x
+      f.sprite.y = p.y
 
       // Gradually shrink fragments so the liquid "dries up"
-      const lifeRatio = 1 - (this.currentTime / this.options.duration);
-      f.sprite.scale.set(this.sourceSprite.scale.x * lifeRatio);
+      const lifeRatio = 1 - this.currentTime / this.options.duration
+      f.sprite.scale.set(this.sourceSprite.scale.x * lifeRatio)
 
       if (lifeRatio <= 0) {
-        this.removeFragment(i);
+        this.removeFragment(i)
       }
     }
 
     if (this.fragments.length === 0) {
-      this.finish();
+      this.finish()
     }
   }
 
   private removeFragment(index: number): void {
-    const f = this.fragments[index];
-    if (f.particle) ParticlePool.global.push(f.particle);
-    this.pContainer.removeChild(f.sprite);
-    f.sprite.destroy();
-    this.fragments.splice(index, 1);
+    const f = this.fragments[index]
+    if (f.particle) ParticlePool.global.push(f.particle)
+    this.pContainer.removeChild(f.sprite)
+    f.sprite.destroy()
+    this.fragments.splice(index, 1)
   }
 
   private finish(): void {
-    this.isProcessing = false;
-    Ticker.shared.remove(this.update, this);
-    this.meltResolve?.();
+    this.isProcessing = false
+    Ticker.shared.remove(this.update, this)
+    this.meltResolve?.()
   }
 
   public static async melt(sprite: Sprite, options: IMeltEffectOptions = {}): Promise<void> {
-    if (!sprite.parent) return;
-    const effect = new MeltEffect(sprite, options);
-    const index = sprite.parent.getChildIndex(sprite);
-    sprite.parent.addChildAt(effect, index);
-    await effect.start();
-    effect.destroy({ children: true });
+    if (!sprite.parent) return
+    const effect = new MeltEffect(sprite, options)
+    const index = sprite.parent.getChildIndex(sprite)
+    sprite.parent.addChildAt(effect, index)
+    await effect.start()
+    effect.destroy({ children: true })
   }
 }
