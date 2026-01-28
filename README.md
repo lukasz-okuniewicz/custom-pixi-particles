@@ -2,6 +2,30 @@
 
 **CustomPIXIParticles** is a lightweight, high-performance library designed for creating and managing customizable particle effects in **PIXI.js** applications. It offers an intuitive API, flexible configuration options, and seamless compatibility with modern PIXI.js versions, making it an essential tool for developers looking to create stunning visual effects.
 
+## 📑 Table of Contents
+
+- [Features](#-features)
+- [Demo](#-demo)
+- [Installation](#️-installation)
+- [Quick Start](#-quick-start)
+- [API Reference](#-api-reference)
+- [Configuration Guide](#-configuration-guide)
+  - [Emission Types](#emission-types)
+  - [Behaviours](#behaviours)
+- [Examples](#-examples)
+- [Performance Tips](#-performance-tips)
+- [Troubleshooting](#-troubleshooting)
+- [Special Effects](#special-effects)
+  - [Shatter Effect](#shatter-effect)
+  - [Dissolve Effect](#dissolve-effect)
+  - [Magnetic Assembly Effect](#magnetic-assembly-effect)
+  - [Ghost Effect](#ghost-effect)
+  - [Glitch Effect](#glitch-effect)
+  - [Melt Effect](#melt-effect)
+- [Versions Compatibility](#️-versions-compatibility)
+- [Advanced Editor](#️-advanced-editor)
+- [Contributing](#-contributing)
+
 ---
 
 ### Support My Work
@@ -37,7 +61,8 @@ npm install custom-pixi-particles
 ---
 
 ## 🚀 Quick Start
-Import or Require
+
+### Import or Require
 ```javascript
 // ES6 Modules
 import customPixiParticles from 'custom-pixi-particles'
@@ -46,19 +71,79 @@ import customPixiParticles from 'custom-pixi-particles'
 const customPixiParticles = require('custom-pixi-particles')
 ```
 
-Create Particle Effects
+### Basic Example
 ```javascript
+import { Application } from 'pixi.js'
+import customPixiParticles from 'custom-pixi-particles'
+
+// Create PIXI application
+const app = new Application()
+await app.init({ width: 800, height: 600 })
+document.body.appendChild(app.canvas)
+
 // Define textures and emitter configuration
-const textures = ['texture1.png', 'texture2.png']
+const textures = ['particle.png']
 const emitterConfig = {
-  // Your configuration object
+  behaviours: [
+    {
+      priority: 10000,
+      enabled: true,
+      maxLifeTime: 2,
+      timeVariance: 0.5,
+      name: 'LifeBehaviour',
+    },
+    {
+      priority: 100,
+      enabled: true,
+      position: { x: 400, y: 300 },
+      positionVariance: { x: 0, y: 0 },
+      velocity: { x: 0, y: -50 },
+      velocityVariance: { x: 20, y: 10 },
+      acceleration: { x: 0, y: 50 },
+      accelerationVariance: { x: 0, y: 0 },
+      name: 'PositionBehaviour',
+    },
+    {
+      priority: 0,
+      enabled: true,
+      allowNegativeValues: false,
+      sizeStart: { x: 10, y: 10 },
+      sizeEnd: { x: 5, y: 5 },
+      startVariance: 2,
+      endVariance: 1,
+      name: 'SizeBehaviour',
+    },
+    {
+      priority: 0,
+      enabled: true,
+      start: { _r: 255, _g: 100, _b: 0, _alpha: 1 },
+      end: { _r: 255, _g: 200, _b: 0, _alpha: 0 },
+      startVariance: { _r: 0, _g: 0, _b: 0, _alpha: 0 },
+      endVariance: { _r: 0, _g: 0, _b: 0, _alpha: 0 },
+      sinus: false,
+      name: 'ColorBehaviour',
+    },
+  ],
+  emitController: {
+    _maxParticles: 1000,
+    _maxLife: 1,
+    _emitPerSecond: 50,
+    name: 'UniformEmission',
+  },
+  duration: -1,
+  alpha: 1,
+  blendMode: 0,
 }
 
 // Initialize particle emitter
-const particles = customPixiParticles.create({ textures, emitterConfig })
+const particles = customPixiParticles.create({ 
+  textures, 
+  emitterConfig,
+  maxParticles: 1000
+})
 
 // Add emitter to the PIXI container
-container.addChild(particles)
+app.stage.addChild(particles)
 
 // Start the emitter
 particles.play()
@@ -67,24 +152,55 @@ particles.play()
 ---
 
 ## 📖 API Reference
-Initializes a particle emitter.
+
+### Creating a Particle Emitter
+
+Initializes a particle emitter with the specified configuration.
+
 ```javascript
 const particles = customPixiParticles.create({
-  textures: [String],             // Array of particle textures
-  emitterConfig: Object,          // Configuration object for the emitter
-  animatedSpriteZeroPad: Number,  // Zero-padding for animated sprite names
-  animatedSpriteIndexToStart: Number, // Initial frame index for animated sprites
-  finishingTextures: [String],    // Textures used for particle finishing
-  vertices: Boolean,              // Use vertex mode for rendering
-  position: Boolean,              // Allow position-based behavior
-  rotation: Boolean,              // Allow rotation-based behavior
-  uvs: Boolean,                   // Apply UV mapping
-  tint: Boolean,                  // Apply tint to particles
-  maxParticles: Number,           // Maximum particles allowed
-  maxFPS: Number,                 // Cap emitter update frequency
+  textures: [String],             // Array of particle texture paths or PIXI.Texture objects
+  emitterConfig: Object,          // Configuration object for the emitter (see Configuration section)
+  animatedSpriteZeroPad: Number,  // Zero-padding for animated sprite names (default: 2)
+  animatedSpriteIndexToStart: Number, // Initial frame index for animated sprites (default: 0)
+  finishingTextures: [String],    // Textures used for particle finishing animations
+  vertices: Boolean,              // Use vertex mode for rendering (default: true)
+  position: Boolean,              // Allow position-based behavior (default: true)
+  rotation: Boolean,              // Allow rotation-based behavior (default: true)
+  uvs: Boolean,                   // Apply UV mapping (default: true)
+  tint: Boolean,                  // Apply tint to particles (default: true)
+  maxParticles: Number,           // Maximum particles allowed (default: 10000)
+  maxFPS: Number,                 // Cap emitter update frequency (default: 60)
   minFPS: Number,                 // Minimum FPS threshold (default: 30)
-  tickerSpeed: Number,            // Speed of the PIXI ticker
+  tickerSpeed: Number,            // Speed of the PIXI ticker (default: 0.02)
 })
+```
+
+### Configuration Object Structure
+
+The `emitterConfig` object contains all the settings for your particle system:
+
+```javascript
+const emitterConfig = {
+  // Emission Control
+  emitController: {
+    name: 'UniformEmission',      // 'UniformEmission' | 'StandardEmission' | 'RandomEmission'
+    _maxParticles: 1000,          // Maximum particles (for Standard/Random)
+    _maxLife: 1,                  // Maximum lifetime (for Standard/Random)
+    _emitPerSecond: 50,           // Particles per second (for Uniform)
+    _emissionRate: 100,           // Emission rate (for Standard/Random)
+  },
+  
+  // Global Settings
+  duration: -1,                   // Emitter duration in seconds (-1 = infinite)
+  alpha: 1,                       // Global alpha (0-1)
+  blendMode: 0,                   // PIXI.js blend mode
+  
+  // Behaviours Array
+  behaviours: [
+    // See Behaviours section for details
+  ],
+}
 ```
 
 ### Event Callbacks
@@ -140,6 +256,10 @@ Clears internal object pools to free memory.
 ```javascript
 particles.clearPool()
 ```
+
+## 🎨 Special Effects
+
+The library includes several pre-built special effects for common use cases.
 
 ### Shatter Effect
 Create a dramatic shattering effect that slices a sprite into fragments with realistic physics.
@@ -385,6 +505,619 @@ meltEffect.melt().then(() => {
 - `melt(onComplete?)` - Triggers the melt animation. Optionally accepts a callback when animation completes.
 - `reset()` - Resets the effect to its initial state.
 - `destroy()` - Destroys the effect and cleans up all resources.
+
+---
+
+## 📚 Configuration Guide
+
+### Emission Types
+
+The library supports three emission types that control how particles are emitted:
+
+#### 1. Uniform Emission
+Particles are emitted at a consistent rate per second.
+
+```javascript
+emitController: {
+  name: 'UniformEmission',
+  _emitPerSecond: 50,  // Particles emitted per second
+}
+```
+
+#### 2. Standard Emission
+Particles are emitted up to a maximum count with a defined rate.
+
+```javascript
+emitController: {
+  name: 'StandardEmission',
+  _maxParticles: 1000,      // Maximum particles that can exist
+  _maxLife: 1,               // Maximum lifetime
+  _emissionRate: 100,       // Emission rate
+}
+```
+
+#### 3. Random Emission
+Particles are emitted randomly with variance.
+
+```javascript
+emitController: {
+  name: 'RandomEmission',
+  _maxParticles: 1000,
+  _maxLife: 1,
+  _emissionRate: 100,
+}
+```
+
+### Behaviours
+
+Behaviours define how particles behave throughout their lifetime. Each behaviour has a `priority` (higher = processed first) and can be `enabled` or disabled.
+
+#### Life Behaviour
+Controls particle lifetime.
+
+```javascript
+{
+  priority: 10000,           // High priority (processed first)
+  enabled: true,
+  maxLifeTime: 2,            // Maximum lifetime in seconds
+  timeVariance: 0.5,         // Random variance in lifetime
+  name: 'LifeBehaviour',
+}
+```
+
+#### Position Behaviour
+Controls particle position, velocity, and acceleration.
+
+```javascript
+{
+  priority: 100,
+  enabled: true,
+  position: { x: 400, y: 300 },           // Initial position
+  positionVariance: { x: 10, y: 10 },     // Position randomness
+  velocity: { x: 0, y: -50 },             // Initial velocity
+  velocityVariance: { x: 20, y: 10 },     // Velocity randomness
+  acceleration: { x: 0, y: 50 },           // Constant acceleration
+  accelerationVariance: { x: 0, y: 0 },    // Acceleration randomness
+  name: 'PositionBehaviour',
+}
+```
+
+#### Spawn Behaviour
+Defines where and how particles spawn. Supports multiple spawn types.
+
+```javascript
+{
+  priority: 100,
+  enabled: true,
+  customPoints: [
+    {
+      spawnType: 'Rectangle',  // See Spawn Types below
+      position: { x: 0, y: 0 },
+      positionVariance: { x: 100, y: 100 },
+      // ... spawn type specific properties
+    },
+  ],
+  trailingEnabled: false,      // Enable trail effects
+  spawnAlongTrail: false,     // Spawn along entire trail
+  trailSpeed: 1,              // Trail animation speed
+  name: 'SpawnBehaviour',
+}
+```
+
+**Available Spawn Types:**
+- `Rectangle` - Uniform distribution in a rectangular area
+- `Ring` - Circular particle arrangement
+- `Star` - Star-shaped distribution with configurable points
+- `Grid` - Organized grid with rows and columns
+- `Word` - Particles form text/word shapes
+- `Sphere` - 3D sphere-shaped spawning
+- `Cone` - Conical distribution with customizable angles
+- `Frame` - Particles along frame edges
+- `FrameRectangle` - Rectangular frame outline
+- `Bezier` - Particles follow Bezier curve paths
+- `Helix` - Spiral helix with adjustable pitch and turns
+- `Heart` - Heart-shaped formations
+- `Lissajous` - Complex figure-eight-like paths
+- `Spring` - Spring-like patterns with coiled loops
+- `Path` - Custom path defined by points
+- `Oval` - Elliptical distributions
+
+#### Size Behaviour
+Controls particle size over time.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  allowNegativeValues: false,
+  sizeStart: { x: 10, y: 10 },      // Initial size
+  sizeEnd: { x: 5, y: 5 },          // Final size
+  startVariance: 2,                 // Size start randomness
+  endVariance: 1,                   // Size end randomness
+  name: 'SizeBehaviour',
+}
+```
+
+#### Color Behaviour
+Controls particle color and alpha over time.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  start: { _r: 255, _g: 100, _b: 0, _alpha: 1 },    // Start color (RGBA)
+  end: { _r: 255, _g: 200, _b: 0, _alpha: 0 },      // End color (RGBA)
+  startVariance: { _r: 0, _g: 0, _b: 0, _alpha: 0 }, // Color start variance
+  endVariance: { _r: 0, _g: 0, _b: 0, _alpha: 0 },   // Color end variance
+  sinus: false,                                       // Use sine wave interpolation
+  name: 'ColorBehaviour',
+}
+```
+
+#### Rotation Behaviour
+Controls particle rotation.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  rotation: 0,          // Initial rotation in radians
+  variance: 0.2,         // Rotation randomness
+  name: 'RotationBehaviour',
+}
+```
+
+#### Angular Velocity Behaviour
+Controls particle spin speed.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  angularVelocity: 1,   // Rotation speed
+  variance: 0.5,        // Speed randomness
+  name: 'AngularVelocityBehaviour',
+}
+```
+
+#### Emit Direction Behaviour
+Controls initial emission direction.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  angle: 0,             // Emission angle in radians
+  variance: 0.5,        // Angle randomness
+  name: 'EmitDirectionBehaviour',
+}
+```
+
+#### Turbulence Behaviour
+Adds random motion to particles.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  strength: 10,         // Turbulence strength
+  scale: 0.1,           // Noise scale
+  speed: 1,             // Turbulence speed
+  name: 'TurbulenceBehaviour',
+}
+```
+
+#### Collision Behaviour
+Handles particle collisions with boundaries.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  bounce: 0.5,          // Bounce coefficient (0-1)
+  bounds: {              // Collision boundaries
+    x: 0,
+    y: 0,
+    width: 800,
+    height: 600,
+  },
+  name: 'CollisionBehaviour',
+}
+```
+
+#### Attraction/Repulsion Behaviour
+Particles attract or repel from points.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  points: [
+    {
+      x: 400,
+      y: 300,
+      strength: 100,     // Positive = attraction, Negative = repulsion
+      radius: 200,       // Effect radius
+    },
+  ],
+  name: 'AttractionRepulsionBehaviour',
+}
+```
+
+#### Noise-Based Motion Behaviour
+Uses Perlin noise for organic movement.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  strength: 50,         // Noise strength
+  scale: 0.01,           // Noise scale
+  speed: 1,              // Animation speed
+  name: 'NoiseBasedMotionBehaviour',
+}
+```
+
+#### Force Fields Behaviour
+Applies force fields to particles.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  fields: [
+    {
+      type: 'vortex',    // 'vortex' | 'wind' | 'gravity'
+      position: { x: 400, y: 300 },
+      strength: 100,
+      radius: 200,
+    },
+  ],
+  name: 'ForceFieldsBehaviour',
+}
+```
+
+#### Timeline Behaviour
+Controls particle properties over time with keyframes.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  keyframes: [
+    { time: 0, property: 'alpha', value: 1 },
+    { time: 0.5, property: 'alpha', value: 0.5 },
+    { time: 1, property: 'alpha', value: 0 },
+  ],
+  name: 'TimelineBehaviour',
+}
+```
+
+#### Grouping Behaviour
+Groups particles together.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  groupSize: 5,           // Particles per group
+  cohesion: 0.5,         // Group cohesion strength
+  name: 'GroupingBehaviour',
+}
+```
+
+#### Sound Reactive Behaviour
+Reacts to audio input.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  audioSource: audioContext,  // Web Audio API source
+  sensitivity: 1,            // Reaction sensitivity
+  frequencyRange: [0, 1000], // Frequency range to react to
+  name: 'SoundReactiveBehaviour',
+}
+```
+
+#### Light Effect Behaviour
+Adds lighting effects to particles.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  lights: [
+    {
+      position: { x: 400, y: 300 },
+      intensity: 1,
+      radius: 200,
+      color: 0xFFFFFF,
+    },
+  ],
+  name: 'LightEffectBehaviour',
+}
+```
+
+#### Stretch Behaviour
+Stretches particles based on velocity.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  stretchFactor: 2,      // Stretch multiplier
+  minStretch: 1,          // Minimum stretch
+  maxStretch: 5,         // Maximum stretch
+  name: 'StretchBehaviour',
+}
+```
+
+#### Temperature Behaviour
+Simulates temperature effects.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  temperature: 100,      // Base temperature
+  variance: 20,          // Temperature variance
+  name: 'TemperatureBehaviour',
+}
+```
+
+#### Move To Point Behaviour
+Moves particles toward specific points.
+
+```javascript
+{
+  priority: 0,
+  enabled: true,
+  target: { x: 400, y: 300 },
+  speed: 100,            // Movement speed
+  easing: 0.1,           // Easing factor
+  name: 'MoveToPointBehaviour',
+}
+```
+
+---
+
+## 💡 Examples
+
+### Fire Effect
+```javascript
+const fireConfig = {
+  behaviours: [
+    {
+      priority: 10000,
+      enabled: true,
+      maxLifeTime: 1.5,
+      timeVariance: 0.5,
+      name: 'LifeBehaviour',
+    },
+    {
+      priority: 100,
+      enabled: true,
+      position: { x: 400, y: 500 },
+      positionVariance: { x: 20, y: 0 },
+      velocity: { x: 0, y: -80 },
+      velocityVariance: { x: 15, y: 20 },
+      acceleration: { x: 0, y: -30 },
+      name: 'PositionBehaviour',
+    },
+    {
+      priority: 0,
+      enabled: true,
+      sizeStart: { x: 20, y: 20 },
+      sizeEnd: { x: 5, y: 5 },
+      name: 'SizeBehaviour',
+    },
+    {
+      priority: 0,
+      enabled: true,
+      start: { _r: 255, _g: 100, _b: 0, _alpha: 1 },
+      end: { _r: 255, _g: 0, _b: 0, _alpha: 0 },
+      name: 'ColorBehaviour',
+    },
+  ],
+  emitController: {
+    _emitPerSecond: 100,
+    name: 'UniformEmission',
+  },
+  duration: -1,
+  alpha: 1,
+  blendMode: 2, // ADD blend mode
+}
+
+const fire = customPixiParticles.create({
+  textures: ['flame.png'],
+  emitterConfig: fireConfig,
+})
+```
+
+### Explosion Effect
+```javascript
+const explosionConfig = {
+  behaviours: [
+    {
+      priority: 10000,
+      enabled: true,
+      maxLifeTime: 0.5,
+      timeVariance: 0.2,
+      name: 'LifeBehaviour',
+    },
+    {
+      priority: 100,
+      enabled: true,
+      customPoints: [{
+        spawnType: 'Ring',
+        radius: 0,
+        position: { x: 400, y: 300 },
+      }],
+      velocity: { x: 0, y: 0 },
+      velocityVariance: { x: 200, y: 200 },
+      acceleration: { x: 0, y: 100 },
+      name: 'SpawnBehaviour',
+    },
+    {
+      priority: 100,
+      enabled: true,
+      position: { x: 400, y: 300 },
+      name: 'PositionBehaviour',
+    },
+    {
+      priority: 0,
+      enabled: true,
+      sizeStart: { x: 15, y: 15 },
+      sizeEnd: { x: 5, y: 5 },
+      name: 'SizeBehaviour',
+    },
+    {
+      priority: 0,
+      enabled: true,
+      start: { _r: 255, _g: 255, _b: 0, _alpha: 1 },
+      end: { _r: 255, _g: 0, _b: 0, _alpha: 0 },
+      name: 'ColorBehaviour',
+    },
+  ],
+  emitController: {
+    _maxParticles: 500,
+    _maxLife: 1,
+    _emissionRate: 1000,
+    name: 'StandardEmission',
+  },
+  duration: 0.1,
+}
+
+const explosion = customPixiParticles.create({
+  textures: ['spark.png'],
+  emitterConfig: explosionConfig,
+})
+explosion.play()
+```
+
+### Text Effect
+```javascript
+const textConfig = {
+  behaviours: [
+    {
+      priority: 10000,
+      enabled: true,
+      maxLifeTime: 2,
+      name: 'LifeBehaviour',
+    },
+    {
+      priority: 100,
+      enabled: true,
+      customPoints: [{
+        spawnType: 'Word',
+        word: 'Hello',
+        fontSize: 100,
+        fontSpacing: 5,
+        particleDensity: 1,
+        position: { x: 400, y: 300 },
+      }],
+      velocity: { x: 0, y: 0 },
+      name: 'SpawnBehaviour',
+    },
+    {
+      priority: 0,
+      enabled: true,
+      sizeStart: { x: 3, y: 3 },
+      sizeEnd: { x: 3, y: 3 },
+      name: 'SizeBehaviour',
+    },
+    {
+      priority: 0,
+      enabled: true,
+      start: { _r: 255, _g: 255, _b: 255, _alpha: 1 },
+      end: { _r: 255, _g: 255, _b: 255, _alpha: 1 },
+      name: 'ColorBehaviour',
+    },
+  ],
+  emitController: {
+    _maxParticles: 1000,
+    _maxLife: 1,
+    _emissionRate: 500,
+    name: 'StandardEmission',
+  },
+  duration: 0.1,
+}
+```
+
+---
+
+## ⚡ Performance Tips
+
+1. **Limit Particle Count**: Use `maxParticles` to cap the number of active particles
+2. **Optimize Textures**: Use small, optimized texture files
+3. **Disable Unused Features**: Set `vertices`, `rotation`, `tint` to `false` if not needed
+4. **Use Object Pooling**: The library automatically pools particles - avoid creating new emitters frequently
+5. **FPS Capping**: Use `maxFPS` and `minFPS` to control update frequency
+6. **Batch Updates**: Update multiple emitters in a single frame when possible
+7. **Clean Up**: Call `destroy()` and `clearPool()` when done with emitters
+
+---
+
+## 🐛 Troubleshooting
+
+### Particles Not Appearing
+- Check that textures are loaded before creating the emitter
+- Verify `emitterConfig` structure is correct
+- Ensure emitter is added to the stage and `play()` is called
+- Check that behaviours are enabled
+
+### Performance Issues
+- Reduce `maxParticles` count
+- Lower `_emitPerSecond` or `_emissionRate`
+- Disable unused behaviours
+- Use simpler spawn types (avoid complex paths)
+
+### Particles Not Following Expected Path
+- Check behaviour priorities (higher priority = processed first)
+- Verify position, velocity, and acceleration values
+- Ensure SpawnBehaviour is configured correctly for your spawn type
+
+### Memory Leaks
+- Always call `destroy()` on emitters when done
+- Use `clearPool()` periodically for long-running applications
+- Avoid creating new emitters every frame
+
+---
+
+## 🎯 Common Use Cases
+
+### Game Effects
+- **Explosions**: Use burst emission with high velocity variance
+- **Fire/Smoke**: Continuous emission with upward velocity and color gradients
+- **Magic Spells**: Combine multiple emitters with different spawn types
+- **Hit Effects**: Short-duration bursts with radial emission
+- **Trails**: Use GhostEffect for character movement trails
+
+### UI Effects
+- **Button Hover**: Subtle particle bursts on interaction
+- **Loading Animations**: Continuous particle streams
+- **Transitions**: Dissolve or shatter effects for scene changes
+- **Notifications**: Brief particle celebrations
+
+### Visual Effects
+- **Text Animations**: Use Word spawn type for text effects
+- **Background Ambiance**: Low-intensity continuous emitters
+- **Weather Effects**: Rain, snow, or leaves with appropriate physics
+- **Particle Art**: Create artistic patterns with custom spawn paths
+
+---
+
+## 🔧 Best Practices
+
+1. **Start Simple**: Begin with basic behaviours and add complexity gradually
+2. **Use the Editor**: Leverage the visual editor to prototype effects quickly
+3. **Profile Performance**: Monitor FPS and particle counts during development
+4. **Reuse Configurations**: Save and reuse emitter configs for consistency
+5. **Test on Target Devices**: Performance varies across devices - test early
+6. **Clean Up Properly**: Always destroy emitters when switching scenes
+7. **Optimize Textures**: Use texture atlases and appropriate sizes
+8. **Layer Effects**: Combine multiple emitters for complex effects
 
 ---
 
