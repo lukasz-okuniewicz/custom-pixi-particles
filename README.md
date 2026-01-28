@@ -1,6 +1,6 @@
-# CustomPIXIParticles by [@lukasz-okuniewicz](http://github.com/lukasz-okuniewicz)
+# custom-pixi-particles by [@lukasz-okuniewicz](http://github.com/lukasz-okuniewicz)
 
-**CustomPIXIParticles** is a lightweight, high-performance library designed for creating and managing customizable particle effects in **PIXI.js** applications. It offers an intuitive API, flexible configuration options, and seamless compatibility with modern PIXI.js versions, making it an essential tool for developers looking to create stunning visual effects.
+**custom-pixi-particles** is a lightweight, high-performance library designed for creating and managing customizable particle effects in **PIXI.js** applications. It offers an intuitive API, flexible configuration options, and seamless compatibility with modern PIXI.js versions, making it an essential tool for developers looking to create stunning visual effects.
 
 ## 📑 Table of Contents
 
@@ -29,7 +29,7 @@
 ---
 
 ### Support My Work
-If you find **CustomPIXIParticles** useful and would like to support my work, you can buy me a coffee. Your contributions help me dedicate more time to improving this library and creating new features for the community. Thank you for your support! ☕💖
+If you find **custom-pixi-particles** useful and would like to support my work, you can buy me a coffee. Your contributions help me dedicate more time to improving this library and creating new features for the community. Thank you for your support! ☕💖
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20My%20Work-orange?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/lukasz.okuniewicz)
 
@@ -46,7 +46,7 @@ If you find **CustomPIXIParticles** useful and would like to support my work, yo
 ---
 
 ## 🎮 Demo
-Try it out here: [CustomPIXIParticles Live Editor](https://okuniewicz.eu/)
+Try it out here: [custom-pixi-particles Live Editor](https://okuniewicz.eu/)
 
 ---
 
@@ -1122,17 +1122,17 @@ const textConfig = {
 ---
 
 ## 🖥️ Versions Compatibility
-| PixiJS      | CustomPIXIParticles |
-|-------------|---------------------|
-| v5.x - v6.x | v4.x                |
-| v7.x        | v7.x                |
-| v8.x        | v8.x                |
+| PixiJS      | custom-pixi-particles |
+|-------------|-----------------------|
+| v5.x - v6.x | v4.x                  |
+| v7.x        | v7.x                  |
+| v8.x        | v8.x                  |
 
 ---
 
 ## 🛠️ Advanced Editor
-Easily design and fine-tune your particle effects with the CustomPIXIParticles Editor.
-🔗 [CustomPIXIParticles Live Editor](https://okuniewicz.eu/)
+Easily design and fine-tune your particle effects with the custom-pixi-particles Editor.
+🔗 [custom-pixi-particles Live Editor](https://okuniewicz.eu/)
 
 ---
 
@@ -1141,4 +1141,4 @@ Contributions, feature suggestions, and bug reports are welcome! Open an issue o
 
 ---
 
-With CustomPIXIParticles, you're not just building animations; you're crafting immersive experiences! 🌟
+With custom-pixi-particles, you're not just building animations; you're crafting immersive experiences! 🌟
