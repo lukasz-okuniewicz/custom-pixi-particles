@@ -17,7 +17,7 @@ import Model from '../Model'
  */
 export default class Renderer extends Container {
   emitter: Emitter
-  turbulenceEmitter: Emitter
+  turbulenceEmitter: Emitter | undefined
   private static readonly BASE_TICKER_SPEED = 0.02
   private _paused: boolean = false
   private _internalPaused: boolean = false
@@ -27,7 +27,7 @@ export default class Renderer extends Container {
   private finishingTextureNames: string[]
   private unusedSprites: any[] = []
   private emitterParser: EmitterParser
-  private turbulenceParser: EmitterParser
+  private turbulenceParser: EmitterParser | undefined
   private config: any
   private anchor: { x: number; y: number } = { x: 0.5, y: 0.5 }
   private _model: Model = new Model()
@@ -300,14 +300,35 @@ export default class Renderer extends Container {
    */
   updateConfig(config: any, resetDuration = false) {
     this.emitterParser?.update(config, this._model, resetDuration)
-    if (this.turbulenceEmitter) {
-      const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
-      if (turbulenceConfigIndex !== -1) {
-        const turbulenceConfig = config.behaviours[turbulenceConfigIndex]
-        if (turbulenceConfig.enabled === true) {
-          this.turbulenceParser.update(this.buildTurbulenceConfig(turbulenceConfig), this._model, resetDuration)
+    const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
+    if (turbulenceConfigIndex === -1) return
+    const turbulenceConfig = config.behaviours[turbulenceConfigIndex]
+    if (turbulenceConfig.enabled === true) {
+      if (!this.turbulenceEmitter) {
+        this.turbulenceEmitter = new engine.Emitter(this._model)
+        this.turbulenceParser = this.turbulenceEmitter.getParser()
+        this.turbulenceParser.read(this.buildTurbulenceConfig(turbulenceConfig), this._model)
+        this.turbulenceEmitter.on(Emitter.CREATE, this.onCreateTurbulence, this)
+        this.turbulenceEmitter.on(Emitter.UPDATE, this.onUpdateTurbulence, this)
+        this.turbulenceEmitter.on(Emitter.REMOVE, this.onRemoveTurbulence, this)
+        if (this.turbulenceEmitter.list) {
+          this.emitter.turbulencePool.list = this.turbulenceEmitter.list
         }
+        this.turbulenceEmitter.resetAndPlay()
+      } else {
+        this.turbulenceParser!.update(this.buildTurbulenceConfig(turbulenceConfig), this._model, resetDuration)
       }
+    } else if (this.turbulenceEmitter) {
+      this.turbulenceEmitter.stop()
+      if (this.emitter.turbulencePool.list) {
+        this.emitter.turbulencePool.list.reset()
+        this.emitter.turbulencePool.list = new List()
+      }
+      this.turbulenceEmitter.off(Emitter.CREATE, this.onCreateTurbulence, this)
+      this.turbulenceEmitter.off(Emitter.UPDATE, this.onUpdateTurbulence, this)
+      this.turbulenceEmitter.off(Emitter.REMOVE, this.onRemoveTurbulence, this)
+      this.turbulenceEmitter = undefined
+      this.turbulenceParser = undefined
     }
   }
 
