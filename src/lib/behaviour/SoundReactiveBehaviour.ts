@@ -29,8 +29,8 @@ export default class SoundReactiveBehaviour extends Behaviour {
   apply(particle: Particle, deltaTime: number) {
     if (!this.enabled || !this.analyser || !this.frequencyData || !this.isPlaying) return
 
-    // Update frequency data
-    this.analyser.getByteFrequencyData(this.frequencyData)
+    // Update frequency data (cast for Web Audio API: expects Uint8Array<ArrayBuffer>, not ArrayBufferLike)
+    this.analyser.getByteFrequencyData(this.frequencyData as unknown as Uint8Array<ArrayBuffer>)
 
     // Compute amplitude and frequency effects
     const amplitude = this.getAmplitude()
