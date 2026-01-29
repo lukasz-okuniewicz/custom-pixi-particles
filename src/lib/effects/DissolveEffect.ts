@@ -36,8 +36,7 @@ export default class DissolveEffect extends Container {
     options: IDissolveEffectOptions = {},
   ) {
     super()
-    // Determine bounds to set container size
-    const bounds = sourceSprite.getLocalBounds()
+
     const pixelSize = options.pixelSize ?? 2
 
     this.options = {
@@ -48,51 +47,69 @@ export default class DissolveEffect extends Container {
       lifetime: options.lifetime ?? 1.5,
       fadeOutDuration: options.fadeOutDuration ?? 0.5,
       direction: options.direction ?? 'left-to-right',
-      windAngle: (options.windAngle ?? -45) * (Math.PI / 180), // Support degrees from UI
+      windAngle: (options.windAngle ?? -45) * (Math.PI / 180),
     }
 
+    // Copy transforms from source
     this.x = sourceSprite.x
     this.y = sourceSprite.y
     this.rotation = sourceSprite.rotation
+    this.scale.copyFrom(sourceSprite.scale)
+    this.pivot.copyFrom(sourceSprite.pivot)
   }
 
   private prepare(): void {
     const texture = this.sourceSprite.texture
-    if (!texture || !texture.source) return
 
-    const canvas = document.createElement('canvas')
+    if (!texture || !texture.source) {
+      console.warn('DissolveEffect: Texture source not found.')
+      return
+    }
+
+    // In Pixi v8, 'resource' is the most reliable path to the raw image data.
+    // It can be an HTMLImageElement, HTMLCanvasElement, or ImageBitmap.
+    const sourceElement = (texture.source as any).resource
+
+    if (!sourceElement) {
+      console.warn('DissolveEffect: Could not find valid resource on texture.source.')
+      return
+    }
+
     const { width, height } = texture.frame
+    const canvas = document.createElement('canvas')
     canvas.width = width
     canvas.height = height
 
-    const ctx = canvas.getContext('2d')!
-    const source = texture.source
-    const resource = (source as any).resource
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!
 
-    if (resource && (resource.source || resource.data)) {
-      // tslint:disable-next-line:max-line-length
+    // Draw the specific frame (important for Spritesheets/Atlases)
+    try {
       ctx.drawImage(
-        resource.source || resource.data,
+        sourceElement,
         texture.frame.x,
         texture.frame.y,
-        width,
-        height,
+        texture.frame.width,
+        texture.frame.height,
         0,
         0,
         width,
         height,
       )
+    } catch (e) {
+      console.error('DissolveEffect: Failed to draw texture to canvas. This is likely a CORS issue.', e)
+      return
     }
 
     const imgData = ctx.getImageData(0, 0, width, height).data
     const { pixelSize, edgeSoftness, direction } = this.options
+
     const anchorX = this.sourceSprite.anchor.x
     const anchorY = this.sourceSprite.anchor.y
-    const scale = this.sourceSprite.scale.x
 
     for (let py = 0; py < height; py += pixelSize) {
       for (let px = 0; px < width; px += pixelSize) {
-        const i = (py * width + px) * 4
+        const i = (Math.floor(py) * width + Math.floor(px)) * 4
+
         if (imgData[i + 3] < 10) continue
 
         let spatialFactor = 0
@@ -119,12 +136,11 @@ export default class DissolveEffect extends Container {
         const activationThreshold = spatialFactor * (1 - edgeSoftness) + Math.random() * edgeSoftness
 
         const sprite = new Sprite(Texture.WHITE)
-        sprite.width = sprite.height = pixelSize * scale
-        // tslint:disable-next-line:no-bitwise
+        sprite.width = sprite.height = pixelSize
         sprite.tint = (imgData[i] << 16) | (imgData[i + 1] << 8) | imgData[i + 2]
 
-        const lx = (px - width * anchorX) * scale
-        const ly = (py - height * anchorY) * scale
+        const lx = px - width * anchorX
+        const ly = py - height * anchorY
 
         const p = ParticlePool.global.pop()
         p.reset()
@@ -142,13 +158,21 @@ export default class DissolveEffect extends Container {
         })
 
         this.addChild(sprite)
+        sprite.x = lx
+        sprite.y = ly
       }
     }
+
     this.sourceSprite.visible = false
   }
 
   public async start(): Promise<void> {
     this.prepare()
+    if (this.fragments.length === 0) {
+      this.finish()
+      return
+    }
+
     this.isProcessing = true
     return new Promise((resolve) => {
       this.dissolveResolve = resolve
@@ -160,10 +184,12 @@ export default class DissolveEffect extends Container {
     if (!this.isProcessing) return
 
     const dt = Ticker.shared.deltaMS / 1000
-    // progress moves from 0 to 1.2 to ensure all thresholds are met
-    this.progress += dt * 0.6
+    this.progress += dt * 0.7
 
-    // Iterate backwards so we can safely splice the array
+    const { windAngle, driftStrength, noiseIntensity, fadeOutDuration } = this.options
+    const windX = Math.cos(windAngle) * driftStrength
+    const windY = Math.sin(windAngle) * driftStrength
+
     for (let i = this.fragments.length - 1; i >= 0; i--) {
       const f = this.fragments[i]
       const p = f.particle
@@ -175,31 +201,25 @@ export default class DissolveEffect extends Container {
       if (f.isActive) {
         p.lifeTime += dt
 
-        // Movement
-        const windX = Math.cos(this.options.windAngle) * this.options.driftStrength
-        const windY = Math.sin(this.options.windAngle) * this.options.driftStrength
-        const noiseX = (Math.random() - 0.5) * this.options.noiseIntensity
-        const noiseY = (Math.random() - 0.5) * this.options.noiseIntensity
+        const nx = (Math.random() - 0.5) * noiseIntensity
+        const ny = (Math.random() - 0.5) * noiseIntensity
 
-        p.x += (windX + noiseX) * dt
-        p.y += (windY + noiseY) * dt
+        p.x += (windX + nx) * dt
+        p.y += (windY + ny) * dt
+
         f.sprite.x = p.x
         f.sprite.y = p.y
 
-        // Alpha Fade
         const lifeProg = p.lifeTime / p.maxLifeTime
-        const fadeThreshold = 1 - this.options.fadeOutDuration / p.maxLifeTime
+        const fadeThreshold = 1 - fadeOutDuration / p.maxLifeTime
+
         if (lifeProg > fadeThreshold) {
           f.sprite.alpha = Math.max(0, 1 - (lifeProg - fadeThreshold) / (1 - fadeThreshold))
         }
 
-        // REMOVAL LOGIC: Check if lifetime ended
         if (p.lifeTime >= p.maxLifeTime || f.sprite.alpha <= 0) {
           this.removeFragment(i)
         }
-      } else {
-        f.sprite.x = f.initialX
-        f.sprite.y = f.initialY
       }
     }
 
@@ -224,9 +244,9 @@ export default class DissolveEffect extends Container {
     this.dissolveResolve?.()
   }
 
-  public destroy(options?: any): void {
+  public override destroy(options?: any): void {
     Ticker.shared.remove(this.update, this)
-    this.fragments.forEach((f, i) => {
+    this.fragments.forEach((f) => {
       if (f.particle) ParticlePool.global.push(f.particle)
     })
     this.fragments = []
@@ -235,9 +255,11 @@ export default class DissolveEffect extends Container {
 
   public static async dissolve(sprite: Sprite, options: IDissolveEffectOptions = {}): Promise<void> {
     if (!sprite.parent) return
+
     const effect = new DissolveEffect(sprite, options)
     const index = sprite.parent.getChildIndex(sprite)
     sprite.parent.addChildAt(effect, index)
+
     await effect.start()
     effect.destroy({ children: true })
   }
