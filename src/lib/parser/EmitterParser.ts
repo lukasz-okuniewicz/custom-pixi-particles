@@ -2,6 +2,8 @@
 import CompatibilityHelper from './CompatibilityHelper'
 import * as emissions from '../emission'
 import * as behaviours from '../behaviour'
+import { BehaviourRegistry } from '../behaviour/BehaviourRegistry'
+import PlaceholderBehaviour from '../behaviour/PlaceholderBehaviour'
 import { Emitter } from '../emitter'
 import Model from '../Model'
 
@@ -166,23 +168,39 @@ export default class EmitterParser {
   }
 
   /**
-   * Creates a new behaviour
+   * Creates a new behaviour by name. Uses BehaviourRegistry first (custom behaviours),
+   * then falls back to built-in behaviours.
    * @param {string} name - The name of the behaviour to create
    * @return {any} The new behaviour
    */
   createBehaviour = (name: string) => {
-    // @ts-ignore
-    return new behaviours[name]()
+    const CustomBehaviour = BehaviourRegistry.get(name)
+    if (CustomBehaviour) {
+      return new CustomBehaviour()
+    }
+    const BuiltIn = (behaviours as any)[name]
+    if (BuiltIn && typeof BuiltIn === 'function') {
+      return new BuiltIn()
+    }
+    return new PlaceholderBehaviour(name)
   }
 
   /**
-   * Creates a new behaviour properties
+   * Creates a new behaviour properties (for config schema / editor).
+   * Uses BehaviourRegistry first for custom behaviours.
    * @param {string} name - The name of the behaviour to create
    * @return {any} The new behaviour properties
    */
   createBehaviourProps = (name: string) => {
-    // @ts-ignore
-    return new behaviours[name]().getProps()
+    const CustomBehaviour = BehaviourRegistry.get(name)
+    if (CustomBehaviour) {
+      return new CustomBehaviour().getProps()
+    }
+    const BuiltIn = (behaviours as any)[name]
+    if (BuiltIn && typeof BuiltIn === 'function') {
+      return new BuiltIn().getProps()
+    }
+    return new PlaceholderBehaviour(name).getProps()
   }
 
   /**

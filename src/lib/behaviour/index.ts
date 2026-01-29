@@ -1,6 +1,7 @@
 import BehaviourNames from './BehaviourNames'
 import EmitterBehaviours from './EmitterBehaviours'
 import Behaviour from './Behaviour'
+import { BehaviourRegistry } from './BehaviourRegistry'
 import LifeBehaviour from './LifeBehaviour'
 import PositionBehaviour from './PositionBehaviour'
 import ColorBehaviour from './ColorBehaviour'
@@ -21,6 +22,9 @@ import LightEffectBehaviour from './LightEffectBehaviour'
 import StretchBehaviour from './StretchBehaviour'
 import TemperatureBehaviour from './TemperatureBehaviour'
 import MoveToPointBehaviour from './MoveToPointBehaviour'
+
+export type { IBehaviour } from './IBehaviour'
+export { BehaviourRegistry } from './BehaviourRegistry'
 
 export {
   EmitterBehaviours,

@@ -1,15 +1,17 @@
 // src/lib/behaviour/EmitterBehaviours.ts
 // tslint:disable:prefer-for-of
 
+import type { IBehaviour } from './IBehaviour'
 import Particle from '../Particle'
 import Model from '../Model'
 import TurbulencePool from '../util/turbulencePool'
 
 /**
- * EmitterBehaviours class manages the behaviour of particles
+ * EmitterBehaviours class manages the behaviour of particles.
+ * Accepts built-in behaviours and custom behaviours that implement IBehaviour.
  */
 export default class EmitterBehaviours {
-  behaviours: any = []
+  behaviours: IBehaviour[] = []
 
   /**
    * Gets all the enabled behaviours
@@ -17,7 +19,7 @@ export default class EmitterBehaviours {
    * @return {any[]} The enabled behaviours
    */
   getAll = () => {
-    return this.behaviours.filter((behaviour: any) => {
+    return this.behaviours.filter((behaviour: IBehaviour) => {
       return behaviour.enabled
     })
   }
@@ -30,19 +32,19 @@ export default class EmitterBehaviours {
   }
 
   /**
-   * Adds a behaviour
+   * Adds a behaviour (built-in or custom implementing IBehaviour).
    *
-   * @param {any} behaviour The behaviour to add
+   * @param {IBehaviour} behaviour The behaviour to add
    *
-   * @return {any} The added behaviour
+   * @return {IBehaviour} The added behaviour
    */
-  add = (behaviour: any) => {
+  add = (behaviour: IBehaviour) => {
     if (this.getByName(behaviour.getName()) !== null) {
       throw new Error('Emitter duplicate')
     }
 
     this.behaviours.push(behaviour)
-    this.behaviours.sort((a: any, b: any) => {
+    this.behaviours.sort((a: IBehaviour, b: IBehaviour) => {
       return b.priority - a.priority
     })
 
@@ -65,7 +67,7 @@ export default class EmitterBehaviours {
    *
    * @return {any | null} The behaviour with the given name or null if not found
    */
-  getByName = (name: string) => {
+  getByName = (name: string): IBehaviour | null => {
     for (let i = 0; i < this.behaviours.length; ++i) {
       if (this.behaviours[i].getName() === name) {
         return this.behaviours[i]
@@ -81,7 +83,7 @@ export default class EmitterBehaviours {
    * @param {string} name The name of the behaviour to remove
    */
   removeByName = (name: string) => {
-    const behaviours = []
+    const behaviours: IBehaviour[] = []
     for (let i = 0; i < this.behaviours.length; ++i) {
       if (this.behaviours[i].getName() !== name) {
         behaviours.push(this.behaviours[i])
@@ -125,7 +127,8 @@ export default class EmitterBehaviours {
    */
   update = (deltaTime: number) => {
     for (let i = 0; i < this.behaviours.length; ++i) {
-      if (this.behaviours[i].update) this.behaviours[i].update(deltaTime)
+      const updateFn = this.behaviours[i].update
+      if (updateFn) updateFn(deltaTime)
     }
   }
 
@@ -136,9 +139,8 @@ export default class EmitterBehaviours {
    */
   onParticleRemoved = (particle: Particle) => {
     for (let i = 0; i < this.behaviours.length; ++i) {
-      if (typeof this.behaviours[i].onParticleRemoved === 'function') {
-        this.behaviours[i].onParticleRemoved(particle)
-      }
+      const onRemoved = this.behaviours[i].onParticleRemoved
+      if (onRemoved) onRemoved(particle)
     }
   }
 }
