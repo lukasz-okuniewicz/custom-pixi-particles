@@ -139,11 +139,15 @@ export default class GhostEffect extends Container {
   private lerpColor(start: number, end: number, t: number): number {
     // tslint:disable-next-line:one-variable-per-declaration no-bitwise
     const r1 = (start >> 16) & 0xff,
+      // tslint:disable-next-line:no-bitwise
       g1 = (start >> 8) & 0xff,
+      // tslint:disable-next-line:no-bitwise
       b1 = start & 0xff
     // tslint:disable-next-line:one-variable-per-declaration no-bitwise
     const r2 = (end >> 16) & 0xff,
+      // tslint:disable-next-line:no-bitwise
       g2 = (end >> 8) & 0xff,
+      // tslint:disable-next-line:no-bitwise
       b2 = end & 0xff
     // tslint:disable-next-line:one-variable-per-declaration no-bitwise
     const r = r1 + (r2 - r1) * t,
