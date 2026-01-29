@@ -17,6 +17,8 @@ export default class SpawnBehaviour extends Behaviour {
   trailSpeed: number = 1 // Speed of the trail
   trailRepeat: boolean = true // Loop the trail
   trailStart: number = 0 // Start the trail at 20% of its path
+  trailRangeSegments: number = 20 // Number of segments for trail range sampling (higher = finer distribution)
+  trailRangeWeightFactor: number = 4 // Weight decay toward trail end (higher = more particles near leading edge)
   currentProgress: number = 0
 
   customPoints: any[] = [
@@ -122,7 +124,8 @@ export default class SpawnBehaviour extends Behaviour {
   calculateTrailRangePositions = (point: any) => {
     const positions: any[] = []
     const weights: number[] = []
-    const segments = 20
+    const segments = this.trailRangeSegments ?? 20
+    const weightFactor = this.trailRangeWeightFactor ?? 4
     const start = this.trailStart || 0
     const end = this.currentProgress
     const totalDistance = end >= start ? end - start : 1 - start + end
@@ -140,7 +143,6 @@ export default class SpawnBehaviour extends Behaviour {
       const position = this.calculateTrailPosition(point, p)
       positions.push(position)
 
-      const weightFactor = 4
       const distToEnd = (segments - step) * stepSize
       weights.push(Math.exp(-distToEnd * weightFactor))
     }
@@ -772,6 +774,8 @@ export default class SpawnBehaviour extends Behaviour {
       trailSpeed: this.trailSpeed,
       trailRepeat: this.trailRepeat,
       trailStart: this.trailStart,
+      trailRangeSegments: this.trailRangeSegments,
+      trailRangeWeightFactor: this.trailRangeWeightFactor,
       customPoints: this.customPoints,
       name: this.getName(),
     }
