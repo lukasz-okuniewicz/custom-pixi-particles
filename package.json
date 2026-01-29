@@ -43,7 +43,7 @@
     "build": "npm run clean-dist && tsc && node copy.js",
     "build:browser:v6": "npm install pixi.js-legacy@6.5.10 --no-save && npx esbuild dist/index.js --bundle --format=esm --outfile=dist/browser-bundle-v6.js --platform=browser --target=es2020 --sourcemap && npm install pixi.js-legacy@6.5.10 --no-save",
     "build:browser:v7": "npm install pixi.js@7.3.2 --no-save && npx esbuild dist/index.js --bundle --format=esm --outfile=dist/browser-bundle-v7.js --platform=browser --target=es2020 --sourcemap && npm install pixi.js@7.3.2 --no-save",
-    "build:browser:v8": "npm install pixi.js@8 --no-save && npx esbuild dist/index.js --bundle --format=esm --outfile=dist/browser-bundle-v8.js --platform=browser --target=es2020 --sourcemap && npm install pixi.js@8 --no-save",
+    "build:browser:v8": "npm install pixi.js@8.13.2 --no-save && npx esbuild dist/index.js --bundle --format=esm --outfile=dist/browser-bundle-v8.js --platform=browser --target=es2020 --sourcemap && npm install pixi.js@8.13.2 --no-save",
     "clean-dist": "rimraf dist/*",
     "lint": "tslint 'src/**/*.ts'",
     "lint:fix": "tslint --fix 'src/**/*.ts'"
