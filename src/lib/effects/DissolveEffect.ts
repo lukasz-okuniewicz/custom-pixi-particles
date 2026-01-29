@@ -181,6 +181,10 @@ export default class DissolveEffect extends Container {
     })
   }
 
+  public async dissolve(): Promise<void> {
+    return this.start()
+  }
+
   private update(): void {
     if (!this.isProcessing) return
 

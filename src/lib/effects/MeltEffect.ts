@@ -235,6 +235,10 @@ export default class MeltEffect extends Container {
     })
   }
 
+  public async melt(): Promise<void> {
+    return this.start()
+  }
+
   private update = (): void => {
     if (!this.isProcessing) return
 
