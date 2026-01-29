@@ -123,25 +123,32 @@ export default class SpawnBehaviour extends Behaviour {
    * @returns {Point[]} List of positions along the trail.
    */
   calculateTrailRangePositions = (point: any) => {
-    const positions = []
-    const segments = 20 // Increase segments for finer granularity
-    const trailStart = this.trailStart || 0
-    const weights = [] // Store probabilities for positions
+    const positions: any[] = []
+    const weights: number[] = []
+    const segments = 20
+    const start = this.trailStart || 0
+    const end = this.currentProgress
+    const totalDistance = end >= start ? end - start : 1 - start + end
 
-    const startProgress = Math.max(trailStart, 0)
-    const endProgress = Math.min(this.currentProgress, 1)
-
-    for (let i = startProgress; i <= endProgress; i += (endProgress - startProgress) / segments) {
-      const position = this.calculateTrailPosition(point, i)
-      positions.push(position)
-
-      // Assign a weight inversely proportional to distance from trail center
-      const weightFactor = 4 // Higher values give steeper drops
-      const distanceToTrail = Math.abs(i - this.currentProgress)
-      weights.push(Math.exp(-distanceToTrail * weightFactor))
+    if (totalDistance <= 0) {
+      return { positions: [this.calculateTrailPosition(point, end)], probabilities: [1] }
     }
 
-    // Normalize weights to create probabilities
+    const stepSize = totalDistance / segments
+
+    for (let step = 0; step <= segments; step++) {
+      let p = start + step * stepSize
+      if (p > 1) p -= 1
+
+      const position = this.calculateTrailPosition(point, p)
+      positions.push(position)
+
+      const weightFactor = 4
+      const distToEnd = (segments - step) * stepSize
+      weights.push(Math.exp(-distToEnd * weightFactor))
+    }
+
+    // Normalize weights
     const totalWeight = weights.reduce((sum, w) => sum + w, 0)
     const probabilities = weights.map((w) => w / totalWeight)
 
@@ -469,7 +476,7 @@ export default class SpawnBehaviour extends Behaviour {
         } else if (localPosition <= radiusX + radiusY) {
           // Right edge: top to bottom
           x += radiusX / 2
-          y += (localPosition - radiusX) - radiusY / 2
+          y += localPosition - radiusX - radiusY / 2
         } else if (localPosition <= 2 * radiusX + radiusY) {
           // Bottom edge: right to left
           x += radiusX / 2 - (localPosition - radiusX - radiusY)
@@ -604,7 +611,7 @@ export default class SpawnBehaviour extends Behaviour {
         let y = point.position.y
 
         // Trace the frame perimeter starting from top-left, going clockwise
-        // Spawn logic: 
+        // Spawn logic:
         //   Top/Bottom: x = Math.random() * w (0 to w), y = 0 or h-1
         //   Left/Right: y = Math.random() * h (0 to h), x = 0 or w-1
         if (localPosition < w) {
@@ -714,50 +721,33 @@ export default class SpawnBehaviour extends Behaviour {
 
   /**
    * Update trail progress once per frame.
+   * When trailRepeat is true and trailStart > 0, each lap runs from trailStart to 1
+   * (lap progress 0..1 maps to path progress trailStart..1) so repeats start at trailStart, not 0.
    * @param {number} deltaTime - Time since the last update
    */
   updateTrailProgress = (deltaTime: number) => {
     if (!this.trailingEnabled) return
 
-    const trailStart = this.trailStart || 0
+    const start = this.trailStart ?? 0
+    const range = 1 - start
 
-    // Increment trail progress
-    this.trailProgress += this.trailSpeed * deltaTime
-
-    if (trailStart > 0) {
-      const remainingDistance = 1 - trailStart
-      if (!this.overOne) {
-        if (this.trailProgress > remainingDistance) {
-          if (this.trailRepeat) {
-            this.overOne = true
-            this.trailProgress = 0
-          } else {
-            this.trailProgress = remainingDistance
-          }
-        }
-        this.currentProgress = trailStart + (this.trailProgress / remainingDistance) * remainingDistance
-      } else {
-        if (this.trailProgress > 1) {
-          if (this.trailRepeat) {
-            this.trailProgress %= 1
-          } else {
-            this.trailingEnabled = false
-            this.trailProgress = 1
-          }
-        }
-        this.currentProgress = this.trailProgress
-      }
-    } else {
-      if (this.trailProgress > 1) {
-        if (this.trailRepeat) {
-          this.trailProgress %= 1
-        } else {
-          this.trailingEnabled = false
-          this.trailProgress = 1
-        }
-      }
-      this.currentProgress = this.trailProgress
+    if (range <= 0) {
+      this.currentProgress = 1
+      return
     }
+
+    this.trailProgress += (this.trailSpeed / range) * deltaTime
+
+    if (this.trailProgress > 1) {
+      if (this.trailRepeat) {
+        this.trailProgress = 0
+      } else {
+        this.trailProgress = 1
+        this.trailingEnabled = false
+      }
+    }
+
+    this.currentProgress = start + this.trailProgress * range
   }
 
   // Utility function for weighted random selection
