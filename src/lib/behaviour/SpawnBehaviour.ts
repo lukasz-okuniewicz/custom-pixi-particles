@@ -215,8 +215,8 @@ export default class SpawnBehaviour extends Behaviour {
         particle.movement.y = Math.random() * h + particle.movement.y
         particle.movement.x = Math.random() < 0.5 ? particle.movement.x : particle.movement.x + w - 1
       }
-      particle.movement.x += this.calculate(point.position.x, point.positionVariance.x)
-      particle.movement.y += this.calculate(point.position.y, point.positionVariance.y)
+      particle.movement.x += this.calculate(point.position.x, point.positionVariance.x) - w / 2
+      particle.movement.y += this.calculate(point.position.y, point.positionVariance.y) - h / 2
     } else if (point.spawnType === 'Frame') {
       const w = point.radius
       const h = point.radius
@@ -227,8 +227,8 @@ export default class SpawnBehaviour extends Behaviour {
         particle.movement.y = Math.random() * h + particle.movement.y
         particle.movement.x = Math.random() < 0.5 ? particle.movement.x : particle.movement.x + w - 1
       }
-      particle.movement.x += this.calculate(point.position.x, point.positionVariance.x)
-      particle.movement.y += this.calculate(point.position.y, point.positionVariance.y)
+      particle.movement.x += this.calculate(point.position.x, point.positionVariance.x) - w / 2
+      particle.movement.y += this.calculate(point.position.y, point.positionVariance.y) - h / 2
     } else if (point.spawnType === 'Sphere') {
       const phi = Math.random() * Math.PI * 2 // Random azimuthal angle
       const theta = Math.random() * (point.spread / 180) * Math.PI // Random polar angle
@@ -267,8 +267,10 @@ export default class SpawnBehaviour extends Behaviour {
     } else if (point.spawnType === 'Grid') {
       const row = Math.floor(Math.random() * point.rows)
       const column = Math.floor(Math.random() * point.columns)
-      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + column * point.cellSize
-      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + row * point.cellSize
+      const offsetX = (column - (point.columns - 1) / 2) * point.cellSize
+      const offsetY = (row - (point.rows - 1) / 2) * point.cellSize
+      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + offsetX
+      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + offsetY
     } else if (point.spawnType === 'Word') {
       if (particleCount > 0 && pixelPositions.length > 0) {
         const selectedPixel = pixelPositions[Math.floor(Math.random() * particleCount)]
@@ -300,7 +302,7 @@ export default class SpawnBehaviour extends Behaviour {
         3 * (1 - t) * t ** 2 * cx2 +
         t ** 3 * point.end.x
       const y =
-        this.calculate(point.position.x, point.positionVariance.x) +
+        this.calculate(point.position.y, point.positionVariance.y) +
         (1 - t) ** 3 * point.start.y +
         3 * (1 - t) ** 2 * t * cy1 +
         3 * (1 - t) * t ** 2 * cy2 +
@@ -531,11 +533,11 @@ export default class SpawnBehaviour extends Behaviour {
         const start = pathPoints[segmentIndex]
         const end = pathPoints[segmentIndex + 1]
 
-        const x = start.x + localProgress * (end.x - start.x)
-        const y = start.y + localProgress * (end.y - start.y)
+        const localX = start.x + localProgress * (end.x - start.x)
+        const localY = start.y + localProgress * (end.y - start.y)
         const z = start.z + localProgress * (end.z - start.z || 0)
 
-        return { x, y, z }
+        return { x: point.position.x + localX, y: point.position.y + localY, z }
       }
 
       case 'Lissajous': {
@@ -582,55 +584,41 @@ export default class SpawnBehaviour extends Behaviour {
         const t = progress // Use progress directly as the parameter for the curve
         const { start, end, control1, control2 } = point
 
-        // Calculate position along the Bezier curve
-        const x =
+        const localX =
           (1 - t) ** 3 * start.x +
           3 * (1 - t) ** 2 * t * control1.x +
           3 * (1 - t) * t ** 2 * control2.x +
           t ** 3 * end.x
-        const y =
+        const localY =
           (1 - t) ** 3 * start.y +
           3 * (1 - t) ** 2 * t * control1.y +
           3 * (1 - t) * t ** 2 * control2.y +
           t ** 3 * end.y
 
-        return { x, y, z: 0 } // Bezier is 2D, so z is 0
+        return { x: point.position.x + localX, y: point.position.y + localY, z: 0 }
       }
 
       case 'Frame': {
-        // Frame uses radius for both width and height (square frame)
         const w = point.radius || 100
         const h = point.radius || 100
-        // Perimeter: top (w) + right (h) + bottom (w) + left (h) = 2*(w+h)
         const perimeter = 2 * (w + h)
         const totalDistance = perimeter * progress
         const localPosition = totalDistance % perimeter
 
-        // Start from position
-        let x = point.position.x
-        let y = point.position.y
+        let x = point.position.x - w / 2
+        let y = point.position.y - h / 2
 
-        // Trace the frame perimeter starting from top-left, going clockwise
-        // Spawn logic:
-        //   Top/Bottom: x = Math.random() * w (0 to w), y = 0 or h-1
-        //   Left/Right: y = Math.random() * h (0 to h), x = 0 or w-1
         if (localPosition < w) {
-          // Top edge: x from 0 to w, y = 0
           x += localPosition
-          y += 0
         } else if (localPosition < w + h) {
-          // Right edge: x = w-1, y from 0 to h
           x += w - 1
           y += localPosition - w
         } else if (localPosition < 2 * w + h) {
-          // Bottom edge: x from w-1 down to 0, y = h-1
           const bottomProgress = localPosition - w - h
           x += w - 1 - bottomProgress
           y += h - 1
         } else {
-          // Left edge: x = 0, y from h-1 down to 0
           const leftProgress = localPosition - 2 * w - h
-          x += 0
           y += h - 1 - leftProgress
         }
 
@@ -638,39 +626,26 @@ export default class SpawnBehaviour extends Behaviour {
       }
 
       case 'FrameRectangle': {
-        // FrameRectangle uses radiusX for width and radiusY for height
         const w = point.radiusX || 100
         const h = point.radiusY || 100
-        // Perimeter: top (w) + right (h) + bottom (w) + left (h) = 2*(w+h)
         const perimeter = 2 * (w + h)
         const totalDistance = perimeter * progress
         const localPosition = totalDistance % perimeter
 
-        // Start from position
-        let x = point.position.x
-        let y = point.position.y
+        let x = point.position.x - w / 2
+        let y = point.position.y - h / 2
 
-        // Trace the frame perimeter starting from top-left, going clockwise
-        // Spawn logic:
-        //   Top/Bottom: x = Math.random() * w (0 to w), y = 0 or h-1
-        //   Left/Right: y = Math.random() * h (0 to h), x = 0 or w-1
         if (localPosition < w) {
-          // Top edge: x from 0 to w, y = 0
           x += localPosition
-          y += 0
         } else if (localPosition < w + h) {
-          // Right edge: x = w-1, y from 0 to h
           x += w - 1
           y += localPosition - w
         } else if (localPosition < 2 * w + h) {
-          // Bottom edge: x from w-1 down to 0, y = h-1
           const bottomProgress = localPosition - w - h
           x += w - 1 - bottomProgress
           y += h - 1
         } else {
-          // Left edge: x = 0, y from h-1 down to 0
           const leftProgress = localPosition - 2 * w - h
-          x += 0
           y += h - 1 - leftProgress
         }
 
