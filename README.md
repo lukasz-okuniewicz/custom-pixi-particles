@@ -552,6 +552,31 @@ emitController: {
 
 Behaviours define how particles behave throughout their lifetime. Each behaviour has a `priority` (higher = processed first) and can be `enabled` or disabled.
 
+#### Custom behaviours (IBehaviour)
+
+You can add your own behaviours by implementing the **IBehaviour** interface (or extending the base **Behaviour** class) and registering them with **BehaviourRegistry**. Custom behaviours can then be used by name in your emitter config (e.g. from JSON or the editor).
+
+```javascript
+import { Behaviour, BehaviourRegistry, customPixiParticles } from 'custom-pixi-particles'
+
+// Extend Behaviour and implement required methods
+class MyCustomBehaviour extends Behaviour {
+  enabled = true
+  priority = 0
+  getName() { return 'MyCustomBehaviour' }
+  getProps() { return { enabled: this.enabled, priority: this.priority, name: this.getName() } }
+  init(particle, model, turbulencePool) { /* ... */ }
+  apply(particle, deltaTime, model) { /* ... */ }
+}
+
+// Register so config can create it by name
+BehaviourRegistry.register('MyCustomBehaviour', MyCustomBehaviour)
+
+// Your emitter config can now include: { behaviours: [{ name: 'MyCustomBehaviour', ... }] }
+```
+
+You can also add a custom behaviour instance at runtime: get the emitter from your renderer and call `emitter.behaviours.add(myCustomBehaviour)`.
+
 #### Life Behaviour
 Controls particle lifetime.
 

@@ -72,6 +72,12 @@ const _customPixiParticlesEditorOnly = {
   },
 }
 
+export type { IBehaviour } from './lib/behaviour'
+export { Behaviour, BehaviourRegistry } from './lib/behaviour'
+
+// Re-export so demos can use one import (avoids loading Pixi twice)
+export { Application, Loader } from 'pixi.js'
+
 export {
   Renderer,
   customPixiParticles,
