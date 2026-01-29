@@ -109,6 +109,10 @@ export default class GlitchEffect extends ParticleContainer {
     })
   }
 
+  public async glitch(): Promise<void> {
+    return this.play()
+  }
+
   private update(): void {
     if (!this.isProcessing) return
     const dt = Ticker.shared.deltaMS / 1000
