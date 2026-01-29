@@ -577,6 +577,18 @@ BehaviourRegistry.register('MyCustomBehaviour', MyCustomBehaviour)
 
 You can also add a custom behaviour instance at runtime: get the emitter from your renderer and call `emitter.behaviours.add(myCustomBehaviour)`.
 
+```javascript
+// After creating the particle emitter
+const particles = customPixiParticles.create({ textures, emitterConfig })
+app.stage.addChild(particles)
+particles.play()
+
+// Add a custom behaviour at runtime
+const myCustomBehaviour = new MyCustomBehaviour()
+particles.emitter.behaviours.add(myCustomBehaviour)
+// New and existing particles will use the new behaviour on the next update
+```
+
 #### Life Behaviour
 Controls particle lifetime.
 
