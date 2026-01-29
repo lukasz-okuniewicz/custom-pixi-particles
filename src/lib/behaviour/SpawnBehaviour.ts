@@ -73,10 +73,8 @@ export default class SpawnBehaviour extends Behaviour {
     const point = this.customPoints[Math.floor(Math.random() * this.customPoints.length)]
 
     // Safety check: Disable trailing for restricted spawn types
-    // Note: Frame and FrameRectangle are allowed to use trailing
     const restrictedSpawnTypes = ['Word', 'Sphere', 'Rectangle', 'Helix', 'Grid', 'Cone']
     if (this.trailingEnabled && restrictedSpawnTypes.includes(point.spawnType)) {
-      // Reset trail state and disable trailing for restricted types
       this.trailingEnabled = false
       this.trailProgress = 0
       this.currentProgress = 0
@@ -92,11 +90,10 @@ export default class SpawnBehaviour extends Behaviour {
       const positionIndex = this.weightedRandomIndex(probabilities)
       const position = positions[positionIndex]
 
-      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + position.x
-      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + position.y
-      particle.z = Math.random() * point.maxZ
+      particle.movement.x = position.x + this.varianceFrom(point.positionVariance.x)
+      particle.movement.y = position.y + this.varianceFrom(point.positionVariance.y)
+      particle.z = position.z !== 0 ? position.z : Math.random() * (point.maxZ || 0)
     } else {
-      // Normal spawning logic
       this.spawnParticleAtPoint(particle, point)
     }
 
