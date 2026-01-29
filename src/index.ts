@@ -1,9 +1,27 @@
 import Renderer from './lib/pixi/Renderer'
 import { ICustomPixiParticlesSettings } from './lib/customPixiParticlesSettingsInterface'
 import TestRenderer from './lib/pixi/TestRenderer'
-import { ShatterEffect, DissolveEffect, MagneticAssemblyEffect, GhostEffect, GlitchEffect, MeltEffect } from './lib/effects'
+import {
+  DissolveEffect,
+  GhostEffect,
+  GlitchEffect,
+  MagneticAssemblyEffect,
+  MeltEffect,
+  ShatterEffect,
+} from './lib/effects'
 
-export type { IShatterEffectOptions, ShatterMode, IDissolveEffectOptions, DissolveDirection, IMagneticAssemblyOptions, AssemblyMode, IGhostEffectOptions, IGlitchEffectOptions, IMeltEffectOptions } from './lib/effects'
+// tslint:disable-next-line:max-line-length
+export type {
+  IShatterEffectOptions,
+  ShatterMode,
+  IDissolveEffectOptions,
+  DissolveDirection,
+  IMagneticAssemblyOptions,
+  AssemblyMode,
+  IGhostEffectOptions,
+  IGlitchEffectOptions,
+  IMeltEffectOptions,
+} from './lib/effects'
 
 /**
  * Constructs a renderer for custom pixi particles

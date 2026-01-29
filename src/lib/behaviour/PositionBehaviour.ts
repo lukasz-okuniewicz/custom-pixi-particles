@@ -1,5 +1,5 @@
-import {Point} from '../util'
-import {Behaviour, BehaviourNames} from './index'
+import { Point } from '../util'
+import { Behaviour, BehaviourNames } from './index'
 import Particle from '../Particle'
 import Model from '../Model'
 import MinMax from '../util/MinMax'

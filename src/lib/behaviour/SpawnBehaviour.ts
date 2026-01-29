@@ -72,6 +72,17 @@ export default class SpawnBehaviour extends Behaviour {
     // Choose a random custom point
     const point = this.customPoints[Math.floor(Math.random() * this.customPoints.length)]
 
+    // Safety check: Disable trailing for restricted spawn types
+    // Note: Frame and FrameRectangle are allowed to use trailing
+    const restrictedSpawnTypes = ['Word', 'Sphere', 'Rectangle', 'Helix', 'Grid', 'Cone']
+    if (this.trailingEnabled && restrictedSpawnTypes.includes(point.spawnType)) {
+      // Reset trail state and disable trailing for restricted types
+      this.trailingEnabled = false
+      this.trailProgress = 0
+      this.currentProgress = 0
+      this.overOne = false
+    }
+
     if (this.trailingEnabled) {
       const { positions, probabilities } = this.spawnAlongTrail
         ? this.calculateTrailRangePositions(point)
@@ -440,30 +451,33 @@ export default class SpawnBehaviour extends Behaviour {
 
     switch (point.spawnType) {
       case 'Rectangle': {
-        const totalSegments = 4 // Rectangle has four edges
-        const segmentLength = (2 * point.radiusX + 2 * point.radiusY) * progress
-        const perimeter = 2 * point.radiusX + 2 * point.radiusY
+        // Rectangle spawns particles randomly within the area, but for trail we trace the perimeter
+        const radiusX = point.radiusX || 100
+        const radiusY = point.radiusY || 100
+        const perimeter = 2 * radiusX + 2 * radiusY
+        const segmentLength = perimeter * progress
         const localPosition = segmentLength % perimeter
 
         let x = point.position.x
         let y = point.position.y
 
-        if (localPosition <= point.radiusX) {
-          // Top edge
-          x += localPosition - point.radiusX
-          y -= point.radiusY
-        } else if (localPosition <= point.radiusX + point.radiusY) {
-          // Right edge
-          x += point.radiusX
-          y += localPosition - point.radiusX - point.radiusY
-        } else if (localPosition <= 2 * point.radiusX + point.radiusY) {
-          // Bottom edge
-          x += point.radiusX - (localPosition - point.radiusX - point.radiusY)
-          y += point.radiusY
+        // Trace the rectangle perimeter starting from top-left, going clockwise
+        if (localPosition <= radiusX) {
+          // Top edge: left to right
+          x += localPosition - radiusX / 2
+          y -= radiusY / 2
+        } else if (localPosition <= radiusX + radiusY) {
+          // Right edge: top to bottom
+          x += radiusX / 2
+          y += localPosition - radiusX - radiusY / 2
+        } else if (localPosition <= 2 * radiusX + radiusY) {
+          // Bottom edge: right to left
+          x += radiusX / 2 - (localPosition - radiusX - radiusY)
+          y += radiusY / 2
         } else {
-          // Left edge
-          x -= point.radiusX
-          y += point.radiusY - (localPosition - 2 * point.radiusX - point.radiusY)
+          // Left edge: bottom to top
+          x -= radiusX / 2
+          y += radiusY / 2 - (localPosition - 2 * radiusX - radiusY)
         }
 
         return { x, y, z: 0 }
@@ -577,61 +591,83 @@ export default class SpawnBehaviour extends Behaviour {
       }
 
       case 'Frame': {
-        const perimeter = 2 * (point.radiusX + point.radiusY) // Total perimeter of the frame
-        const segmentLength = perimeter * progress // Length covered by progress
-        const localPosition = segmentLength % perimeter
+        // Frame uses radius for both width and height (square frame)
+        const w = point.radius || 100
+        const h = point.radius || 100
+        // Perimeter: top (w) + right (h) + bottom (w) + left (h) = 2*(w+h)
+        const perimeter = 2 * (w + h)
+        const totalDistance = perimeter * progress
+        const localPosition = totalDistance % perimeter
 
+        // Start from position
         let x = point.position.x
         let y = point.position.y
 
-        if (localPosition <= point.radiusX) {
-          // Top edge
+        // Trace the frame perimeter starting from top-left, going clockwise
+        // Spawn logic:
+        //   Top/Bottom: x = Math.random() * w (0 to w), y = 0 or h-1
+        //   Left/Right: y = Math.random() * h (0 to h), x = 0 or w-1
+        if (localPosition < w) {
+          // Top edge: x from 0 to w, y = 0
           x += localPosition
-          y -= point.radiusY
-        } else if (localPosition <= point.radiusX + point.radiusY) {
-          // Right edge
-          x += point.radiusX
-          y += localPosition - point.radiusX
-        } else if (localPosition <= 2 * point.radiusX + point.radiusY) {
-          // Bottom edge
-          x += point.radiusX - (localPosition - point.radiusX - point.radiusY)
-          y += point.radiusY
+          y += 0
+        } else if (localPosition < w + h) {
+          // Right edge: x = w-1, y from 0 to h
+          x += w - 1
+          y += localPosition - w
+        } else if (localPosition < 2 * w + h) {
+          // Bottom edge: x from w-1 down to 0, y = h-1
+          const bottomProgress = localPosition - w - h
+          x += w - 1 - bottomProgress
+          y += h - 1
         } else {
-          // Left edge
-          x -= localPosition - 2 * point.radiusX - point.radiusY
-          y -= point.radiusY
+          // Left edge: x = 0, y from h-1 down to 0
+          const leftProgress = localPosition - 2 * w - h
+          x += 0
+          y += h - 1 - leftProgress
         }
 
-        return { x, y, z: 0 } // Frame is 2D, so z is 0
+        return { x, y, z: 0 }
       }
 
       case 'FrameRectangle': {
-        const perimeter = 2 * (point.radiusX + point.radiusY) // Total perimeter of the rectangular frame
-        const segmentLength = perimeter * progress // Length covered by progress
-        const localPosition = segmentLength % perimeter
+        // FrameRectangle uses radiusX for width and radiusY for height
+        const w = point.radiusX || 100
+        const h = point.radiusY || 100
+        // Perimeter: top (w) + right (h) + bottom (w) + left (h) = 2*(w+h)
+        const perimeter = 2 * (w + h)
+        const totalDistance = perimeter * progress
+        const localPosition = totalDistance % perimeter
 
+        // Start from position
         let x = point.position.x
         let y = point.position.y
 
-        if (localPosition <= point.radiusX) {
-          // Top edge
+        // Trace the frame perimeter starting from top-left, going clockwise
+        // Spawn logic:
+        //   Top/Bottom: x = Math.random() * w (0 to w), y = 0 or h-1
+        //   Left/Right: y = Math.random() * h (0 to h), x = 0 or w-1
+        if (localPosition < w) {
+          // Top edge: x from 0 to w, y = 0
           x += localPosition
-          y -= point.radiusY / 2
-        } else if (localPosition <= point.radiusX + point.radiusY) {
-          // Right edge
-          x += point.radiusX / 2
-          y += localPosition - point.radiusX - point.radiusY / 2
-        } else if (localPosition <= 2 * point.radiusX + point.radiusY) {
-          // Bottom edge
-          x += point.radiusX / 2 - (localPosition - point.radiusX - point.radiusY)
-          y += point.radiusY / 2
+          y += 0
+        } else if (localPosition < w + h) {
+          // Right edge: x = w-1, y from 0 to h
+          x += w - 1
+          y += localPosition - w
+        } else if (localPosition < 2 * w + h) {
+          // Bottom edge: x from w-1 down to 0, y = h-1
+          const bottomProgress = localPosition - w - h
+          x += w - 1 - bottomProgress
+          y += h - 1
         } else {
-          // Left edge
-          x -= localPosition - 2 * point.radiusX - point.radiusY
-          y -= point.radiusY / 2
+          // Left edge: x = 0, y from h-1 down to 0
+          const leftProgress = localPosition - 2 * w - h
+          x += 0
+          y += h - 1 - leftProgress
         }
 
-        return { x, y, z: 0 } // FrameRectangle is 2D, so z is 0
+        return { x, y, z: 0 }
       }
 
       case 'Oval': {

@@ -137,6 +137,7 @@ export default class DissolveEffect extends Container {
 
         const sprite = new Sprite(Texture.WHITE)
         sprite.width = sprite.height = pixelSize
+        // tslint:disable-next-line:no-bitwise
         sprite.tint = (imgData[i] << 16) | (imgData[i + 1] << 8) | imgData[i + 2]
 
         const lx = px - width * anchorX
