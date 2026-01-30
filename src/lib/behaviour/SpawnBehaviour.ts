@@ -19,7 +19,9 @@ export default class SpawnBehaviour extends Behaviour {
   trailStart: number = 0 // Start the trail at 20% of its path
   trailRangeSegments: number = 20 // Number of segments for trail range sampling (higher = finer distribution)
   trailRangeWeightFactor: number = 4 // Weight decay toward trail end (higher = more particles near leading edge)
+  trailRangeLength: number = 1 // Length of trail to spawn along (0-1)
   currentProgress: number = 0
+  trailJustWrapped: boolean = false // True only right after a loop wrap
 
   customPoints: any[] = [
     {
@@ -84,11 +86,10 @@ export default class SpawnBehaviour extends Behaviour {
     }
 
     if (this.trailingEnabled) {
-      const { positions, probabilities } = this.spawnAlongTrail
-        ? this.calculateTrailRangePositions(point)
-        : { positions: [this.calculateTrailPosition(point)], probabilities: [1] }
+      // Always use trail range (segments + weight/length) so trailRangeSegments and trailRangeWeightFactor have effect.
+      // spawnAlongTrail true = uniform along trail; false = weighted toward leading edge.
+      const { positions, probabilities } = this.calculateTrailRangePositions(point, this.spawnAlongTrail)
 
-      // Use weighted random selection for position
       const positionIndex = this.weightedRandomIndex(probabilities)
       const position = positions[positionIndex]
 
@@ -116,18 +117,64 @@ export default class SpawnBehaviour extends Behaviour {
     // do nothing
   }
 
+  /** Distance along path from progress p to head (end), going backward; path is 0..1 circular. */
+  private distanceFromHead = (p: number, head: number) => (p <= head ? head - p : 1 - p + head)
+
   /**
-   * Calculate trail positions along the range from trailStart to currentProgress.
+   * Calculate trail positions along the range. Uses trailRangeLength so only the "tail" is sampled.
+   * When the head wraps to the start of the path, we still spawn along the end of the previous loop
+   * so the tail at the frame end doesn't disappear.
    * @param {Object} point - The custom point configuration.
-   * @returns {Point[]} List of positions along the trail.
+   * @param {boolean} uniformWeights - If true (spawnAlongTrail), equal probability.
+   * @returns {{ positions, probabilities }}
    */
-  calculateTrailRangePositions = (point: any) => {
+  calculateTrailRangePositions = (point: any, uniformWeights: boolean = false) => {
     const positions: any[] = []
-    const weights: number[] = []
+    const progressValues: number[] = []
     const segments = this.trailRangeSegments ?? 20
     const weightFactor = this.trailRangeWeightFactor ?? 4
-    const start = this.trailStart || 0
+    const rangeLength = Math.max(0.01, Math.min(1, this.trailRangeLength ?? 1))
     const end = this.currentProgress
+
+    let start = end - rangeLength
+    if (start < 0) {
+      if (end <= rangeLength && this.trailJustWrapped) {
+        const prevLoopLength = rangeLength - end
+        const segsPrev = Math.max(1, Math.round((segments * prevLoopLength) / rangeLength))
+        const segsCurr = Math.max(1, Math.round((segments * end) / rangeLength))
+        if (prevLoopLength > 0.001) {
+          const stepPrev = prevLoopLength / segsPrev
+          for (let i = 0; i <= segsPrev; i++) {
+            const p = 1 - prevLoopLength + i * stepPrev
+            progressValues.push(p)
+            positions.push(this.calculateTrailPosition(point, p))
+          }
+        }
+        if (end > 0.001) {
+          const stepCurr = end / segsCurr
+          for (let i = 0; i <= segsCurr; i++) {
+            const p = i * stepCurr
+            progressValues.push(p)
+            positions.push(this.calculateTrailPosition(point, p))
+          }
+        }
+        if (positions.length === 0) {
+          positions.push(this.calculateTrailPosition(point, end))
+          progressValues.push(end)
+        }
+        const weights = progressValues.map((p) =>
+          uniformWeights ? 1 : Math.exp(-this.distanceFromHead(p, end) * weightFactor),
+        )
+        const totalWeight = weights.reduce((sum, w) => sum + w, 0)
+        const probabilities = weights.map((w) => w / totalWeight)
+        return { positions, probabilities }
+      }
+      if (end <= rangeLength) {
+        start = 0
+      } else {
+        start += 1
+      }
+    }
     const totalDistance = end >= start ? end - start : 1 - start + end
 
     if (totalDistance <= 0) {
@@ -135,22 +182,18 @@ export default class SpawnBehaviour extends Behaviour {
     }
 
     const stepSize = totalDistance / segments
-
     for (let step = 0; step <= segments; step++) {
       let p = start + step * stepSize
       if (p > 1) p -= 1
-
-      const position = this.calculateTrailPosition(point, p)
-      positions.push(position)
-
-      const distToEnd = (segments - step) * stepSize
-      weights.push(Math.exp(-distToEnd * weightFactor))
+      if (p < 0) p += 1
+      progressValues.push(p)
+      positions.push(this.calculateTrailPosition(point, p))
     }
-
-    // Normalize weights
+    const weights = progressValues.map((p) =>
+      uniformWeights ? 1 : Math.exp(-this.distanceFromHead(p, end) * weightFactor),
+    )
     const totalWeight = weights.reduce((sum, w) => sum + w, 0)
     const probabilities = weights.map((w) => w / totalWeight)
-
     return { positions, probabilities }
   }
 
@@ -603,22 +646,25 @@ export default class SpawnBehaviour extends Behaviour {
         const perimeter = 2 * (w + h)
         const totalDistance = perimeter * progress
         const localPosition = totalDistance % perimeter
+        const cx = point.position.x
+        const cy = point.position.y
 
-        let x = point.position.x - w / 2
-        let y = point.position.y - h / 2
-
+        let x: number
+        let y: number
         if (localPosition < w) {
-          x += localPosition
+          x = cx - w / 2 + localPosition
+          y = cy - h / 2
         } else if (localPosition < w + h) {
-          x += w - 1
-          y += localPosition - w
+          x = cx + w / 2
+          y = cy - h / 2 + (localPosition - w)
         } else if (localPosition < 2 * w + h) {
           const bottomProgress = localPosition - w - h
-          x += w - 1 - bottomProgress
-          y += h - 1
+          x = cx + w / 2 - bottomProgress
+          y = cy + h / 2
         } else {
           const leftProgress = localPosition - 2 * w - h
-          y += h - 1 - leftProgress
+          x = cx - w / 2
+          y = cy + h / 2 - leftProgress
         }
 
         return { x, y, z: 0 }
@@ -630,22 +676,25 @@ export default class SpawnBehaviour extends Behaviour {
         const perimeter = 2 * (w + h)
         const totalDistance = perimeter * progress
         const localPosition = totalDistance % perimeter
+        const cx = point.position.x
+        const cy = point.position.y
 
-        let x = point.position.x - w / 2
-        let y = point.position.y - h / 2
-
+        let x: number
+        let y: number
         if (localPosition < w) {
-          x += localPosition
+          x = cx - w / 2 + localPosition
+          y = cy - h / 2
         } else if (localPosition < w + h) {
-          x += w - 1
-          y += localPosition - w
+          x = cx + w / 2
+          y = cy - h / 2 + (localPosition - w)
         } else if (localPosition < 2 * w + h) {
           const bottomProgress = localPosition - w - h
-          x += w - 1 - bottomProgress
-          y += h - 1
+          x = cx + w / 2 - bottomProgress
+          y = cy + h / 2
         } else {
           const leftProgress = localPosition - 2 * w - h
-          y += h - 1 - leftProgress
+          x = cx - w / 2
+          y = cy + h / 2 - leftProgress
         }
 
         return { x, y, z: 0 }
@@ -715,6 +764,7 @@ export default class SpawnBehaviour extends Behaviour {
     if (this.trailProgress > 1) {
       if (this.trailRepeat) {
         this.trailProgress = 0
+        this.trailJustWrapped = true
       } else {
         this.trailProgress = 1
         this.trailingEnabled = false
@@ -722,6 +772,8 @@ export default class SpawnBehaviour extends Behaviour {
     }
 
     this.currentProgress = start + this.trailProgress * range
+    const rangeLengthForWrap = Math.max(0.01, Math.min(1, this.trailRangeLength ?? 1))
+    if (this.currentProgress > rangeLengthForWrap) this.trailJustWrapped = false
   }
 
   // Utility function for weighted random selection
@@ -776,6 +828,7 @@ export default class SpawnBehaviour extends Behaviour {
       trailStart: this.trailStart,
       trailRangeSegments: this.trailRangeSegments,
       trailRangeWeightFactor: this.trailRangeWeightFactor,
+      trailRangeLength: this.trailRangeLength,
       customPoints: this.customPoints,
       name: this.getName(),
     }

@@ -2,6 +2,7 @@ import Renderer from './lib/pixi/Renderer'
 import { ICustomPixiParticlesSettings } from './lib/customPixiParticlesSettingsInterface'
 import TestRenderer from './lib/pixi/TestRenderer'
 import { ShatterEffect, DissolveEffect, MagneticAssemblyEffect, GhostEffect, GlitchEffect, MeltEffect } from './lib/effects'
+import { Container, Graphics } from 'pixi.js-legacy'
 
 export type { IShatterEffectOptions, ShatterMode, IDissolveEffectOptions, DissolveDirection, IMagneticAssemblyOptions, AssemblyMode, IGhostEffectOptions, IGlitchEffectOptions, IMeltEffectOptions } from './lib/effects'
 
@@ -28,7 +29,8 @@ const customPixiParticles = {
       minFPS = 30,
       tickerSpeed = 0.02,
     } = settings
-    return new Renderer({
+    const hasWireframe = emitterConfig?.behaviours?.some((b: any) => b.name === 'Wireframe3DBehaviour')
+    const renderer = new Renderer({
       textures,
       animatedSpriteZeroPad,
       animatedSpriteIndexToStart,
@@ -44,6 +46,31 @@ const customPixiParticles = {
       minFPS,
       tickerSpeed,
     })
+    if (hasWireframe) {
+      const graphics = new Graphics()
+      const container = new Container() as any
+      container.addChild(graphics)
+      container.addChild(renderer)
+      renderer.wireframeGraphics = graphics
+      Object.defineProperty(container, 'emitter', { get: () => renderer.emitter })
+      container.updateConfig = (c: any) => renderer.updateConfig(c)
+      container.updatePosition = (p: any) => renderer.updatePosition(p)
+      container.play = () => renderer.play()
+      container.stop = () => renderer.stop()
+      container.stopImmediately = () => renderer.stopImmediately()
+      container.pause = (p?: boolean) => renderer.pause(p)
+      container.resume = () => renderer.resume()
+      container.start = () => renderer.start()
+      container.setTickerSpeed = (s: number) => renderer.setTickerSpeed(s)
+      container.updateTexture = () => renderer.updateTexture()
+      const origDestroy = container.destroy.bind(container)
+      container.destroy = () => {
+        renderer.destroy()
+        origDestroy()
+      }
+      return container
+    }
+    return renderer
   },
 }
 
@@ -73,7 +100,33 @@ const _customPixiParticlesEditorOnly = {
 }
 
 export type { IBehaviour } from './lib/behaviour'
-export { Behaviour, BehaviourRegistry } from './lib/behaviour'
+export {
+  Behaviour,
+  BehaviourRegistry,
+  EmitterBehaviours,
+  SpawnBehaviour,
+  LifeBehaviour,
+  PositionBehaviour,
+  ColorBehaviour,
+  SizeBehaviour,
+  AngularVelocityBehaviour,
+  EmitDirectionBehaviour,
+  RotationBehaviour,
+  TurbulenceBehaviour,
+  CollisionBehaviour,
+  AttractionRepulsionBehaviour,
+  NoiseBasedMotionBehaviour,
+  ForceFieldsBehaviour,
+  TimelineBehaviour,
+  GroupingBehaviour,
+  SoundReactiveBehaviour,
+  LightEffectBehaviour,
+  StretchBehaviour,
+  TemperatureBehaviour,
+  MoveToPointBehaviour,
+  Wireframe3DBehaviour,
+  BehaviourNames,
+} from './lib/behaviour'
 
 // Re-export so demos can use one import (avoids loading Pixi twice)
 export { Application, Loader } from 'pixi.js'
