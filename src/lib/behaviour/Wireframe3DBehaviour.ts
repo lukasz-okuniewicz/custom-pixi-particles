@@ -1,8 +1,7 @@
 import Behaviour from './Behaviour'
 import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
-import Model from '../Model'
-import type { Graphics } from 'pixi.js-legacy'
+import type { Graphics } from 'pixi.js'
 import { createNoise3D } from 'simplex-noise'
 
 type ShapeType =
@@ -134,13 +133,7 @@ export default class Wireframe3DBehaviour extends Behaviour {
       for (let i = 0; i < this.wireframes.length; i++) {
         const w = this.wireframes[i]
         const itemSize = w.size
-        const { vertices, edges } = this.getShapeDataForType(
-          w.shapeType,
-          itemSize,
-          w.offsetX,
-          w.offsetY,
-          w.offsetZ,
-        )
+        const { vertices, edges } = this.getShapeDataForType(w.shapeType, itemSize, w.offsetX, w.offsetY, w.offsetZ)
         this.drawWireframe(
           graphics,
           vertices,
@@ -421,8 +414,14 @@ export default class Wireframe3DBehaviour extends Behaviour {
       case 'cube': {
         const h = s / 2
         const vertices: Vec3[] = [
-          { x: -h, y: -h, z: -h }, { x: h, y: -h, z: -h }, { x: h, y: h, z: -h }, { x: -h, y: h, z: -h },
-          { x: -h, y: -h, z: h }, { x: h, y: -h, z: h }, { x: h, y: h, z: h }, { x: -h, y: h, z: h },
+          { x: -h, y: -h, z: -h },
+          { x: h, y: -h, z: -h },
+          { x: h, y: h, z: -h },
+          { x: -h, y: h, z: -h },
+          { x: -h, y: -h, z: h },
+          { x: h, y: -h, z: h },
+          { x: h, y: h, z: h },
+          { x: -h, y: h, z: h },
         ].map(add)
         const edges = [0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7]
         return { vertices, edges }
@@ -580,8 +579,7 @@ export default class Wireframe3DBehaviour extends Behaviour {
             }
           }
         }
-        const idx = (ix: number, iy: number, iz: number) =>
-          ix * (ny + 1) * (nz + 1) + iy * (nz + 1) + iz
+        const idx = (ix: number, iy: number, iz: number) => ix * (ny + 1) * (nz + 1) + iy * (nz + 1) + iz
         for (let ix = 0; ix <= nx; ix++) {
           for (let iy = 0; iy <= ny; iy++) {
             for (let iz = 0; iz < nz; iz++) {

@@ -589,7 +589,7 @@ particles.emitter.behaviours.add(myCustomBehaviour)
 // New and existing particles will use the new behaviour on the next update
 ```
 
-**Extending built-in behaviours:** All built-in behaviour classes are exported from the package so you can extend any of them: `SpawnBehaviour`, `LifeBehaviour`, `PositionBehaviour`, `ColorBehaviour`, `SizeBehaviour`, `AngularVelocityBehaviour`, `EmitDirectionBehaviour`, `RotationBehaviour`, `TurbulenceBehaviour`, `CollisionBehaviour`, `AttractionRepulsionBehaviour`, `NoiseBasedMotionBehaviour`, `ForceFieldsBehaviour`, `TimelineBehaviour`, `GroupingBehaviour`, `SoundReactiveBehaviour`, `LightEffectBehaviour`, `StretchBehaviour`, `TemperatureBehaviour`, `MoveToPointBehaviour`. Also exported: `Behaviour`, `BehaviourRegistry`, `EmitterBehaviours`, `BehaviourNames`.
+**Extending built-in behaviours:** All built-in behaviour classes are exported from the package so you can extend any of them: `SpawnBehaviour`, `LifeBehaviour`, `PositionBehaviour`, `ColorBehaviour`, `SizeBehaviour`, `AngularVelocityBehaviour`, `EmitDirectionBehaviour`, `RotationBehaviour`, `TurbulenceBehaviour`, `CollisionBehaviour`, `AttractionRepulsionBehaviour`, `NoiseBasedMotionBehaviour`, `ForceFieldsBehaviour`, `TimelineBehaviour`, `GroupingBehaviour`, `SoundReactiveBehaviour`, `LightEffectBehaviour`, `StretchBehaviour`, `TemperatureBehaviour`, `MoveToPointBehaviour`, `Wireframe3DBehaviour`. Also exported: `Behaviour`, `BehaviourRegistry`, `EmitterBehaviours`, `BehaviourNames`.
 
 **Replacing a built-in behaviour:** Register your class under the same name as a built-in (e.g. `SpawnBehaviour`) **before** creating the renderer or loading config. The registry is checked first, so your implementation is used instead. Use this for customizations like multiple trails on one shape, different trailing logic (e.g. CCV-style), or any variant of spawn/trail/position without changing the library.
 
@@ -941,6 +941,58 @@ Moves particles toward specific points.
 }
 ```
 
+#### Wireframe3D Behaviour
+Renders 3D wireframe shapes (cube, sphere, pyramid, torus, cylinder, etc.) with optional orbit, pulsate, path motion, dashed lines, and depth styling. When this behaviour is present, the emitter is wrapped in a container that provides a Graphics object for the wireframe; use it for 3D-style particle backdrops or decorative shapes.
+
+```javascript
+{
+  priority: 50,
+  enabled: true,
+  shapeType: 'cube',           // 'cube' | 'sphere' | 'pyramid' | 'torus' | 'cylinder' | 'tetrahedron' | 'octahedron' | 'grid' | 'lattice' | 'custom'
+  size: 100,
+  rotationSpeedX: 0.5,
+  rotationSpeedY: 0.3,
+  rotationSpeedZ: 0.2,
+  lineColor: 0xffffff,
+  lineWidth: 1,
+  perspective: 400,
+  cameraZ: 500,
+  depthStyle: 'none',          // 'none' | 'fade' | 'thickness' | 'both'
+  sortByDepth: false,
+  orbitEnabled: false,
+  orbitRadius: 50,
+  orbitSpeed: 1,
+  pulsateEnabled: false,
+  pulsateMin: 80,
+  pulsateMax: 120,
+  pulsateSpeed: 2,
+  pathType: 'none',
+  pathSpeed: 1,
+  pathScale: 50,
+  dashedEnabled: false,
+  dashLength: 10,
+  gapLength: 5,
+  colorOverTimeEnabled: false,
+  colorOverTimeSpeed: 1,
+  perVertexColor: false,
+  noiseWobbleEnabled: false,
+  noiseWobbleAmount: 10,
+  noiseWobbleSpeed: 1,
+  attractParticlesEnabled: false,
+  attractStrength: 0,
+  latticeSegmentsX: 4,
+  latticeSegmentsY: 4,
+  latticeSegmentsZ: 4,
+  gridSegments: 4,
+  torusInnerRadius: 0.5,
+  cylinderHeight: 1,
+  customVertices: [],
+  customEdges: [],
+  wireframes: [],
+  name: 'Wireframe3DBehaviour',
+}
+```
+
 ---
 
 ## 💡 Examples
@@ -1192,7 +1244,9 @@ const textConfig = {
 ---
 
 ## 🛠️ Advanced Editor
-Easily design and fine-tune your particle effects with the custom-pixi-particles Editor.
+
+Design and fine-tune particle effects visually with the **custom-pixi-particles-editor** (Next.js app). Run it from the `custom-pixi-particles-editor` folder or use the live version:
+
 🔗 [custom-pixi-particles Live Editor](https://okuniewicz.eu/)
 
 ---
