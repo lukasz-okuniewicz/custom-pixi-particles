@@ -46,9 +46,7 @@ export default class TurbulenceBehaviour extends Behaviour {
       const dx = particle.x - vortex.x
       const dy = particle.y - vortex.y
 
-      if (dx > this.vortexOrgSize * vortex.size.x) return
-      if (dy > this.vortexOrgSize * vortex.size.x) return
-
+      // Apply vortex influence in all directions; factor falls off with distance
       if (this.effect === 0 || this.effect === 1) {
         if (!this.effect) {
           vx = -dy + vortex.velocity.x

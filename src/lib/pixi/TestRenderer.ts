@@ -7,7 +7,7 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
-import { AnimatedSprite, Assets, Container, Sprite, Texture, Ticker } from 'pixi.js'
+import { AnimatedSprite, Assets, Container, Graphics, Sprite, Texture, Ticker } from 'pixi.js'
 import Model from '../Model'
 
 /**
@@ -34,6 +34,7 @@ export default class TestRenderer extends Container {
   private _ticker: Ticker | undefined
   private _visibilitychangeBinding: any
   private _firstParticleHasBeenDestroyed = false
+  wireframeGraphics: Graphics | null = null
 
   /**
    * Creates an instance of Renderer.
@@ -96,6 +97,13 @@ export default class TestRenderer extends Container {
     this.emitter.on(Emitter.COMPLETE, this.onCompleteFN, this)
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       this.emitter.turbulencePool.list = this.turbulenceEmitter.list
+    }
+
+    const wireframeConfigIndex = this.getConfigIndexByName(BehaviourNames.WIREFRAME_3D_BEHAVIOUR, emitterConfig)
+    if (wireframeConfigIndex !== -1) {
+      const wireframeGraphics = new Graphics()
+      this.addChildAt(wireframeGraphics, 0)
+      this.wireframeGraphics = wireframeGraphics
     }
 
     this._visibilitychangeBinding = () => this.internalPause(document.hidden)
@@ -163,6 +171,10 @@ export default class TestRenderer extends Container {
     this.emitter?.update(ticker.deltaTime)
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.update(ticker.deltaTime)
+    }
+    const wireframeBehaviour = this.emitter?.behaviours?.getByName(BehaviourNames.WIREFRAME_3D_BEHAVIOUR) as any
+    if (wireframeBehaviour?.enabled && this.wireframeGraphics && typeof wireframeBehaviour.draw === 'function') {
+      wireframeBehaviour.draw(this.wireframeGraphics, ticker.deltaTime)
     }
   }
 
@@ -294,6 +306,12 @@ export default class TestRenderer extends Container {
    */
   updateConfig(config: any, resetDuration = false) {
     this.emitterParser?.update(config, this._model, resetDuration)
+    const wireframeConfigIndex = this.getConfigIndexByName(BehaviourNames.WIREFRAME_3D_BEHAVIOUR, config)
+    if (wireframeConfigIndex !== -1 && !this.wireframeGraphics) {
+      const wireframeGraphics = new Graphics()
+      this.addChildAt(wireframeGraphics, 0)
+      this.wireframeGraphics = wireframeGraphics
+    }
     const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
     if (turbulenceConfigIndex === -1) return
     const turbulenceConfig = config.behaviours[turbulenceConfigIndex]
@@ -627,12 +645,12 @@ export default class TestRenderer extends Container {
           enabled: true,
           priority: 0,
           sizeStart: {
-            x: turbulenceConfig.sizeStart.x || 1,
-            y: turbulenceConfig.sizeStart.y || 1,
+            x: typeof turbulenceConfig.sizeStart?.x === 'number' ? turbulenceConfig.sizeStart.x : 1,
+            y: typeof turbulenceConfig.sizeStart?.y === 'number' ? turbulenceConfig.sizeStart.y : 1,
           },
           sizeEnd: {
-            x: turbulenceConfig.sizeEnd.x || 1,
-            y: turbulenceConfig.sizeEnd.y || 1,
+            x: typeof turbulenceConfig.sizeEnd?.x === 'number' ? turbulenceConfig.sizeEnd.x : 1,
+            y: typeof turbulenceConfig.sizeEnd?.y === 'number' ? turbulenceConfig.sizeEnd.y : 1,
           },
           startVariance: turbulenceConfig.startVariance || 0,
           endVariance: turbulenceConfig.endVariance || 0,
@@ -654,10 +672,10 @@ export default class TestRenderer extends Container {
         },
       ],
       emitController: {
-        _maxParticles: 0,
+        _maxParticles: 100,
         _maxLife: 1,
         _emitPerSecond: turbulenceConfig.emitPerSecond || 2,
-        _frames: 0,
+        _frames: 1.0,
         name: 'UniformEmission',
       },
       duration: turbulenceConfig.duration || -1,

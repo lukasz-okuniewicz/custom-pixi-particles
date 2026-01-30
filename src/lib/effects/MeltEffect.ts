@@ -160,6 +160,7 @@ export default class MeltEffect extends Container {
   }
 
   private prepare(): void {
+    if (!this.sourceSprite || (this.sourceSprite as any).destroyed) return
     const texture = this.sourceSprite.texture
     // v8: no .valid property anymore; check source existence + basic validity
     if (!texture || !texture.source) return
@@ -241,7 +242,11 @@ export default class MeltEffect extends Container {
 
   private update = (): void => {
     if (!this.isProcessing) return
-
+    // Guard: if source sprite was destroyed (e.g. user switched effects mid-animation), stop immediately
+    if (!this.sourceSprite || (this.sourceSprite as any).destroyed) {
+      this.finish()
+      return
+    }
     const dt = Ticker.shared.deltaMS / 1000
     this.currentTime += dt
 
@@ -286,8 +291,9 @@ export default class MeltEffect extends Container {
     this.meltResolve?.()
   }
 
-  public destroy(options?: boolean | { children?: boolean; texture?: boolean; baseTexture?: boolean }): void {
+  public override destroy(options?: boolean | { children?: boolean; texture?: boolean; baseTexture?: boolean }): void {
     Ticker.shared.remove(this.update, this)
+    this.finish()
     super.destroy(options)
   }
 

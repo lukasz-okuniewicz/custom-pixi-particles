@@ -1,4 +1,5 @@
-import { AbstractEmission, EmissionTypes } from './index'
+import AbstractEmission from './AbstractEmission'
+import EmissionTypes from './EmissionTypes'
 
 /**
  * The StandardEmission class is an abstract class extending from AbstractEmission.

@@ -1,4 +1,5 @@
-import { AbstractEmission, EmissionTypes } from './index'
+import AbstractEmission from './AbstractEmission'
+import EmissionTypes from './EmissionTypes'
 import { Random } from '../util'
 
 /**
