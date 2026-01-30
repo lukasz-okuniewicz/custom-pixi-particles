@@ -1,4 +1,4 @@
-import { EmitControllerParser } from '../parser'
+import EmitControllerParser from '../parser/EmitControllerParser'
 
 /**
  * Abstract class representing a particle emitter.

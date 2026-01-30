@@ -19,6 +19,7 @@ const behaviourNames = {
   STRETCH_BEHAVIOUR: 'StretchBehaviour',
   TEMPERATURE_BEHAVIOUR: 'TemperatureBehaviour',
   MOVE_TO_POINT_BEHAVIOUR: 'MoveToPointBehaviour',
+  WIREFRAME_3D_BEHAVIOUR: 'Wireframe3DBehaviour',
 }
 
 export default behaviourNames

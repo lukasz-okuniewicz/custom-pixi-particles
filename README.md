@@ -589,6 +589,23 @@ particles.emitter.behaviours.add(myCustomBehaviour)
 // New and existing particles will use the new behaviour on the next update
 ```
 
+**Extending built-in behaviours:** All built-in behaviour classes are exported from the package so you can extend any of them: `SpawnBehaviour`, `LifeBehaviour`, `PositionBehaviour`, `ColorBehaviour`, `SizeBehaviour`, `AngularVelocityBehaviour`, `EmitDirectionBehaviour`, `RotationBehaviour`, `TurbulenceBehaviour`, `CollisionBehaviour`, `AttractionRepulsionBehaviour`, `NoiseBasedMotionBehaviour`, `ForceFieldsBehaviour`, `TimelineBehaviour`, `GroupingBehaviour`, `SoundReactiveBehaviour`, `LightEffectBehaviour`, `StretchBehaviour`, `TemperatureBehaviour`, `MoveToPointBehaviour`. Also exported: `Behaviour`, `BehaviourRegistry`, `EmitterBehaviours`, `BehaviourNames`.
+
+**Replacing a built-in behaviour:** Register your class under the same name as a built-in (e.g. `SpawnBehaviour`) **before** creating the renderer or loading config. The registry is checked first, so your implementation is used instead. Use this for customizations like multiple trails on one shape, different trailing logic (e.g. CCV-style), or any variant of spawn/trail/position without changing the library.
+
+```javascript
+import { BehaviourRegistry, SpawnBehaviour } from 'custom-pixi-particles'
+
+class MySpawnBehaviour extends SpawnBehaviour {
+  getName() { return 'SpawnBehaviour' }
+  // Override init/apply, add multiple trails, custom trailing (e.g. CCV), etc.
+}
+BehaviourRegistry.register('SpawnBehaviour', MySpawnBehaviour)
+// Then create renderer / load config that uses name: 'SpawnBehaviour'
+```
+
+**Unregister:** `BehaviourRegistry.unregister('MyCustomBehaviour')` removes a registration. To restore a built-in after replacing it, unregister the custom name so the built-in is used again (built-ins are not in the registry by default).
+
 #### Life Behaviour
 Controls particle lifetime.
 
@@ -634,12 +651,19 @@ Defines where and how particles spawn. Supports multiple spawn types.
       // ... spawn type specific properties
     },
   ],
-  trailingEnabled: false,      // Enable trail effects
-  spawnAlongTrail: false,     // Spawn along entire trail
+  trailingEnabled: false,      // Enable trail effects (path types only)
+  spawnAlongTrail: false,      // true = uniform along trail; false = weighted toward leading edge
   trailSpeed: 1,              // Trail animation speed
+  trailRepeat: true,           // Loop the trail
+  trailStart: 0,               // Start position on path (0–1)
+  trailRangeSegments: 20,      // Sampling points along trail (higher = finer distribution)
+  trailRangeWeightFactor: 4,  // Weight toward leading edge when spawnAlongTrail is false
+  trailRangeLength: 1,        // Length of trail to spawn along (0–1); <1 avoids particles at path start
   name: 'SpawnBehaviour',
 }
 ```
+
+**Trailing:** When `trailingEnabled` is true (path types like Frame, Ring, Bezier only), particles spawn along a moving “head” on the path. **Spawn Along Trail** on = even spread along the trail; off = more particles near the leading edge (**trailRangeWeightFactor**). **Trail Range Segments** sets how many sample points are used (higher = smoother). **Trail Range Length** (0–1) limits where particles appear: `1` = from path start to head; e.g. `0.2` = only the last 20% of the path, so the path start (e.g. top-left of a Frame) stays clear. **Trail Speed**, **Trail Repeat**, and **Trail Start** (0–1) control motion. When the path loops, the tail at the end stays visible until the head moves on.
 
 **Available Spawn Types:**
 - `Rectangle` - Uniform distribution in a rectangular area

@@ -65,6 +65,7 @@ export default class MeltEffect extends Container {
   private meltResolve?: () => void
   private pContainer: ParticleContainer
   private currentTime: number = 0
+  private cachedScale: number = 1
 
   constructor(
     private sourceSprite: Sprite,
@@ -112,6 +113,7 @@ export default class MeltEffect extends Container {
   }
 
   private prepare(): void {
+    if (!this.sourceSprite || (this.sourceSprite as any).destroyed) return
     const texture = this.sourceSprite.texture
     if (!texture || !texture.valid) return
 
@@ -120,6 +122,7 @@ export default class MeltEffect extends Container {
     const stepW = texFrame.width / gridCols
     const stepH = texFrame.height / gridRows
     const scale = this.sourceSprite.scale.x
+    this.cachedScale = scale
     const anchorX = this.sourceSprite.anchor.x
     const anchorY = this.sourceSprite.anchor.y
 
@@ -166,6 +169,11 @@ export default class MeltEffect extends Container {
 
   private update(): void {
     if (!this.isProcessing) return
+    // Guard: if source sprite was destroyed (e.g. user switched effects mid-animation), stop immediately
+    if (!this.sourceSprite || (this.sourceSprite as any).destroyed) {
+      this.finish()
+      return
+    }
     const dt = Ticker.shared.deltaMS / 1000
     this.currentTime += dt
 
@@ -184,9 +192,9 @@ export default class MeltEffect extends Container {
       f.sprite.x = p.x
       f.sprite.y = p.y
 
-      // Gradually shrink fragments so the liquid "dries up"
+      // Gradually shrink fragments so the liquid "dries up" (use cachedScale - safe if sourceSprite was destroyed)
       const lifeRatio = 1 - this.currentTime / this.options.duration
-      f.sprite.scale.set(this.sourceSprite.scale.x * lifeRatio)
+      f.sprite.scale.set(this.cachedScale * lifeRatio)
 
       if (lifeRatio <= 0) {
         this.removeFragment(i)
@@ -210,6 +218,11 @@ export default class MeltEffect extends Container {
     this.isProcessing = false
     Ticker.shared.remove(this.update, this)
     this.meltResolve?.()
+  }
+
+  public override destroy(options?: { children?: boolean; texture?: boolean; baseTexture?: boolean }): void {
+    this.finish()
+    super.destroy(options)
   }
 
   public static async melt(sprite: Sprite, options: IMeltEffectOptions = {}): Promise<void> {

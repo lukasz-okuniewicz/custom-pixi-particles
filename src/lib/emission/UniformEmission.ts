@@ -1,4 +1,5 @@
-import { AbstractEmission, EmissionTypes } from './index'
+import AbstractEmission from './AbstractEmission'
+import EmissionTypes from './EmissionTypes'
 
 /**
  * UniformEmission class is the implementation of the abstract class AbstractEmission.
@@ -42,6 +43,13 @@ export default class UniformEmission extends AbstractEmission {
     }
 
     return numberToEmit
+  }
+
+  /**
+   * Reset the emission so the next frame can emit immediately (no initial delay).
+   */
+  reset() {
+    this._frames = 1.0
   }
 
   /**
