@@ -22,6 +22,7 @@ import LightEffectBehaviour from './LightEffectBehaviour'
 import StretchBehaviour from './StretchBehaviour'
 import TemperatureBehaviour from './TemperatureBehaviour'
 import MoveToPointBehaviour from './MoveToPointBehaviour'
+import Wireframe3DBehaviour from './Wireframe3DBehaviour'
 
 export type { IBehaviour } from './IBehaviour'
 export { BehaviourRegistry } from './BehaviourRegistry'
@@ -50,4 +51,5 @@ export {
   TemperatureBehaviour,
   BehaviourNames,
   MoveToPointBehaviour,
+  Wireframe3DBehaviour,
 }

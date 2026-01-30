@@ -35,6 +35,8 @@ export default class Renderer extends ParticleContainer {
   private _ticker: Ticker | undefined
   private _visibilitychangeBinding: any
   private _firstParticleHasBeenDestroyed = false
+  /** Set by consumer (or wrapper) when using Wireframe3DBehaviour so the behaviour can draw. */
+  wireframeGraphics: any = null
 
   /**
    * Creates an instance of Renderer.
@@ -176,6 +178,10 @@ export default class Renderer extends ParticleContainer {
     this.emitter?.update(deltaTime)
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.update(deltaTime)
+    }
+    const wireframeBehaviour = this.emitter?.behaviours?.getByName(BehaviourNames.WIREFRAME_3D_BEHAVIOUR) as any
+    if (wireframeBehaviour?.enabled && this.wireframeGraphics && typeof wireframeBehaviour.draw === 'function') {
+      wireframeBehaviour.draw(this.wireframeGraphics, deltaTime)
     }
   }
 
@@ -660,12 +666,12 @@ export default class Renderer extends ParticleContainer {
           enabled: true,
           priority: 0,
           sizeStart: {
-            x: turbulenceConfig.sizeStart.x || 1,
-            y: turbulenceConfig.sizeStart.y || 1,
+            x: typeof turbulenceConfig.sizeStart?.x === 'number' ? turbulenceConfig.sizeStart.x : 1,
+            y: typeof turbulenceConfig.sizeStart?.y === 'number' ? turbulenceConfig.sizeStart.y : 1,
           },
           sizeEnd: {
-            x: turbulenceConfig.sizeEnd.x || 1,
-            y: turbulenceConfig.sizeEnd.y || 1,
+            x: typeof turbulenceConfig.sizeEnd?.x === 'number' ? turbulenceConfig.sizeEnd.x : 1,
+            y: typeof turbulenceConfig.sizeEnd?.y === 'number' ? turbulenceConfig.sizeEnd.y : 1,
           },
           startVariance: turbulenceConfig.startVariance || 0,
           endVariance: turbulenceConfig.endVariance || 0,
@@ -687,10 +693,10 @@ export default class Renderer extends ParticleContainer {
         },
       ],
       emitController: {
-        _maxParticles: 0,
+        _maxParticles: 100,
         _maxLife: 1,
         _emitPerSecond: turbulenceConfig.emitPerSecond || 2,
-        _frames: 0,
+        _frames: 1.0,
         name: 'UniformEmission',
       },
       duration: turbulenceConfig.duration || -1,
