@@ -1,10 +1,10 @@
 import Renderer from './lib/pixi/Renderer'
 import { ICustomPixiParticlesSettings } from './lib/customPixiParticlesSettingsInterface'
 import TestRenderer from './lib/pixi/TestRenderer'
-import { ShatterEffect, DissolveEffect, MagneticAssemblyEffect, GhostEffect, GlitchEffect, MeltEffect } from './lib/effects'
+import { ShatterEffect, DissolveEffect, MagneticAssemblyEffect, GhostEffect, GlitchEffect, MeltEffect, PixelSortEffect, PrismRefractionEffect, CrystallizeEffect, SlitScanEffect, GranularErosionEffect, LiquidMercuryEffect } from './lib/effects'
 import { Container, Graphics } from 'pixi.js-legacy'
 
-export type { IShatterEffectOptions, ShatterMode, IDissolveEffectOptions, DissolveDirection, IMagneticAssemblyOptions, AssemblyMode, IGhostEffectOptions, IGlitchEffectOptions, IMeltEffectOptions } from './lib/effects'
+export type { IShatterEffectOptions, ShatterMode, IDissolveEffectOptions, DissolveDirection, IMagneticAssemblyOptions, AssemblyMode, IGhostEffectOptions, IGlitchEffectOptions, IMeltEffectOptions, IPixelSortEffectOptions, PixelSortDirection, PixelSortMode, PixelSortOrder, IPrismRefractionEffectOptions, ICrystallizeEffectOptions, ISlitScanEffectOptions, SlitScanMode, IGranularErosionEffectOptions, ILiquidMercuryEffectOptions } from './lib/effects'
 
 /**
  * Constructs a renderer for custom pixi particles
@@ -142,4 +142,10 @@ export {
   GhostEffect,
   GlitchEffect,
   MeltEffect,
+  PixelSortEffect,
+  PrismRefractionEffect,
+  CrystallizeEffect,
+  SlitScanEffect,
+  GranularErosionEffect,
+  LiquidMercuryEffect,
 }

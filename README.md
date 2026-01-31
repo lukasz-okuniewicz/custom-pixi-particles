@@ -58,6 +58,19 @@ Install via npm:
 npm install custom-pixi-particles
 ```
 
+**Peer dependency:** This library requires **PIXI.js** (or **pixi.js-legacy**). Install the version compatible with your project:
+
+```bash
+# For PIXI.js v8
+npm install pixi.js
+
+# For PIXI.js v7
+npm install pixi.js
+
+# For PIXI.js v5/v6 (legacy)
+npm install pixi.js-legacy
+```
+
 ---
 
 ## 🚀 Quick Start
@@ -589,7 +602,7 @@ particles.emitter.behaviours.add(myCustomBehaviour)
 // New and existing particles will use the new behaviour on the next update
 ```
 
-**Extending built-in behaviours:** All built-in behaviour classes are exported from the package so you can extend any of them: `SpawnBehaviour`, `LifeBehaviour`, `PositionBehaviour`, `ColorBehaviour`, `SizeBehaviour`, `AngularVelocityBehaviour`, `EmitDirectionBehaviour`, `RotationBehaviour`, `TurbulenceBehaviour`, `CollisionBehaviour`, `AttractionRepulsionBehaviour`, `NoiseBasedMotionBehaviour`, `ForceFieldsBehaviour`, `TimelineBehaviour`, `GroupingBehaviour`, `SoundReactiveBehaviour`, `LightEffectBehaviour`, `StretchBehaviour`, `TemperatureBehaviour`, `MoveToPointBehaviour`, `Wireframe3DBehaviour`. Also exported: `Behaviour`, `BehaviourRegistry`, `EmitterBehaviours`, `BehaviourNames`.
+**Extending built-in behaviours:** All built-in behaviour classes are exported from the package so you can extend any of them: `SpawnBehaviour`, `LifeBehaviour`, `PositionBehaviour`, `ColorBehaviour`, `SizeBehaviour`, `AngularVelocityBehaviour`, `EmitDirectionBehaviour`, `RotationBehaviour`, `TurbulenceBehaviour`, `CollisionBehaviour`, `AttractionRepulsionBehaviour`, `NoiseBasedMotionBehaviour`, `ForceFieldsBehaviour`, `TimelineBehaviour`, `GroupingBehaviour`, `SoundReactiveBehaviour`, `LightEffectBehaviour`, `StretchBehaviour`, `TemperatureBehaviour`, `MoveToPointBehaviour`, `Wireframe3DBehaviour`, `VortexBehaviour`, `PulseBehaviour`, `RippleBehaviour`, `OrbitBehaviour`, `FlickerBehaviour`, `WobbleBehaviour`, `ColorCycleBehaviour`, `ConstrainToShapeBehaviour`, `GravityWellBehaviour`, `TrailBehaviour`, `BounceBehaviour`, `HomingBehaviour`, `FloatUpBehaviour`, `MagnetBehaviour`, `NearMissDispersionBehaviour`, `ConversionCascadeBehaviour`, `BoidsFlockingBehaviour`, `ProximityStateBehaviour`, `PhaseFieldFlowBehaviour`, `PhaseCoherenceBehaviour`, `CurvatureFlowBehaviour`, `LimitCycleBehaviour`, `AizawaAttractorBehaviour`, `ToroidalFlowBehaviour`, `ProximityTriggeredPhaseBehaviour`, `LissajousHarmonicLatticeBehaviour`, `JacobianCurlFieldBehaviour`. Also exported: `Behaviour`, `BehaviourRegistry`, `EmitterBehaviours`, `BehaviourNames`.
 
 **Replacing a built-in behaviour:** Register your class under the same name as a built-in (e.g. `SpawnBehaviour`) **before** creating the renderer or loading config. The registry is checked first, so your implementation is used instead. Use this for customizations like multiple trails on one shape, different trailing logic (e.g. CCV-style), or any variant of spawn/trail/position without changing the library.
 
@@ -683,6 +696,8 @@ Defines where and how particles spawn. Supports multiple spawn types.
 - `Path` - Custom path defined by points
 - `Oval` - Elliptical distributions
 
+**Additional behaviours** (see the [editor](https://okuniewicz.eu/) for full documentation): Aizawa Attractor, Boids Flocking, Bounce, Color Cycle, Constrain To Shape, Conversion Cascade, Curvature Flow, Flicker, Float Up, Gravity Well, Homing, Jacobian Curl-Field, Lissajous Harmonic Lattice, Limit Cycle, Magnet, Near Miss Dispersion, Orbit, Phase Coherence, Phase Field Flow, Proximity State, Proximity Triggered Phase, Pulse, Ripple, Trail, Toroidal Flow, Vortex, Wobble, SubEmitter.
+
 #### Size Behaviour
 Controls particle size over time.
 
@@ -729,14 +744,19 @@ Controls particle rotation.
 ```
 
 #### Angular Velocity Behaviour
-Controls particle spin speed.
+Controls particle spin speed and orbital motion.
 
 ```javascript
 {
   priority: 0,
   enabled: true,
-  angularVelocity: 1,   // Rotation speed
-  variance: 0.5,        // Speed randomness
+  degrees: 0,             // Base angular velocity (degrees/sec)
+  degreesVariance: 0,     // Random variance
+  maxRadius: 0,           // Starting orbit radius
+  minRadius: 0,           // End radius (life-based)
+  oscillate: false,       // Enable oscillation
+  oscillationSpeed: 1,
+  oscillationAmplitude: 10,
   name: 'AngularVelocityBehaviour',
 }
 ```
@@ -1245,13 +1265,27 @@ const textConfig = {
 
 ## 🛠️ Advanced Editor
 
-Design and fine-tune particle effects visually with the **custom-pixi-particles-editor** (Next.js app). Run it from the `custom-pixi-particles-editor` folder or use the live version:
+Design and fine-tune particle effects visually with the **custom-pixi-particles-editor**, a Next.js web app that provides:
 
-🔗 [custom-pixi-particles Live Editor](https://okuniewicz.eu/)
+- Real-time visual editing of all behaviours
+- Predefined effect presets (fire, smoke, explosions, trails, text, etc.)
+- Export/import of emitter configurations as JSON
+- Built-in descriptions for every behaviour and property
+
+**Run locally:** Clone the [custom-pixi-particles-editor](https://github.com/lukasz-okuniewicz/custom-pixi-particles-editor) repository and run `npm install` then `npm run dev` from the editor folder.
+
+**Try online:** [custom-pixi-particles Live Editor](https://okuniewicz.eu/)
+
+---
+
+## 📄 License
+
+Licensed under the GNU General Public License v2.0. See the [LICENSE](LICENSE) file for details.
 
 ---
 
 ## 🤝 Contributing
+
 Contributions, feature suggestions, and bug reports are welcome! Open an issue or submit a pull request on the [GitHub repository](https://github.com/lukasz-okuniewicz/custom-pixi-particles).
 
 ---

@@ -62,10 +62,15 @@ export default class BehaviourParser {
    */
   read = (config: any) => {
     for (const key in config) {
-      if (this._behaviour[key] instanceof Object && typeof this._behaviour[key].copyFromRawData === 'function') {
-        this._behaviour[key].copyFromRawData(config[key])
+      const current = this._behaviour[key]
+      const incoming = config[key]
+      if (typeof current === 'function' && typeof incoming !== 'function') {
+        continue
+      }
+      if (current instanceof Object && typeof current.copyFromRawData === 'function') {
+        current.copyFromRawData(incoming)
       } else {
-        this._behaviour[key] = config[key]
+        this._behaviour[key] = incoming
       }
     }
   }
