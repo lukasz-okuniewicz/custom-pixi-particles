@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture, Ticker } from 'pixi.js-legacy'
+import { Container, Sprite, Texture, Ticker } from 'pixi.js'
 
 export type PixelSortDirection = 'horizontal' | 'vertical'
 export type PixelSortMode = 'luminance' | 'hue' | 'saturation' | 'red' | 'green' | 'blue'
@@ -95,7 +95,7 @@ export default class PixelSortEffect extends Container {
 
   private captureSourceToCanvas(): boolean {
     const texture = this.sourceSprite.texture
-    if (!texture || !texture.valid) return false
+    if (!texture || texture.destroyed || !texture.source) return false
 
     const { width, height } = texture.frame
     this.canvasWidth = width
@@ -110,20 +110,19 @@ export default class PixelSortEffect extends Container {
     this.canvas.width = width
     this.canvas.height = height
 
-    const baseTex = texture.baseTexture.resource as any
-    if (baseTex && (baseTex.source || baseTex.data)) {
-      this.ctx.drawImage(
-        baseTex.source || baseTex.data,
-        texture.frame.x,
-        texture.frame.y,
-        width,
-        height,
-        0,
-        0,
-        width,
-        height,
-      )
-    }
+    const sourceElement = (texture.source as any).resource
+    if (!sourceElement) return false
+    this.ctx.drawImage(
+      sourceElement,
+      texture.frame.x,
+      texture.frame.y,
+      width,
+      height,
+      0,
+      0,
+      width,
+      height,
+    )
     return true
   }
 
@@ -308,7 +307,10 @@ export default class PixelSortEffect extends Container {
 
     this.lerpImageData(this.outputData, this.originalData, this.sortedData, t)
     this.ctx.putImageData(this.outputData, 0, 0)
-    if (this.outputTexture?.baseTexture) this.outputTexture.baseTexture.update()
+    if (this.outputTexture) {
+      this.outputTexture.update()
+      this.outputTexture.source?.update()
+    }
 
     if (this.currentTime >= duration) {
       this.finish()
