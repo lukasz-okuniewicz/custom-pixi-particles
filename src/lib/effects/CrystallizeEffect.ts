@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture, Ticker } from 'pixi.js-legacy'
+import { Container, Sprite, Texture, Ticker } from 'pixi.js'
 
 export interface ICrystallizeEffectOptions {
   cellScale?: number     // approximate cell size in pixels (default: 16)
@@ -54,7 +54,7 @@ export default class CrystallizeEffect extends Container {
 
   private captureSourceToCanvas(): boolean {
     const texture = this.sourceSprite.texture
-    if (!texture || !texture.valid) return false
+    if (!texture || texture.destroyed || !texture.source) return false
 
     const { width, height } = texture.frame
     this.canvasWidth = width
@@ -69,20 +69,19 @@ export default class CrystallizeEffect extends Container {
     this.canvas.width = width
     this.canvas.height = height
 
-    const baseTex = texture.baseTexture.resource as any
-    if (baseTex && (baseTex.source || baseTex.data)) {
-      this.ctx.drawImage(
-        baseTex.source || baseTex.data,
-        texture.frame.x,
-        texture.frame.y,
-        width,
-        height,
-        0,
-        0,
-        width,
-        height,
-      )
-    }
+    const sourceElement = (texture.source as any).resource
+    if (!sourceElement) return false
+    this.ctx.drawImage(
+      sourceElement,
+      texture.frame.x,
+      texture.frame.y,
+      width,
+      height,
+      0,
+      0,
+      width,
+      height,
+    )
     this.sourceData = this.ctx.getImageData(0, 0, width, height)
     this.outputData = this.ctx.createImageData(width, height)
     return true
@@ -216,7 +215,10 @@ export default class CrystallizeEffect extends Container {
     }
 
     this.ctx.putImageData(this.outputData, 0, 0)
-    if (this.outputTexture?.baseTexture) this.outputTexture.baseTexture.update()
+    if (this.outputTexture) {
+      this.outputTexture.update()
+      this.outputTexture.source?.update()
+    }
   }
 
   private prepare(): void {
