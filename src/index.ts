@@ -2,12 +2,18 @@ import Renderer from './lib/pixi/Renderer'
 import { ICustomPixiParticlesSettings } from './lib/customPixiParticlesSettingsInterface'
 import TestRenderer from './lib/pixi/TestRenderer'
 import {
+  CrystallizeEffect,
   DissolveEffect,
   GhostEffect,
   GlitchEffect,
+  GranularErosionEffect,
+  LiquidMercuryEffect,
   MagneticAssemblyEffect,
   MeltEffect,
+  PixelSortEffect,
+  PrismRefractionEffect,
   ShatterEffect,
+  SlitScanEffect,
 } from './lib/effects'
 import { Container, Graphics } from 'pixi.js'
 
@@ -22,6 +28,16 @@ export type {
   IGhostEffectOptions,
   IGlitchEffectOptions,
   IMeltEffectOptions,
+  IPixelSortEffectOptions,
+  PixelSortDirection,
+  PixelSortMode,
+  PixelSortOrder,
+  IPrismRefractionEffectOptions,
+  ICrystallizeEffectOptions,
+  ISlitScanEffectOptions,
+  SlitScanMode,
+  IGranularErosionEffectOptions,
+  ILiquidMercuryEffectOptions,
 } from './lib/effects'
 
 /**
@@ -160,4 +176,10 @@ export {
   GhostEffect,
   GlitchEffect,
   MeltEffect,
+  PixelSortEffect,
+  PrismRefractionEffect,
+  CrystallizeEffect,
+  SlitScanEffect,
+  GranularErosionEffect,
+  LiquidMercuryEffect,
 }

@@ -128,7 +128,7 @@ export default class EmitterBehaviours {
   update = (deltaTime: number) => {
     for (let i = 0; i < this.behaviours.length; ++i) {
       const updateFn = this.behaviours[i].update
-      if (updateFn) updateFn(deltaTime)
+      if (updateFn) updateFn.call(this.behaviours[i], deltaTime)
     }
   }
 
@@ -140,7 +140,7 @@ export default class EmitterBehaviours {
   onParticleRemoved = (particle: Particle) => {
     for (let i = 0; i < this.behaviours.length; ++i) {
       const onRemoved = this.behaviours[i].onParticleRemoved
-      if (onRemoved) onRemoved(particle)
+      if (onRemoved) onRemoved.call(this.behaviours[i], particle)
     }
   }
 }
