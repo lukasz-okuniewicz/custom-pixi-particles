@@ -22,6 +22,12 @@
   - [Ghost Effect](#ghost-effect)
   - [Glitch Effect](#glitch-effect)
   - [Melt Effect](#melt-effect)
+  - [Pixel Sort Effect](#pixel-sort-effect)
+  - [Prism Refraction Effect](#prism-refraction-effect)
+  - [Crystallize Effect](#crystallize-effect)
+  - [Slit-Scan Effect](#slit-scan-effect)
+  - [Granular Erosion Effect](#granular-erosion-effect)
+  - [Liquid Mercury Effect](#liquid-mercury-effect)
 - [Versions Compatibility](#️-versions-compatibility)
 - [Advanced Editor](#️-advanced-editor)
 - [Contributing](#-contributing)
@@ -176,6 +182,9 @@ const particles = customPixiParticles.create({
   emitterConfig: Object,          // Configuration object for the emitter (see Configuration section)
   animatedSpriteZeroPad: Number,  // Zero-padding for animated sprite names (default: 2)
   animatedSpriteIndexToStart: Number, // Initial frame index for animated sprites (default: 0)
+  animatedSprite: Boolean,        // Enable animated sprite textures (default: false)
+  animatedSpriteFrameRate: Number, // Frame rate for animated sprites
+  animatedSpriteLoop: Boolean,    // Loop animated sprites (default: true)
   finishingTextures: [String],    // Textures used for particle finishing animations
   vertices: Boolean,              // Use vertex mode for rendering (default: true)
   position: Boolean,              // Allow position-based behavior (default: true)
@@ -208,6 +217,7 @@ const emitterConfig = {
   duration: -1,                   // Emitter duration in seconds (-1 = infinite)
   alpha: 1,                       // Global alpha (0-1)
   blendMode: 0,                   // PIXI.js blend mode
+  anchor: { x: 0.5, y: 0.5 },    // Particle anchor point (default: center)
   
   // Behaviours Array
   behaviours: [
@@ -233,13 +243,22 @@ particles.setTextures(['texture3.png', 'texture4.png'])
 ### Configuration Updates
 Dynamically update emitter configurations.
 ```javascript
-particles.updateConfig({ /* New configuration properties */ })
+particles.updateConfig({ /* New configuration properties */ }, resetDuration = false)
 ```
+`resetDuration` — when `true`, resets the emitter duration timer.
 
 ### State Control
-Starts or resumes the emitter.
+Starts the emitter and turbulence emitter (when applicable).
+```javascript
+particles.start()
+```
+Starts or resumes emission.
 ```javascript
 particles.play()
+```
+Resumes after pause.
+```javascript
+particles.resume()
 ```
 Toggles the paused state.
 ```javascript
@@ -257,12 +276,21 @@ Resets the emitter to its initial state.
 ```javascript
 particles.resetEmitter()
 ```
+Sets the PIXI ticker speed multiplier (affects animation speed).
+```javascript
+particles.setTickerSpeed(0.02)
+```
+Refreshes the particle texture (e.g. after changing texture source).
+```javascript
+particles.updateTexture()
+```
 
 ### Position Updates
 Dynamically adjust the emitter's position.
 ```javascript
-particles.updatePosition({ x: 100, y: 200 })
+particles.updatePosition({ x: 100, y: 200 }, resetDuration = true)
 ```
+`resetDuration` — when `true`, resets the emitter duration timer.
 
 ### Pool Management
 Clears internal object pools to free memory.
@@ -309,7 +337,7 @@ app.stage.addChild(shatterEffect)
 // Trigger explosion with optional completion callback
 shatterEffect.Explode().then(() => {
   console.log("Boom! Animation complete.");
-  effect.destroy();
+  shatterEffect.destroy();
 });
 
 // Or Simple Usage (Static Method)
@@ -519,6 +547,210 @@ meltEffect.melt().then(() => {
 - `reset()` - Resets the effect to its initial state.
 - `destroy()` - Destroys the effect and cleans up all resources.
 
+### Pixel Sort Effect
+Creates a glitch-art style distortion by sorting pixels within rows or columns by luminance, hue, saturation, or RGB channel. Pixels within a threshold range are reordered, producing characteristic stretchy bands.
+
+```javascript
+import { PixelSortEffect } from 'custom-pixi-particles'
+import { Sprite, Texture } from 'pixi.js'
+
+const sprite = new Sprite(Texture.from('my-image.png'))
+sprite.anchor.set(0.5, 0.5)
+sprite.x = 400
+sprite.y = 300
+
+const pixelSortEffect = new PixelSortEffect(sprite, {
+  direction: 'horizontal',        // 'horizontal' | 'vertical' (default: 'horizontal')
+  sortMode: 'luminance',         // 'luminance' | 'hue' | 'saturation' | 'red' | 'green' | 'blue' (default: 'luminance')
+  sortOrder: 'ascending',        // 'ascending' | 'descending' (default: 'ascending')
+  thresholdLow: 0.2,             // 0-1, min key to sort (default: 0.2)
+  thresholdHigh: 0.8,            // 0-1, max key to sort (default: 0.8)
+  duration: 1.5,                 // Effect duration in seconds (default: 1.5)
+  refreshRate: 0.016,            // How often to refresh the effect (default: 0.016)
+  rowStep: 1,                    // Process every Nth row for performance (default: 1)
+  intensity: 1                   // 0-1, fraction of line affected (default: 1)
+})
+
+app.stage.addChild(pixelSortEffect)
+
+pixelSortEffect.play().then(() => {
+  console.log("Pixel sort complete!")
+  pixelSortEffect.destroy()
+})
+```
+
+**PixelSortEffect Methods:**
+- `play(onComplete?)` - Triggers the effect. Returns a Promise that resolves when complete.
+- `reset()` - Resets the effect to its initial state.
+- `destroy()` - Destroys the effect and cleans up all resources.
+
+### Prism Refraction Effect
+Creates a holographic prism effect with chromatic dispersion—RGB channels are offset to produce rainbow fringing and a spectral/hologram feel.
+
+```javascript
+import { PrismRefractionEffect } from 'custom-pixi-particles'
+import { Sprite, Texture } from 'pixi.js'
+
+const sprite = new Sprite(Texture.from('my-image.png'))
+sprite.anchor.set(0.5, 0.5)
+sprite.x = 400
+sprite.y = 300
+
+const prismEffect = new PrismRefractionEffect(sprite, {
+  dispersionStrength: 8,         // Pixels of R/B offset (default: 8)
+  dispersionAngle: 0,            // Radians, 0 = horizontal (default: 0)
+  duration: 1.5,                 // Effect duration (default: 1.5)
+  scanSpeed: 0,                  // Optional scan line speed, 0 = no scan (default: 0)
+  fresnelPower: 0                // 0 = no fresnel, higher = edge-only (default: 0)
+})
+
+app.stage.addChild(prismEffect)
+
+prismEffect.play().then(() => {
+  console.log("Prism effect complete!")
+  prismEffect.destroy()
+})
+```
+
+**PrismRefractionEffect Methods:**
+- `play(onComplete?)` - Triggers the effect. Returns a Promise that resolves when complete.
+- `reset()` - Resets the effect to its initial state.
+- `destroy()` - Destroys the effect and cleans up all resources.
+
+### Crystallize Effect
+Transforms sprites into crystal/gem-like facets using Voronoi-style cells. Each cell gets an averaged color with optional facet highlights and tint variation.
+
+```javascript
+import { CrystallizeEffect } from 'custom-pixi-particles'
+import { Sprite, Texture } from 'pixi.js'
+
+const sprite = new Sprite(Texture.from('my-image.png'))
+sprite.anchor.set(0.5, 0.5)
+sprite.x = 400
+sprite.y = 300
+
+const crystallizeEffect = new CrystallizeEffect(sprite, {
+  cellScale: 16,                 // Approximate cell size in pixels (default: 16)
+  jitter: 0.5,                   // 0-1, random offset of cell centers (default: 0.5)
+  highlightStrength: 0.3,        // 0-1, facet sheen (default: 0.3)
+  edgeSoftness: 0.2,             // 0-1, smooth cell edges (default: 0.2)
+  tintByCell: false,             // Slight tint variation per cell (default: false)
+  duration: 1                    // Blend from original to crystallize (default: 1)
+})
+
+app.stage.addChild(crystallizeEffect)
+
+crystallizeEffect.play().then(() => {
+  console.log("Crystallize complete!")
+  crystallizeEffect.destroy()
+})
+```
+
+**CrystallizeEffect Methods:**
+- `play(onComplete?)` - Triggers the effect. Returns a Promise that resolves when complete.
+- `reset()` - Resets the effect to its initial state.
+- `destroy()` - Destroys the effect and cleans up all resources.
+
+### Slit-Scan Effect
+Creates temporal/slit-scan distortion where each row (or column) samples a different offset over time, producing wave-like or ribbon distortion effects.
+
+```javascript
+import { SlitScanEffect } from 'custom-pixi-particles'
+import { Sprite, Texture } from 'pixi.js'
+
+const sprite = new Sprite(Texture.from('my-image.png'))
+sprite.anchor.set(0.5, 0.5)
+sprite.x = 400
+sprite.y = 300
+
+const slitScanEffect = new SlitScanEffect(sprite, {
+  mode: 'wave',                  // 'wave' | 'slit-scan' (default: 'wave')
+  speed: 2,                      // Phase/offset speed (default: 2)
+  amplitude: 20,                 // Pixel displacement for wave mode (default: 20)
+  frequency: 0.02,               // Rows per wave cycle (default: 0.02)
+  direction: 'horizontal',       // 'horizontal' | 'vertical' (default: 'horizontal')
+  duration: 2                    // Effect duration (default: 2)
+})
+
+app.stage.addChild(slitScanEffect)
+
+slitScanEffect.play().then(() => {
+  console.log("Slit-scan complete!")
+  slitScanEffect.destroy()
+})
+```
+
+**SlitScanEffect Methods:**
+- `play(onComplete?)` - Triggers the effect. Returns a Promise that resolves when complete.
+- `reset()` - Resets the effect to its initial state.
+- `destroy()` - Destroys the effect and cleans up all resources.
+
+### Granular Erosion Effect
+Simulates granular erosion where the sprite appears to break apart into falling grains with gravity and wind turbulence.
+
+```javascript
+import { GranularErosionEffect } from 'custom-pixi-particles'
+import { Sprite, Texture } from 'pixi.js'
+
+const sprite = new Sprite(Texture.from('my-image.png'))
+sprite.anchor.set(0.5, 0.5)
+sprite.x = 400
+sprite.y = 300
+
+const erosionEffect = new GranularErosionEffect(sprite, {
+  erosionProgress: 0.5,          // 0-1, how much has broken loose (default: 0.5)
+  gravityScale: 80,              // Vertical fall speed (default: 80)
+  windTurbulence: 15,            // Horizontal sine amplitude (default: 15)
+  grainSize: 0.08,               // Noise frequency, higher = finer grains (default: 0.08)
+  duration: 2                    // Effect duration (default: 2)
+})
+
+app.stage.addChild(erosionEffect)
+
+erosionEffect.play().then(() => {
+  console.log("Erosion complete!")
+  erosionEffect.destroy()
+})
+```
+
+**GranularErosionEffect Methods:**
+- `play(onComplete?)` - Triggers the effect. Returns a Promise that resolves when complete.
+- `reset()` - Resets the effect to its initial state.
+- `destroy()` - Destroys the effect and cleans up all resources.
+
+### Liquid Mercury Effect
+Creates a liquid metal look with viscosity, reflectivity, and rippling. Sprites appear to morph into blobby mercury-like shapes.
+
+```javascript
+import { LiquidMercuryEffect } from 'custom-pixi-particles'
+import { Sprite, Texture } from 'pixi.js'
+
+const sprite = new Sprite(Texture.from('my-image.png'))
+sprite.anchor.set(0.5, 0.5)
+sprite.x = 400
+sprite.y = 300
+
+const mercuryEffect = new LiquidMercuryEffect(sprite, {
+  viscosity: 0.3,                // 0-1, blur/smooth (default: 0.3)
+  reflectivity: 0.6,             // 0-1, MatCap strength (default: 0.6)
+  rippleSpeed: 2,                // Scroll speed (default: 2)
+  edgeRoundness: 2,              // Smooth-step power for blobby edges (default: 2)
+  duration: 2                    // Effect duration (default: 2)
+})
+
+app.stage.addChild(mercuryEffect)
+
+mercuryEffect.play().then(() => {
+  console.log("Liquid mercury complete!")
+  mercuryEffect.destroy()
+})
+```
+
+**LiquidMercuryEffect Methods:**
+- `play(onComplete?)` - Triggers the effect. Returns a Promise that resolves when complete.
+- `reset()` - Resets the effect to its initial state.
+- `destroy()` - Destroys the effect and cleans up all resources.
+
 ---
 
 ## 📚 Configuration Guide
@@ -696,7 +928,7 @@ Defines where and how particles spawn. Supports multiple spawn types.
 - `Path` - Custom path defined by points
 - `Oval` - Elliptical distributions
 
-**Additional behaviours** (see the [editor](https://okuniewicz.eu/) for full documentation): Aizawa Attractor, Boids Flocking, Bounce, Color Cycle, Constrain To Shape, Conversion Cascade, Curvature Flow, Flicker, Float Up, Gravity Well, Homing, Jacobian Curl-Field, Lissajous Harmonic Lattice, Limit Cycle, Magnet, Near Miss Dispersion, Orbit, Phase Coherence, Phase Field Flow, Proximity State, Proximity Triggered Phase, Pulse, Ripple, Trail, Toroidal Flow, Vortex, Wobble, SubEmitter.
+**Additional behaviours** (see the [editor](https://okuniewicz.eu/) for full documentation): Aizawa Attractor, Boids Flocking, Bounce, Color Cycle, Constrain To Shape, Conversion Cascade, Curvature Flow, Flicker, Float Up, Gravity Well, Homing, Jacobian Curl-Field, Lissajous Harmonic Lattice, Limit Cycle, Magnet, Near Miss Dispersion, Orbit, Phase Coherence, Phase Field Flow, Proximity State, Proximity Triggered Phase, Pulse, Ripple, Trail, Toroidal Flow, Vortex, Wobble.
 
 #### Size Behaviour
 Controls particle size over time.
