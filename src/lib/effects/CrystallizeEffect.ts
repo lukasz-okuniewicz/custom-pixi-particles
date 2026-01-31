@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture, Ticker } from 'pixi.js-legacy'
+import { Container, Sprite, Texture, Ticker } from 'pixi.js'
 
 export interface ICrystallizeEffectOptions {
   cellScale?: number     // approximate cell size in pixels (default: 16)

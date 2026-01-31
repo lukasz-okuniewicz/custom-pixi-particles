@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture, Ticker } from 'pixi.js-legacy'
+import { Container, Sprite, Texture, Ticker } from 'pixi.js'
 
 export interface IPrismRefractionEffectOptions {
   dispersionStrength?: number // pixels of R/B offset (default: 8)

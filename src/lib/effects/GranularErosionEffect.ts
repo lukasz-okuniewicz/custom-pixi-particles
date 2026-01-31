@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture, Ticker } from 'pixi.js-legacy'
+import { Container, Sprite, Texture, Ticker } from 'pixi.js'
 import { createNoise2D } from 'simplex-noise'
 
 export interface IGranularErosionEffectOptions {
