@@ -4,6 +4,7 @@ import * as emissions from '../emission'
 import * as behaviours from '../behaviour'
 import { BehaviourRegistry } from '../behaviour/BehaviourRegistry'
 import PlaceholderBehaviour from '../behaviour/PlaceholderBehaviour'
+import BehaviourNames from '../behaviour/BehaviourNames'
 import { Emitter } from '../emitter'
 import Model from '../Model'
 
@@ -83,6 +84,8 @@ export default class EmitterParser {
       }
     }
 
+    this.wireBoidsParticleList()
+
     this.emitter.emitController = this.createEmitController(
       config.emitController.name || emissions.EmissionTypes.DEFAULT,
     )
@@ -129,6 +132,8 @@ export default class EmitterParser {
       }
     }
 
+    this.wireBoidsParticleList()
+
     this.emitter.emitController.getParser().read(config.emitController)
     this.emitter.duration.maxTime = CompatibilityHelper.readDuration(config)
     if (resetDuration) {
@@ -149,6 +154,24 @@ export default class EmitterParser {
     }
 
     return this.emitter
+  }
+
+  /**
+   * Wires neighbour-based behaviours to use this emitter's particle list.
+   */
+  private wireBoidsParticleList = () => {
+    const boids = this.emitter.behaviours.getByName(BehaviourNames.BOIDS_FLOCKING_BEHAVIOUR) as any
+    if (boids && typeof boids.particleListGetter !== 'undefined') {
+      boids.particleListGetter = () => this.emitter.list
+    }
+    const phaseCoherence = this.emitter.behaviours.getByName(BehaviourNames.PHASE_COHERENCE_BEHAVIOUR) as any
+    if (phaseCoherence && typeof phaseCoherence.particleListGetter !== 'undefined') {
+      phaseCoherence.particleListGetter = () => this.emitter.list
+    }
+    const curvatureFlow = this.emitter.behaviours.getByName(BehaviourNames.CURVATURE_FLOW_BEHAVIOUR) as any
+    if (curvatureFlow && typeof curvatureFlow.particleListGetter !== 'undefined') {
+      curvatureFlow.particleListGetter = () => this.emitter.list
+    }
   }
 
   /**
