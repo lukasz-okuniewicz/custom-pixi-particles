@@ -9,6 +9,11 @@ import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInte
 import { EmitterParser } from '../parser'
 import { AnimatedSprite, Assets, Container, Graphics, Sprite, Texture, Ticker } from 'pixi.js'
 import Model from '../Model'
+import {
+  pickVariantIndex,
+  resolveTextureVariants,
+  type TextureVariantFrames,
+} from '../textureVariants'
 
 /**
  * Renderer is a class used to render particles in the Pixi library.
@@ -25,7 +30,8 @@ export default class TestRenderer extends Container {
   private zeroPad: number = 2
   private indexToStart: number = 0
   private finishingTextureNames: string[]
-  private unusedSprites: any[] = []
+  private unusedStaticSprites: Sprite[] = []
+  private unusedAnimatedSprites: AnimatedSprite[] = []
   private emitterParser: EmitterParser
   private turbulenceParser: EmitterParser | undefined
   private config: any
@@ -184,13 +190,12 @@ export default class TestRenderer extends Container {
    * @description This method updates the texture of the unused sprites and children to a randomly generated texture.
    */
   updateTexture() {
-    for (let i = 0; i < this.unusedSprites.length; ++i) {
-      this.unusedSprites[i].texture = Assets.get(this.getRandomTexture())
-    }
-
-    for (let i = 0; i < this.children?.length; ++i) {
-      // @ts-ignore
-      this.children[i].texture = Texture.from(this.getRandomTexture())
+    const ids = this.getStaticTextureIdsForPreview()
+    const pick = () => ids[Math.floor(Math.random() * Math.max(1, ids.length))] || this.getRandomLegacyTexture()
+    for (let i = 0; i < this.unusedStaticSprites.length; ++i) {
+      const id = pick()
+      const t = Assets.get(id) ?? Texture.from(id)
+      this.unusedStaticSprites[i].texture = t
     }
   }
 
@@ -252,7 +257,9 @@ export default class TestRenderer extends Container {
     // @ts-ignore
     this.turbulenceParser = undefined
     // @ts-ignore
-    this.unusedSprites = undefined
+    this.unusedStaticSprites = undefined
+    // @ts-ignore
+    this.unusedAnimatedSprites = undefined
     // @ts-ignore
     this._model = undefined
     this.onComplete = undefined
@@ -361,7 +368,8 @@ export default class TestRenderer extends Container {
    */
   clearPool() {
     this.removeChildren()
-    this.unusedSprites = []
+    this.unusedStaticSprites = []
+    this.unusedAnimatedSprites = []
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       if (this.emitter) {
         this.emitter.turbulencePool.list.reset()
@@ -385,46 +393,78 @@ export default class TestRenderer extends Container {
     return null
   }
 
-  private getOrCreateSprite() {
-    while (this.unusedSprites.length > 0) {
-      const sprite = this.unusedSprites.pop()
-      if (sprite) {
-        if (this.finishingTextureNames && this.finishingTextureNames.length) {
-          sprite.texture = Assets.get(this.getRandomTexture())
+  private textureFromAssetId(assetId: string): Texture {
+    return Assets.get(assetId) ?? Texture.from(assetId)
+  }
+
+  private getStaticTextureIdsForPreview(): string[] {
+    const { variants } = resolveTextureVariants(this.textures, this.emitter)
+    const ids: string[] = []
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i]
+      if (v.type === 'staticRandom') {
+        for (let j = 0; j < v.textures.length; j++) {
+          ids.push(v.textures[j])
         }
-        return sprite
       }
     }
+    if (ids.length) return ids
+    return this.textures
+  }
 
-    if (this.emitter?.animatedSprite) {
-      const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
-      if (textures.length) {
-        const animation: AnimatedSprite = new AnimatedSprite(textures)
-        animation.anchor.set(this.anchor.x, this.anchor.y)
-        // @ts-ignore
-        animation.loop = this.emitter?.animatedSprite.loop
-        // @ts-ignore
-        animation.animationSpeed = this.emitter?.animatedSprite.frameRate
-        return this.addChild(animation)
+  private acquireStaticSprite(assetId: string): Sprite {
+    let sprite = this.unusedStaticSprites.pop()
+    if (sprite) {
+      if (this.finishingTextureNames && this.finishingTextureNames.length) {
+        sprite.texture = Assets.get(this.getRandomLegacyTexture()) ?? Texture.from(this.getRandomLegacyTexture())
+      } else {
+        sprite.texture = this.textureFromAssetId(assetId)
       }
+      return sprite
     }
 
-    const sprite = new Sprite(Texture.from(this.getRandomTexture()))
+    sprite = new Sprite(this.textureFromAssetId(assetId))
     sprite.anchor.set(this.anchor.x, this.anchor.y)
     return this.addChild(sprite)
   }
 
-  private createFrameAnimationByName(prefix: string, imageFileExtension: string = 'png'): Texture[] {
-    const zeroPad = this.zeroPad
+  private acquireAnimatedSprite(
+    frameTextures: Texture[],
+    loop: boolean,
+    frameRate: number,
+  ): AnimatedSprite {
+    let anim = this.unusedAnimatedSprites.pop()
+    if (anim && frameTextures.length) {
+      anim.textures = frameTextures
+      anim.loop = loop
+      anim.animationSpeed = frameRate
+      anim.gotoAndStop(0)
+      return anim
+    }
+
+    const animation: AnimatedSprite = new AnimatedSprite(frameTextures)
+    animation.anchor.set(this.anchor.x, this.anchor.y)
+    animation.loop = loop
+    animation.animationSpeed = frameRate
+    return this.addChild(animation)
+  }
+
+  private createFrameAnimationByName(
+    prefix: string,
+    imageFileExtension: string = 'png',
+    zeroPad: number = this.zeroPad,
+    indexFrameStart: number = this.indexToStart,
+  ): Texture[] {
+    const zeroPadLocal = zeroPad
     const textures: Texture[] = []
     let frame: string = ''
-    let indexFrame: number = this.indexToStart
+    let indexFrame: number = indexFrameStart
     let padding: number = 0
     let texture: any
 
     do {
       frame = indexFrame.toString()
-      padding = zeroPad - frame.length
+      padding = zeroPadLocal - frame.length
       if (padding > 0) {
         frame = '0'.repeat(padding) + frame
       }
@@ -432,7 +472,7 @@ export default class TestRenderer extends Container {
         const fileName = `${prefix}${frame}.${imageFileExtension}`
         const file = Assets.get(fileName)
         if (file) {
-          texture = Assets.get(fileName)
+          texture = file
           textures.push(texture)
           indexFrame += 1
         } else {
@@ -446,19 +486,61 @@ export default class TestRenderer extends Container {
   }
 
   private onCreate(particle: Particle) {
-    const sprite = this.getOrCreateSprite()
+    const { variants, weights } = resolveTextureVariants(this.textures, this.emitter)
+    const idx = pickVariantIndex(weights)
+    const variant = variants[idx]
+    particle.textureVariantIndex = idx
+
+    const animDefaults = this.emitter?.animatedSprite as any
+
+    if (variant.type === 'staticRandom') {
+      particle.spriteDisplayKind = 'static'
+      const pool = variant.textures.length ? variant.textures : this.textures
+      const assetId = pool[Math.floor(Math.random() * pool.length)]
+      const sprite = this.acquireStaticSprite(assetId)
+      sprite.visible = true
+      sprite.alpha = 1
+      if (this.blendMode) {
+        sprite.blendMode = this.blendMode
+      }
+      particle.sprite = sprite
+      return
+    }
+
+    const v = variant as TextureVariantFrames
+    particle.spriteDisplayKind = 'animated'
+    const frameTextures = this.createFrameAnimationByName(
+      v.prefix,
+      'png',
+      v.animatedSpriteZeroPad ?? this.zeroPad,
+      v.animatedSpriteIndexToStart ?? this.indexToStart,
+    )
+    const loop = v.loop ?? animDefaults?.loop ?? true
+    const frameRate = v.frameRate ?? animDefaults?.frameRate ?? 0.25
+    if (!frameTextures.length) {
+      const assetId = this.getRandomLegacyTexture()
+      particle.spriteDisplayKind = 'static'
+      const sprite = this.acquireStaticSprite(assetId)
+      sprite.visible = true
+      sprite.alpha = 1
+      if (this.blendMode) {
+        sprite.blendMode = this.blendMode
+      }
+      particle.sprite = sprite
+      return
+    }
+
+    const sprite = this.acquireAnimatedSprite(frameTextures, loop, frameRate)
     sprite.visible = true
     sprite.alpha = 1
     if (this.blendMode) {
       sprite.blendMode = this.blendMode
     }
-    if (sprite instanceof AnimatedSprite) {
-      if (this.emitter?.animatedSprite.randomFrameStart) {
-        const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
-        sprite.gotoAndPlay(this.getRandomFrameNumber(textures.length))
-      } else {
-        sprite.play()
-      }
+    const randomStart = v.randomFrameStart ?? animDefaults?.randomFrameStart
+    if (randomStart) {
+      sprite.gotoAndPlay(this.getRandomFrameNumber(frameTextures.length))
+    } else {
+      sprite.play()
     }
     particle.sprite = sprite
   }
@@ -468,7 +550,7 @@ export default class TestRenderer extends Container {
     if (particle.showVortices) {
       sprite = new Sprite(Texture.from('vortex.png'))
     } else {
-      sprite = new Sprite()
+      sprite = new Sprite(Texture.WHITE)
     }
     sprite.anchor.set(this.anchor.x, this.anchor.y)
     this.addChild(sprite)
@@ -514,6 +596,7 @@ export default class TestRenderer extends Container {
   private onFinishing(particle: Particle) {
     if (!this.finishingTextureNames || !this.finishingTextureNames.length) return
     const sprite = particle.sprite
+    if (sprite instanceof AnimatedSprite) return
     if (particle.finishingTexture <= this.finishingTextureNames.length - 1) {
       sprite.texture = Texture.from(this.getRandomFinishingTexture())
       particle.finishingTexture++
@@ -534,8 +617,10 @@ export default class TestRenderer extends Container {
       }
       if (sprite instanceof AnimatedSprite) {
         sprite.stop()
+        this.unusedAnimatedSprites.push(sprite)
+      } else {
+        this.unusedStaticSprites.push(sprite as Sprite)
       }
-      this.unusedSprites.push(sprite)
       ;(particle as any).sprite = null
     }
 
@@ -552,7 +637,8 @@ export default class TestRenderer extends Container {
     delete (particle as any).sprite
   }
 
-  private getRandomTexture(): string {
+  private getRandomLegacyTexture(): string {
+    if (!this.textures.length) return ''
     return this.textures[Math.floor(Math.random() * this.textures.length)]
   }
 

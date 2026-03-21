@@ -57,6 +57,12 @@ export default class EmitterParser {
     if (typeof this.emitter.animatedSprite !== 'undefined') {
       config.animatedSprite = this.emitter.animatedSprite
     }
+    if (typeof this.emitter.textureVariants !== 'undefined') {
+      config.textureVariants = this.emitter.textureVariants
+    }
+    if (typeof this.emitter.variantWeights !== 'undefined') {
+      config.variantWeights = this.emitter.variantWeights
+    }
     return config
   }
 
@@ -102,6 +108,16 @@ export default class EmitterParser {
     }
     if (typeof config.animatedSprite !== 'undefined') {
       this.emitter.animatedSprite = config.animatedSprite
+    }
+    if (typeof config.textureVariants !== 'undefined') {
+      this.emitter.textureVariants = config.textureVariants
+    } else {
+      this.emitter.textureVariants = undefined
+    }
+    if (typeof config.variantWeights !== 'undefined') {
+      this.emitter.variantWeights = config.variantWeights
+    } else {
+      this.emitter.variantWeights = undefined
     }
 
     return this.emitter
@@ -151,6 +167,16 @@ export default class EmitterParser {
     }
     if (typeof config.animatedSprite !== 'undefined') {
       this.emitter.animatedSprite = config.animatedSprite
+    }
+    if (typeof config.textureVariants !== 'undefined') {
+      this.emitter.textureVariants = config.textureVariants
+    } else {
+      this.emitter.textureVariants = undefined
+    }
+    if (typeof config.variantWeights !== 'undefined') {
+      this.emitter.variantWeights = config.variantWeights
+    } else {
+      this.emitter.variantWeights = undefined
     }
 
     return this.emitter

@@ -15,7 +15,11 @@ import {
   ShatterEffect,
   SlitScanEffect,
 } from './lib/effects'
-import { Container, Graphics } from 'pixi.js'
+import { Container, extensions, FederatedContainer, Graphics } from 'pixi.js'
+
+// Pixi applies FederatedContainer in events/init after async browser extension load; creating
+// particle containers before that runs leaves isInteractive() missing on Container.prototype.
+extensions.mixin(Container, FederatedContainer)
 
 // tslint:disable-next-line:max-line-length
 export type {
@@ -133,6 +137,7 @@ const _customPixiParticlesEditorOnly = {
   },
 }
 
+export type { TextureVariant, TextureVariantFrames, TextureVariantStaticRandom } from './lib/textureVariants'
 export type { IBehaviour } from './lib/behaviour'
 export {
   Behaviour,

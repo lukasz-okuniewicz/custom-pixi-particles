@@ -179,6 +179,12 @@ export default class Particle {
    */
   finishingTexture: number
 
+  /** Index into resolved `textureVariants` for this spawn (-1 if unused). */
+  textureVariantIndex: number
+
+  /** Whether the display object plays a frame strip or a single texture. */
+  spriteDisplayKind: 'static' | 'animated'
+
   /**
    * Stores the camera z position of the particle
    */
@@ -300,6 +306,8 @@ export default class Particle {
     this.directionSin = 0
 
     this.finishingTexture = 0
+    this.textureVariantIndex = -1
+    this.spriteDisplayKind = 'static'
 
     this.showVortices = false
     this.turbulence = false
