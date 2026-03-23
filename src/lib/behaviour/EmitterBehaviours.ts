@@ -114,9 +114,9 @@ export default class EmitterBehaviours {
    * @param {Model} model The model
    */
   apply = (particle: Particle, deltaTime: number, model: Model) => {
-    for (let i = 0; i < this.behaviours.length; ++i) {
-      model.updateCamera(deltaTime)
-      this.behaviours[i].apply(particle, deltaTime, model)
+    const enabled = this.getAll()
+    for (let i = 0; i < enabled.length; ++i) {
+      enabled[i].apply(particle, deltaTime, model)
     }
   }
 
@@ -126,9 +126,10 @@ export default class EmitterBehaviours {
    * @param {number} deltaTime The delta time
    */
   update = (deltaTime: number) => {
-    for (let i = 0; i < this.behaviours.length; ++i) {
-      const updateFn = this.behaviours[i].update
-      if (updateFn) updateFn.call(this.behaviours[i], deltaTime)
+    const enabled = this.getAll()
+    for (let i = 0; i < enabled.length; ++i) {
+      const updateFn = enabled[i].update
+      if (updateFn) updateFn.call(enabled[i], deltaTime)
     }
   }
 
@@ -138,9 +139,10 @@ export default class EmitterBehaviours {
    * @param {Particle} particle The particle being removed.
    */
   onParticleRemoved = (particle: Particle) => {
-    for (let i = 0; i < this.behaviours.length; ++i) {
-      const onRemoved = this.behaviours[i].onParticleRemoved
-      if (onRemoved) onRemoved.call(this.behaviours[i], particle)
+    const enabled = this.getAll()
+    for (let i = 0; i < enabled.length; ++i) {
+      const onRemoved = enabled[i].onParticleRemoved
+      if (onRemoved) onRemoved.call(enabled[i], particle)
     }
   }
 }

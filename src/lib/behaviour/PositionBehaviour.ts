@@ -6,7 +6,8 @@ import MinMax from '../util/MinMax'
 import ThereBack from '../util/ThereBack'
 
 export default class PositionBehaviour extends Behaviour {
-  enabled = false
+  /** Default true so integration runs when config omits `enabled` (most emitters need this). */
+  enabled = true
   priority = 100
   warp: boolean = false
   warpSpeed: number = 0
@@ -131,7 +132,7 @@ export default class PositionBehaviour extends Behaviour {
    * @param {Model} model - The model containing information about the particle's movement
    */
   apply = (particle: Particle, deltaTime: number, model: Model) => {
-    if (particle.skipPositionBehaviour) return
+    if (!this.enabled || particle.skipPositionBehaviour) return
     if (!this.fromAtoB) {
       const { acceleration, sinXVal, sinYVal, z, warpSizeStart, movement } = particle
       const { cameraZ } = model

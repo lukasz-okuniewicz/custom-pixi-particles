@@ -7,6 +7,7 @@ import PlaceholderBehaviour from '../behaviour/PlaceholderBehaviour'
 import BehaviourNames from '../behaviour/BehaviourNames'
 import { Emitter } from '../emitter'
 import Model from '../Model'
+import { resolveBlendMode } from '../util/resolveBlendMode'
 
 /**
  * @class EmitterParser
@@ -57,6 +58,12 @@ export default class EmitterParser {
     if (typeof this.emitter.animatedSprite !== 'undefined') {
       config.animatedSprite = this.emitter.animatedSprite
     }
+    if (typeof this.emitter.textureVariants !== 'undefined') {
+      config.textureVariants = this.emitter.textureVariants
+    }
+    if (typeof this.emitter.variantWeights !== 'undefined') {
+      config.variantWeights = this.emitter.variantWeights
+    }
     return config
   }
 
@@ -98,10 +105,20 @@ export default class EmitterParser {
       this.emitter.anchor = config.anchor
     }
     if (typeof config.blendMode !== 'undefined') {
-      this.emitter.blendMode = config.blendMode
+      this.emitter.blendMode = resolveBlendMode(config.blendMode)
     }
     if (typeof config.animatedSprite !== 'undefined') {
       this.emitter.animatedSprite = config.animatedSprite
+    }
+    if (typeof config.textureVariants !== 'undefined') {
+      this.emitter.textureVariants = config.textureVariants
+    } else {
+      this.emitter.textureVariants = undefined
+    }
+    if (typeof config.variantWeights !== 'undefined') {
+      this.emitter.variantWeights = config.variantWeights
+    } else {
+      this.emitter.variantWeights = undefined
     }
 
     return this.emitter
@@ -147,10 +164,20 @@ export default class EmitterParser {
       this.emitter.anchor = config.anchor
     }
     if (typeof config.blendMode !== 'undefined') {
-      this.emitter.blendMode = config.blendMode
+      this.emitter.blendMode = resolveBlendMode(config.blendMode)
     }
     if (typeof config.animatedSprite !== 'undefined') {
       this.emitter.animatedSprite = config.animatedSprite
+    }
+    if (typeof config.textureVariants !== 'undefined') {
+      this.emitter.textureVariants = config.textureVariants
+    } else {
+      this.emitter.textureVariants = undefined
+    }
+    if (typeof config.variantWeights !== 'undefined') {
+      this.emitter.variantWeights = config.variantWeights
+    } else {
+      this.emitter.variantWeights = undefined
     }
 
     return this.emitter
@@ -171,6 +198,21 @@ export default class EmitterParser {
     const curvatureFlow = this.emitter.behaviours.getByName(BehaviourNames.CURVATURE_FLOW_BEHAVIOUR) as any
     if (curvatureFlow && typeof curvatureFlow.particleListGetter !== 'undefined') {
       curvatureFlow.particleListGetter = () => this.emitter.list
+    }
+    const rvo = this.emitter.behaviours.getByName(BehaviourNames.RVO_AVOIDANCE_BEHAVIOUR) as any
+    if (rvo && typeof rvo.particleListGetter !== 'undefined') {
+      rvo.particleListGetter = () => this.emitter.list
+    }
+    const formPattern = this.emitter.behaviours.getByName(BehaviourNames.FORM_PATTERN_BEHAVIOUR) as any
+    // Always wire: optional getter was never set, so the old undefined-check skipped assignment.
+    if (formPattern) {
+      formPattern.particleListGetter = () => this.emitter.list
+      formPattern.positionBehaviourGetter = () =>
+        this.emitter.behaviours.getByName(BehaviourNames.POSITION_BEHAVIOUR)
+      formPattern.emitterWorldPositionGetter = () => {
+        const wp = this.emitter.worldPosition
+        return wp && typeof wp.x === 'number' && typeof wp.y === 'number' ? wp : null
+      }
     }
   }
 

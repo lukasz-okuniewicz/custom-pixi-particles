@@ -179,6 +179,12 @@ export default class Particle {
    */
   finishingTexture: number
 
+  /** Index into resolved `textureVariants` for this spawn (-1 if unused). */
+  textureVariantIndex: number
+
+  /** Whether the display object plays a frame strip or a single texture. */
+  spriteDisplayKind: 'static' | 'animated'
+
   /**
    * Stores the camera z position of the particle
    */
@@ -256,6 +262,69 @@ export default class Particle {
   moveToPointTotalDistance: number = 0
   moveToPointAccumulatedLinearDistance: number = 0
 
+  /** FormPatternBehaviour: mutually exclusive with MoveToPointBehaviour for predictable motion */
+  formPatternTargetX: number = 0
+  formPatternTargetY: number = 0
+  formPatternInitialX: number = 0
+  formPatternInitialY: number = 0
+  formPatternTotalDistance: number = 0
+  formPatternAccumulatedLinearDistance: number = 0
+  formPatternPathTime: number = 0
+  formPatternAssigned: boolean = false
+  /** Delay before motion along the chord starts (seconds remaining) */
+  formPatternStaggerRemaining: number = 0
+  /** Per-particle speed multiplier (Form Pattern) */
+  formPatternSpeedMul: number = 1
+  /** Sine path phase offset (radians) */
+  formPatternSinPhase: number = 0
+  /** Hold at target after arrival (seconds remaining) */
+  formPatternLingerRemaining: number = 0
+  /** Local-space pattern target (for liveFormationTransform) */
+  formPatternLocalX: number = 0
+  formPatternLocalY: number = 0
+  /** Scales path deviations (arc, spiral, sine, noise) */
+  formPatternPathMul: number = 1
+  /** springSeek integration */
+  formPatternSpringVx: number = 0
+  formPatternSpringVy: number = 0
+  /**
+   * Snapshot before FormPattern image tint (for imageRestoreOriginalColorOnDeactivate).
+   */
+  formPatternColorBackup: {
+    cr: number
+    cg: number
+    cb: number
+    ca: number
+    sr: number
+    sg: number
+    sb: number
+    sa: number
+    er: number
+    eg: number
+    eb: number
+    ea: number
+  } | null = null
+  /** imageBitmap: lerp color from→to when imageColorBlendDurationMs > 0 */
+  formPatternImageColorBlendActive = false
+  formPatternImageColorBlendElapsed = 0
+  formPatternImageBlendFr = 0
+  formPatternImageBlendFg = 0
+  formPatternImageBlendFb = 0
+  formPatternImageBlendTr = 0
+  formPatternImageBlendTg = 0
+  formPatternImageBlendTb = 0
+
+  /** Unit chord initial→target for overshoot */
+  formPatternChordUx = 1
+  formPatternChordUy = 0
+  /** -1 = not overshooting; 0–1 = overshoot phase progress */
+  formPatternOvershootT = -1
+
+  formPatternVisBaseAlpha = 1
+  formPatternVisBaseSizeX = 1
+  formPatternVisBaseSizeY = 1
+  formPatternVisualActive = false
+
   /**
    * Constructs a particle object
    */
@@ -300,6 +369,8 @@ export default class Particle {
     this.directionSin = 0
 
     this.finishingTexture = 0
+    this.textureVariantIndex = -1
+    this.spriteDisplayKind = 'static'
 
     this.showVortices = false
     this.turbulence = false
@@ -356,6 +427,40 @@ export default class Particle {
     this.moveToPointInitialY = 0
     this.moveToPointTotalDistance = 0
     this.moveToPointAccumulatedLinearDistance = 0
+
+    this.formPatternTargetX = 0
+    this.formPatternTargetY = 0
+    this.formPatternInitialX = 0
+    this.formPatternInitialY = 0
+    this.formPatternTotalDistance = 0
+    this.formPatternAccumulatedLinearDistance = 0
+    this.formPatternPathTime = 0
+    this.formPatternAssigned = false
+    this.formPatternStaggerRemaining = 0
+    this.formPatternSpeedMul = 1
+    this.formPatternSinPhase = 0
+    this.formPatternLingerRemaining = 0
+    this.formPatternLocalX = 0
+    this.formPatternLocalY = 0
+    this.formPatternPathMul = 1
+    this.formPatternSpringVx = 0
+    this.formPatternSpringVy = 0
+    this.formPatternColorBackup = null
+    this.formPatternImageColorBlendActive = false
+    this.formPatternImageColorBlendElapsed = 0
+    this.formPatternImageBlendFr = 0
+    this.formPatternImageBlendFg = 0
+    this.formPatternImageBlendFb = 0
+    this.formPatternImageBlendTr = 0
+    this.formPatternImageBlendTg = 0
+    this.formPatternImageBlendTb = 0
+    this.formPatternChordUx = 1
+    this.formPatternChordUy = 0
+    this.formPatternOvershootT = -1
+    this.formPatternVisBaseAlpha = 1
+    this.formPatternVisBaseSizeX = 1
+    this.formPatternVisBaseSizeY = 1
+    this.formPatternVisualActive = false
   }
 
   /**
