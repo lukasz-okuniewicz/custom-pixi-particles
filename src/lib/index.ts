@@ -4,7 +4,7 @@ import * as parser from './parser'
 import * as effects from './effects'
 import Particle from './Particle'
 import ParticlePool from './ParticlePool'
-import { Duration, Emitter } from './emitter'
+import { Duration, Emitter, PersistentWrapEmitter } from './emitter'
 import { Color, Point, Random } from './util'
 
 const cpp = {
@@ -19,6 +19,7 @@ const cpp = {
   Random,
   Duration,
   Emitter,
+  PersistentWrapEmitter,
 }
 
 export default cpp

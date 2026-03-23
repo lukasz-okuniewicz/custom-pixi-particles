@@ -9,6 +9,8 @@ export default class SizeBehaviour extends Behaviour {
   sizeEnd = new Point(1, 1)
   startVariance = 0
   endVariance = 0
+  /** When true, each particle's end size equals its own start size (after start variance); sizeEnd/endVariance are ignored. */
+  endMatchesStart = false
   maxSize = new Point(2, 2) // Maximum size clamp
   uniformScaling = true // Toggle for uniform scaling
   pulsate = false // Enable pulsating size effect
@@ -30,13 +32,20 @@ export default class SizeBehaviour extends Behaviour {
     const sizeStartX = this.sizeStart.x + variance
     const sizeStartY = this.sizeStart.y + variance
 
-    variance = this.varianceFrom(this.endVariance)
-    const sizeEndX = this.sizeEnd.x + variance
-    const sizeEndY = this.sizeEnd.y + variance
-
-    particle.sizeDifference = {
-      x: sizeEndX - sizeStartX,
-      y: sizeEndY - sizeStartY,
+    let sizeEndX: number
+    let sizeEndY: number
+    if (this.endMatchesStart) {
+      sizeEndX = sizeStartX
+      sizeEndY = sizeStartY
+      particle.sizeDifference = { x: 0, y: 0 }
+    } else {
+      variance = this.varianceFrom(this.endVariance)
+      sizeEndX = this.sizeEnd.x + variance
+      sizeEndY = this.sizeEnd.y + variance
+      particle.sizeDifference = {
+        x: sizeEndX - sizeStartX,
+        y: sizeEndY - sizeStartY,
+      }
     }
 
     particle.sizeStart.x = sizeStartX
@@ -150,6 +159,7 @@ export default class SizeBehaviour extends Behaviour {
       },
       startVariance: this.startVariance,
       endVariance: this.endVariance,
+      endMatchesStart: this.endMatchesStart,
       maxSize: {
         x: this.maxSize.x,
         y: this.maxSize.y,

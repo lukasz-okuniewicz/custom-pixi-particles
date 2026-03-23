@@ -14,6 +14,11 @@ import {
   resolveTextureVariants,
   type TextureVariantFrames,
 } from '../textureVariants'
+import {
+  drawParticleLinks,
+  mergeParticleLinkSettings,
+  type IParticleLinkSettings,
+} from './particleLinkLayer'
 
 /**
  * Renderer is a class used to render particles in the Pixi library.
@@ -37,10 +42,16 @@ export default class TestRenderer extends Container {
   private config: any
   private anchor: { x: number; y: number } = { x: 0.5, y: 0.5 }
   private _model: Model = new Model()
+  private _canvasSizeProvider?: () => { width: number; height: number }
   private _ticker: Ticker | undefined
   private _visibilitychangeBinding: any
   private _firstParticleHasBeenDestroyed = false
   wireframeGraphics: Graphics | null = null
+
+  particleLinkGraphics: Graphics | null = null
+  formPatternPreviewGraphics: Graphics | null = null
+  private _particleLinkSettings: IParticleLinkSettings | null = null
+  private _particleLinkFrameCounter = 0
 
   /**
    * Creates an instance of Renderer.
@@ -57,10 +68,13 @@ export default class TestRenderer extends Container {
       maxFPS,
       minFPS,
       tickerSpeed,
+      particleLinks,
+      canvasSizeProvider,
     } = settings
 
     super()
 
+    this._canvasSizeProvider = canvasSizeProvider
     this.config = emitterConfig
     this.textures = textures
     this.finishingTextureNames = finishingTextures!
@@ -105,10 +119,23 @@ export default class TestRenderer extends Container {
       this.emitter.turbulencePool.list = this.turbulenceEmitter.list
     }
 
+    if (particleLinks != null) {
+      const merged = mergeParticleLinkSettings(particleLinks)
+      if (merged.enabled) {
+        this._particleLinkSettings = merged
+        const linkG = new Graphics()
+        if (merged.blendMode != null) {
+          linkG.blendMode = merged.blendMode
+        }
+        this.particleLinkGraphics = linkG
+        this.addChildAt(linkG, 0)
+      }
+    }
+
     const wireframeConfigIndex = this.getConfigIndexByName(BehaviourNames.WIREFRAME_3D_BEHAVIOUR, emitterConfig)
     if (wireframeConfigIndex !== -1) {
       const wireframeGraphics = new Graphics()
-      this.addChildAt(wireframeGraphics, 0)
+      this.addChildAt(wireframeGraphics, this.particleLinkGraphics ? 1 : 0)
       this.wireframeGraphics = wireframeGraphics
     }
 
@@ -169,10 +196,37 @@ export default class TestRenderer extends Container {
   }
 
   /**
+   * Feeds {@link Model.toroidalCanvasBounds} when ToroidalWrapBehaviour.useCanvasBounds is on.
+   */
+  private syncToroidalCanvasBoundsOnModel(): void {
+    const wrap = this.emitter?.behaviours?.getByName(BehaviourNames.TOROIDAL_WRAP_BEHAVIOUR) as
+      | { enabled?: boolean; useCanvasBounds?: boolean }
+      | null
+    if (!wrap?.enabled || !wrap.useCanvasBounds) {
+      this._model.clearToroidalCanvasBounds()
+      return
+    }
+    if (this._canvasSizeProvider) {
+      try {
+        const { width, height } = this._canvasSizeProvider()
+        if (width > 0 && height > 0) {
+          this._model.setToroidalCanvasBoundsFromSize(width, height)
+          return
+        }
+      } catch {
+        //
+      }
+    }
+    this._model.clearToroidalCanvasBounds()
+  }
+
+  /**
    * Updates the transform of the ParticleContainer and updates the emitters.
    */
   _updateTransform(ticker: Ticker): void {
     if (this._paused) return
+
+    this.syncToroidalCanvasBoundsOnModel()
 
     this.emitter?.update(ticker.deltaTime)
     if (this.turbulenceEmitter) {
@@ -181,6 +235,65 @@ export default class TestRenderer extends Container {
     const wireframeBehaviour = this.emitter?.behaviours?.getByName(BehaviourNames.WIREFRAME_3D_BEHAVIOUR) as any
     if (wireframeBehaviour?.enabled && this.wireframeGraphics && typeof wireframeBehaviour.draw === 'function') {
       wireframeBehaviour.draw(this.wireframeGraphics, ticker.deltaTime)
+    }
+
+    const formPatternBehaviour = this.emitter?.behaviours?.getByName(BehaviourNames.FORM_PATTERN_BEHAVIOUR) as
+      | {
+          enabled?: boolean
+          active?: boolean
+          showTargetsPreview?: boolean
+          showPathPreview?: boolean
+          draw?: (g: Graphics, dt: number) => void
+        }
+      | null
+    if (
+      formPatternBehaviour?.enabled &&
+      formPatternBehaviour.active &&
+      (formPatternBehaviour.showTargetsPreview || formPatternBehaviour.showPathPreview) &&
+      typeof formPatternBehaviour.draw === 'function'
+    ) {
+      if (!this.formPatternPreviewGraphics) {
+        const g = new Graphics()
+        this.formPatternPreviewGraphics = g
+        this.addChildAt(g, 0)
+      }
+      formPatternBehaviour.draw(this.formPatternPreviewGraphics, ticker.deltaTime)
+    } else if (this.formPatternPreviewGraphics) {
+      this.formPatternPreviewGraphics.clear()
+    }
+
+    if (this.particleLinkGraphics && this._particleLinkSettings?.enabled && this.emitter?.list) {
+      const every = Math.max(1, this._particleLinkSettings.updateEveryNFrames | 0)
+      if (this._particleLinkFrameCounter % every === 0) {
+        drawParticleLinks(this.particleLinkGraphics, this.emitter.list, this._particleLinkSettings)
+      }
+      this._particleLinkFrameCounter = (this._particleLinkFrameCounter + 1) % 4096
+    }
+  }
+
+  setParticleLinks(partial: Partial<IParticleLinkSettings> | null | undefined): void {
+    if (partial == null) return
+    const merged = mergeParticleLinkSettings({
+      ...(this._particleLinkSettings || undefined),
+      ...partial,
+    })
+    this._particleLinkSettings = merged
+    if (merged.enabled) {
+      if (!this.particleLinkGraphics) {
+        const linkG = new Graphics()
+        if (merged.blendMode != null) {
+          linkG.blendMode = merged.blendMode
+        }
+        this.particleLinkGraphics = linkG
+        this.addChildAt(linkG, 0)
+        if (this.wireframeGraphics) {
+          this.setChildIndex(this.wireframeGraphics, 1)
+        }
+      } else if (merged.blendMode != null) {
+        this.particleLinkGraphics.blendMode = merged.blendMode
+      }
+    } else if (this.particleLinkGraphics) {
+      this.particleLinkGraphics.clear()
     }
   }
 
@@ -241,6 +354,11 @@ export default class TestRenderer extends Container {
    */
   destroy() {
     this.stopImmediately()
+    if (this.particleLinkGraphics) {
+      this.particleLinkGraphics.destroy()
+      this.particleLinkGraphics = null
+    }
+    this._particleLinkSettings = null
     super.destroy()
     if (this.emitter) {
       this.emitter.destroy()
@@ -307,16 +425,34 @@ export default class TestRenderer extends Container {
   }
 
   /**
+   * Keeps Pixi container state in sync with emitter config after hot reloads.
+   * Sprites read blendMode from this container on create (not from emitter.blendMode).
+   */
+  private syncContainerFromEmitterConfig(config: any) {
+    this.config = config
+    if (typeof config.alpha !== 'undefined') {
+      this.alpha = config.alpha
+    }
+    if (typeof config.blendMode !== 'undefined') {
+      this.blendMode = config.blendMode
+    }
+    if (typeof config.anchor !== 'undefined') {
+      this.anchor = config.anchor
+    }
+  }
+
+  /**
    * Updates the configuration of the emitter
    * @param {any} config - Configuration object to be used to update the emitter
    * @param {boolean} resetDuration - should duration be reset
    */
   updateConfig(config: any, resetDuration = false) {
     this.emitterParser?.update(config, this._model, resetDuration)
+    this.syncContainerFromEmitterConfig(config)
     const wireframeConfigIndex = this.getConfigIndexByName(BehaviourNames.WIREFRAME_3D_BEHAVIOUR, config)
     if (wireframeConfigIndex !== -1 && !this.wireframeGraphics) {
       const wireframeGraphics = new Graphics()
-      this.addChildAt(wireframeGraphics, 0)
+      this.addChildAt(wireframeGraphics, this.particleLinkGraphics ? 1 : 0)
       this.wireframeGraphics = wireframeGraphics
     }
     const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
@@ -367,7 +503,25 @@ export default class TestRenderer extends Container {
    * Clears the sprite pool, the unused sprites list and the turbulence and particle pools.
    */
   clearPool() {
+    const hadLinks = this.particleLinkGraphics != null
+    const linkSettings = this._particleLinkSettings
+    const hadWireframe = this.wireframeGraphics != null
     this.removeChildren()
+    if (hadLinks && linkSettings?.enabled) {
+      const linkG = new Graphics()
+      if (linkSettings.blendMode != null) {
+        linkG.blendMode = linkSettings.blendMode
+      }
+      this.particleLinkGraphics = linkG
+      this.addChildAt(linkG, 0)
+    } else {
+      this.particleLinkGraphics = null
+    }
+    if (hadWireframe) {
+      const wf = new Graphics()
+      this.wireframeGraphics = wf
+      this.addChildAt(wf, this.particleLinkGraphics ? 1 : 0)
+    }
     this.unusedStaticSprites = []
     this.unusedAnimatedSprites = []
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {

@@ -9,7 +9,7 @@ export default class CompatibilityHelper {
    * @return {Number} The duration from the given configuration, or -1 if not found.
    */
   static readDuration = (config: any) => {
-    if (config.duration) {
+    if (typeof config.duration === 'number') {
       return config.duration
     }
 

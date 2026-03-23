@@ -7,13 +7,18 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
-import { AnimatedSprite, Assets, Container, Sprite, Texture, Ticker } from 'pixi.js'
+import { AnimatedSprite, Assets, Container, Graphics, Sprite, Texture, Ticker } from 'pixi.js'
 import Model from '../Model'
 import {
   pickVariantIndex,
   resolveTextureVariants,
   type TextureVariantFrames,
 } from '../textureVariants'
+import {
+  drawParticleLinks,
+  mergeParticleLinkSettings,
+  type IParticleLinkSettings,
+} from './particleLinkLayer'
 
 /**
  * Renderer is a class used to render particles in the Pixi library.
@@ -37,11 +42,19 @@ export default class Renderer extends Container {
   private config: any
   private anchor: { x: number; y: number } = { x: 0.5, y: 0.5 }
   private _model: Model = new Model()
+  private _canvasSizeProvider?: () => { width: number; height: number }
   private _ticker: Ticker | undefined
   private _visibilitychangeBinding: any
   private _firstParticleHasBeenDestroyed = false
   /** Set by consumer (or wrapper) when using Wireframe3DBehaviour so the behaviour can draw. */
   wireframeGraphics: any = null
+
+  /** Proximity line mesh drawn below particle sprites when `particleLinks` is enabled in settings. */
+  particleLinkGraphics: Graphics | null = null
+  /** Optional overlay when FormPatternBehaviour has showTargetsPreview. */
+  formPatternPreviewGraphics: Graphics | null = null
+  private _particleLinkSettings: IParticleLinkSettings | null = null
+  private _particleLinkFrameCounter = 0
 
   /**
    * Creates an instance of Renderer.
@@ -64,10 +77,13 @@ export default class Renderer extends Container {
       maxFPS,
       minFPS,
       tickerSpeed,
+      particleLinks,
+      canvasSizeProvider,
     } = settings
 
     super()
 
+    this._canvasSizeProvider = canvasSizeProvider
     this.config = emitterConfig
     this.textures = textures
     this.finishingTextureNames = finishingTextures!
@@ -110,6 +126,19 @@ export default class Renderer extends Container {
     this.emitter.on(Emitter.COMPLETE, this.onCompleteFN, this)
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       this.emitter.turbulencePool.list = this.turbulenceEmitter.list
+    }
+
+    if (particleLinks != null) {
+      const merged = mergeParticleLinkSettings(particleLinks)
+      if (merged.enabled) {
+        this._particleLinkSettings = merged
+        const linkG = new Graphics()
+        if (merged.blendMode != null) {
+          linkG.blendMode = merged.blendMode
+        }
+        this.particleLinkGraphics = linkG
+        this.addChildAt(linkG, 0)
+      }
     }
 
     this._visibilitychangeBinding = () => this.internalPause(document.hidden)
@@ -169,10 +198,37 @@ export default class Renderer extends Container {
   }
 
   /**
+   * Feeds {@link Model.toroidalCanvasBounds} when ToroidalWrapBehaviour.useCanvasBounds is on.
+   */
+  private syncToroidalCanvasBoundsOnModel(): void {
+    const wrap = this.emitter?.behaviours?.getByName(BehaviourNames.TOROIDAL_WRAP_BEHAVIOUR) as
+      | { enabled?: boolean; useCanvasBounds?: boolean }
+      | null
+    if (!wrap?.enabled || !wrap.useCanvasBounds) {
+      this._model.clearToroidalCanvasBounds()
+      return
+    }
+    if (this._canvasSizeProvider) {
+      try {
+        const { width, height } = this._canvasSizeProvider()
+        if (width > 0 && height > 0) {
+          this._model.setToroidalCanvasBoundsFromSize(width, height)
+          return
+        }
+      } catch {
+        //
+      }
+    }
+    this._model.clearToroidalCanvasBounds()
+  }
+
+  /**
    * Updates the transform of the ParticleContainer and updates the emitters.
    */
   _updateTransform(ticker: Ticker) {
     if (this._paused) return
+
+    this.syncToroidalCanvasBoundsOnModel()
 
     this.emitter?.update(ticker.deltaTime)
     if (this.turbulenceEmitter) {
@@ -181,6 +237,65 @@ export default class Renderer extends Container {
     const wireframeBehaviour = this.emitter?.behaviours?.getByName(BehaviourNames.WIREFRAME_3D_BEHAVIOUR) as any
     if (wireframeBehaviour?.enabled && this.wireframeGraphics && typeof wireframeBehaviour.draw === 'function') {
       wireframeBehaviour.draw(this.wireframeGraphics, ticker.deltaTime)
+    }
+
+    const formPatternBehaviour = this.emitter?.behaviours?.getByName(BehaviourNames.FORM_PATTERN_BEHAVIOUR) as
+      | {
+          enabled?: boolean
+          active?: boolean
+          showTargetsPreview?: boolean
+          showPathPreview?: boolean
+          draw?: (g: Graphics, dt: number) => void
+        }
+      | null
+    if (
+      formPatternBehaviour?.enabled &&
+      formPatternBehaviour.active &&
+      (formPatternBehaviour.showTargetsPreview || formPatternBehaviour.showPathPreview) &&
+      typeof formPatternBehaviour.draw === 'function'
+    ) {
+      if (!this.formPatternPreviewGraphics) {
+        const g = new Graphics()
+        this.formPatternPreviewGraphics = g
+        this.addChildAt(g, 0)
+      }
+      formPatternBehaviour.draw(this.formPatternPreviewGraphics, ticker.deltaTime)
+    } else if (this.formPatternPreviewGraphics) {
+      this.formPatternPreviewGraphics.clear()
+    }
+
+    if (this.particleLinkGraphics && this._particleLinkSettings?.enabled && this.emitter?.list) {
+      const every = Math.max(1, this._particleLinkSettings.updateEveryNFrames | 0)
+      if (this._particleLinkFrameCounter % every === 0) {
+        drawParticleLinks(this.particleLinkGraphics, this.emitter.list, this._particleLinkSettings)
+      }
+      this._particleLinkFrameCounter = (this._particleLinkFrameCounter + 1) % 4096
+    }
+  }
+
+  /**
+   * Updates particle link mesh settings (e.g. after loading JSON in the editor).
+   */
+  setParticleLinks(partial: Partial<IParticleLinkSettings> | null | undefined): void {
+    if (partial == null) return
+    const merged = mergeParticleLinkSettings({
+      ...(this._particleLinkSettings || undefined),
+      ...partial,
+    })
+    this._particleLinkSettings = merged
+    if (merged.enabled) {
+      if (!this.particleLinkGraphics) {
+        const linkG = new Graphics()
+        if (merged.blendMode != null) {
+          linkG.blendMode = merged.blendMode
+        }
+        this.particleLinkGraphics = linkG
+        this.addChildAt(linkG, 0)
+      } else if (merged.blendMode != null) {
+        this.particleLinkGraphics.blendMode = merged.blendMode
+      }
+    } else if (this.particleLinkGraphics) {
+      this.particleLinkGraphics.clear()
     }
   }
 
@@ -241,6 +356,11 @@ export default class Renderer extends Container {
    */
   destroy() {
     this.stopImmediately()
+    if (this.particleLinkGraphics) {
+      this.particleLinkGraphics.destroy()
+      this.particleLinkGraphics = null
+    }
+    this._particleLinkSettings = null
     super.destroy()
     if (this.emitter) {
       this.emitter.destroy()
@@ -307,12 +427,29 @@ export default class Renderer extends Container {
   }
 
   /**
+   * Keeps Pixi container state in sync with emitter config after hot reloads.
+   */
+  private syncContainerFromEmitterConfig(config: any) {
+    this.config = config
+    if (typeof config.alpha !== 'undefined') {
+      this.alpha = config.alpha
+    }
+    if (typeof config.blendMode !== 'undefined') {
+      this.blendMode = config.blendMode
+    }
+    if (typeof config.anchor !== 'undefined') {
+      this.anchor = config.anchor
+    }
+  }
+
+  /**
    * Updates the configuration of the emitter
    * @param {any} config - Configuration object to be used to update the emitter
    * @param {boolean} resetDuration - should duration be reset
    */
   updateConfig(config: any, resetDuration = false) {
     this.emitterParser?.update(config, this._model, resetDuration)
+    this.syncContainerFromEmitterConfig(config)
     const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
     if (turbulenceConfigIndex === -1) return
     const turbulenceConfig = config.behaviours[turbulenceConfigIndex]
@@ -361,7 +498,19 @@ export default class Renderer extends Container {
    * Clears the sprite pool, the unused sprites list and the turbulence and particle pools.
    */
   clearPool() {
+    const hadLinks = this.particleLinkGraphics != null
+    const linkSettings = this._particleLinkSettings
     this.removeChildren()
+    if (hadLinks && linkSettings?.enabled) {
+      const linkG = new Graphics()
+      if (linkSettings.blendMode != null) {
+        linkG.blendMode = linkSettings.blendMode
+      }
+      this.particleLinkGraphics = linkG
+      this.addChildAt(linkG, 0)
+    } else {
+      this.particleLinkGraphics = null
+    }
     this.unusedStaticSprites = []
     this.unusedAnimatedSprites = []
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
