@@ -1,5 +1,16 @@
 export default class Model {
   /**
+   * Refreshed each frame by Renderer/TestRenderer when ToroidalWrapBehaviour uses canvas bounds.
+   * Particle space origin at emitter center; half-width = width/2 (matches Pixi render buffer).
+   */
+  toroidalCanvasBounds: {
+    minX: number
+    maxX: number
+    minY: number
+    maxY: number
+  } | null = null
+
+  /**
    * Boolean value indicating whether warping is enabled
    */
   warp: boolean = false
@@ -42,5 +53,16 @@ export default class Model {
   updateCamera(deltaTime: number) {
     if (!this.warp) return
     this.cameraZ += deltaTime * this.cameraZConverter * this.warpSpeed * this.warpBaseSpeed
+  }
+
+  /** Sets {@link toroidalCanvasBounds} from render buffer size (centered rect). */
+  setToroidalCanvasBoundsFromSize(width: number, height: number) {
+    const hw = width / 2
+    const hh = height / 2
+    this.toroidalCanvasBounds = { minX: -hw, maxX: hw, minY: -hh, maxY: hh }
+  }
+
+  clearToroidalCanvasBounds() {
+    this.toroidalCanvasBounds = null
   }
 }

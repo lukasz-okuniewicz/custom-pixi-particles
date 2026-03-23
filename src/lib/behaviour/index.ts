@@ -34,6 +34,7 @@ import ConstrainToShapeBehaviour from './ConstrainToShapeBehaviour'
 import GravityWellBehaviour from './GravityWellBehaviour'
 import TrailBehaviour from './TrailBehaviour'
 import BounceBehaviour from './BounceBehaviour'
+import ToroidalWrapBehaviour from './ToroidalWrapBehaviour'
 import HomingBehaviour from './HomingBehaviour'
 import FloatUpBehaviour from './FloatUpBehaviour'
 import MagnetBehaviour from './MagnetBehaviour'
@@ -50,9 +51,20 @@ import ToroidalFlowBehaviour from './ToroidalFlowBehaviour'
 import ProximityTriggeredPhaseBehaviour from './ProximityTriggeredPhaseBehaviour'
 import LissajousHarmonicLatticeBehaviour from './LissajousHarmonicLatticeBehaviour'
 import JacobianCurlFieldBehaviour from './JacobianCurlFieldBehaviour'
+import ShearFlowBehaviour from './ShearFlowBehaviour'
+import ObstacleSDFSteerBehaviour from './ObstacleSDFSteerBehaviour'
+import RVOAvoidanceBehaviour from './RVOAvoidanceBehaviour'
+import EmitterAttractorLinkBehaviour from './EmitterAttractorLinkBehaviour'
+import KelvinWakeBehaviour from './KelvinWakeBehaviour'
+import BezierFlowTubeBehaviour from './BezierFlowTubeBehaviour'
+import ScreenSpaceFlowMapBehaviour from './ScreenSpaceFlowMapBehaviour'
+import BeatPhaseLockBehaviour from './BeatPhaseLockBehaviour'
+import DamageFlashRippleBehaviour from './DamageFlashRippleBehaviour'
+import FormPatternBehaviour from './FormPatternBehaviour'
 
 export type { IBehaviour } from './IBehaviour'
 export type { IColorStop } from './ColorCycleBehaviour'
+export type { SDFPrimitive } from './ObstacleSDFSteerBehaviour'
 export { BehaviourRegistry } from './BehaviourRegistry'
 
 export {
@@ -91,6 +103,7 @@ export {
   GravityWellBehaviour,
   TrailBehaviour,
   BounceBehaviour,
+  ToroidalWrapBehaviour,
   HomingBehaviour,
   FloatUpBehaviour,
   MagnetBehaviour,
@@ -107,4 +120,26 @@ export {
   ProximityTriggeredPhaseBehaviour,
   LissajousHarmonicLatticeBehaviour,
   JacobianCurlFieldBehaviour,
+  ShearFlowBehaviour,
+  ObstacleSDFSteerBehaviour,
+  RVOAvoidanceBehaviour,
+  EmitterAttractorLinkBehaviour,
+  KelvinWakeBehaviour,
+  BezierFlowTubeBehaviour,
+  ScreenSpaceFlowMapBehaviour,
+  BeatPhaseLockBehaviour,
+  DamageFlashRippleBehaviour,
+  FormPatternBehaviour,
 }
+
+export type {
+  FormPatternMode,
+  FormPatternProgressMode,
+  FormPatternAssignmentMode,
+  FormPatternBakedPolylineMode,
+  FormPatternPathKind,
+  FormPatternSinePhaseMode,
+  FormPatternStaggerOrder,
+  FormPatternPathVarietySeedMode,
+  FormPatternVisualModulation,
+} from './FormPatternBehaviour'

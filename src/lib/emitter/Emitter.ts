@@ -10,6 +10,7 @@ import Particle from '../Particle'
 import { AnimatedSprite, BLEND_MODES } from 'pixi.js'
 import Model from '../Model'
 import TurbulencePool from '../util/turbulencePool'
+import type { TextureVariant } from '../textureVariants'
 
 export default class Emitter extends eventemitter3 {
   static STOP = 'emitter/stop'
@@ -22,13 +23,21 @@ export default class Emitter extends eventemitter3 {
   list: List = new List()
   duration: Duration = new Duration()
   animatedSprite: { loop: boolean; frameRate: number; randomFrameStart: number }
+  /** When set (non-empty), enables mixed static + animated particles; see `resolveTextureVariants`. */
+  textureVariants?: TextureVariant[]
+  variantWeights?: number[]
   alpha: number = 1
   anchor: { x: number; y: number } = { x: 0.5, y: 0.5 }
+  /**
+   * Optional world position (e.g. sync from Pixi container each frame).
+   * Used when FormPatternBehaviour.followEmitterWorldPosition is true.
+   */
+  worldPosition: { x: number; y: number } | null = null
   blendMode: BLEND_MODES = 'normal'
   behaviours: EmitterBehaviours = new EmitterBehaviours()
   emitController: any
   turbulencePool: TurbulencePool = new TurbulencePool()
-  private _play: boolean
+  protected _play: boolean
   private _model: Model
 
   constructor(model: Model) {
@@ -47,6 +56,7 @@ export default class Emitter extends eventemitter3 {
   async update(deltaTime: number) {
     if (!this._play) return
 
+    this._model.updateCamera(deltaTime)
     this.behaviours.update(deltaTime)
     this.emitParticles(deltaTime)
     this.updateParticles(deltaTime)
@@ -254,6 +264,8 @@ export default class Emitter extends eventemitter3 {
     this.duration = undefined
     // @ts-ignore
     this.animatedSprite = undefined
+    this.textureVariants = undefined
+    this.variantWeights = undefined
     this.behaviours?.clear()
     // @ts-ignore
     this.behaviours = undefined

@@ -31,6 +31,7 @@ const behaviourNames = {
   GRAVITY_WELL_BEHAVIOUR: 'GravityWellBehaviour',
   TRAIL_BEHAVIOUR: 'TrailBehaviour',
   BOUNCE_BEHAVIOUR: 'BounceBehaviour',
+  TOROIDAL_WRAP_BEHAVIOUR: 'ToroidalWrapBehaviour',
   HOMING_BEHAVIOUR: 'HomingBehaviour',
   FLOAT_UP_BEHAVIOUR: 'FloatUpBehaviour',
   MAGNET_BEHAVIOUR: 'MagnetBehaviour',
@@ -47,6 +48,16 @@ const behaviourNames = {
   PROXIMITY_TRIGGERED_PHASE_BEHAVIOUR: 'ProximityTriggeredPhaseBehaviour',
   LISSAJOUS_HARMONIC_LATTICE_BEHAVIOUR: 'LissajousHarmonicLatticeBehaviour',
   JACOBIAN_CURL_FIELD_BEHAVIOUR: 'JacobianCurlFieldBehaviour',
+  SHEAR_FLOW_BEHAVIOUR: 'ShearFlowBehaviour',
+  OBSTACLE_SDF_STEER_BEHAVIOUR: 'ObstacleSDFSteerBehaviour',
+  RVO_AVOIDANCE_BEHAVIOUR: 'RVOAvoidanceBehaviour',
+  EMITTER_ATTRACTOR_LINK_BEHAVIOUR: 'EmitterAttractorLinkBehaviour',
+  KELVIN_WAKE_BEHAVIOUR: 'KelvinWakeBehaviour',
+  BEZIER_FLOW_TUBE_BEHAVIOUR: 'BezierFlowTubeBehaviour',
+  SCREEN_SPACE_FLOW_MAP_BEHAVIOUR: 'ScreenSpaceFlowMapBehaviour',
+  BEAT_PHASE_LOCK_BEHAVIOUR: 'BeatPhaseLockBehaviour',
+  DAMAGE_FLASH_RIPPLE_BEHAVIOUR: 'DamageFlashRippleBehaviour',
+  FORM_PATTERN_BEHAVIOUR: 'FormPatternBehaviour',
 }
 
 export default behaviourNames
