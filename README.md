@@ -9,12 +9,15 @@
 - [Installation](#️-installation)
 - [Quick Start](#-quick-start)
 - [API Reference](#-api-reference)
+  - [Textures: static, animated, and mixed](#textures-static-animated-and-mixed)
 - [Configuration Guide](#-configuration-guide)
   - [Emission Types](#emission-types)
   - [Behaviours](#behaviours)
 - [Examples](#-examples)
 - [Performance Tips](#-performance-tips)
 - [Troubleshooting](#-troubleshooting)
+- [Common Use Cases](#-common-use-cases)
+- [Best Practices](#-best-practices)
 - [Special Effects](#special-effects)
   - [Shatter Effect](#shatter-effect)
   - [Dissolve Effect](#dissolve-effect)
@@ -30,6 +33,7 @@
   - [Liquid Mercury Effect](#liquid-mercury-effect)
 - [Versions Compatibility](#️-versions-compatibility)
 - [Advanced Editor](#️-advanced-editor)
+- [License](#-license)
 - [Contributing](#-contributing)
 
 ---
@@ -45,8 +49,9 @@ If you find **custom-pixi-particles** useful and would like to support my work, 
 - **Simple API**: Effortlessly create particle emitters with minimal code.
 - **Highly Configurable**: Adjust particle behavior, appearance, animation, and more.
 - **Performance Optimized**: Handle thousands of particles with minimal performance overhead.
-- **PIXI.js Compatibility**: Fully compatible with **PIXI.js v8**, **PIXI.js v7**, with legacy support for v5.x and v6.x.
+- **PIXI.js Compatibility**: Current releases target **PIXI.js v8**. For legacy **v5/v6** projects, use `custom-pixi-particles@4.x`.
 - **Real-Time Customization**: Dynamically update textures, positions, configurations, and emitters on the fly.
+- **Static and animated textures**: Use single-frame textures, frame sequences (`prefix00.png`, `prefix01.png`, …), or **mix both** per particle via `textureVariants` and optional `variantWeights`.
 - **Shatter Effect**: Create dramatic sprite shattering effects with realistic physics and automatic cleanup.
 
 ---
@@ -64,17 +69,25 @@ Install via npm:
 npm install custom-pixi-particles
 ```
 
-**Peer dependency:** This library requires **PIXI.js** (or **pixi.js-legacy**). Install the version compatible with your project:
+This package targets modern PixiJS and includes `pixi.js` in its dependencies by default.
+For legacy PixiJS v5/v6 compatibility, use `custom-pixi-particles@4.x` with `pixi.js-legacy`.
 
 ```bash
-# For PIXI.js v8
-npm install pixi.js
+# For PIXI.js v8 (current)
+npm install custom-pixi-particles pixi.js
 
-# For PIXI.js v7
-npm install pixi.js
+# For PIXI.js v5/v6 (legacy line)
+npm install custom-pixi-particles@4 pixi.js-legacy
+```
 
-# For PIXI.js v5/v6 (legacy)
-npm install pixi.js-legacy
+If you need prebuilt browser bundles from this repo, run:
+
+```bash
+npm run build
+npm run build:browser:v8
+# optional:
+# npm run build:browser:v7
+# npm run build:browser:v6
 ```
 
 ---
@@ -83,17 +96,22 @@ npm install pixi.js-legacy
 
 ### Import or Require
 ```javascript
-// ES6 Modules
-import customPixiParticles from 'custom-pixi-particles'
+// ES modules
+import { customPixiParticles } from 'custom-pixi-particles'
 
 // CommonJS
-const customPixiParticles = require('custom-pixi-particles')
+const { customPixiParticles } = require('custom-pixi-particles')
+```
+
+You can also import Pixi helpers directly from this package:
+```javascript
+import { Application, Assets } from 'custom-pixi-particles'
 ```
 
 ### Basic Example
 ```javascript
 import { Application } from 'pixi.js'
-import customPixiParticles from 'custom-pixi-particles'
+import { customPixiParticles } from 'custom-pixi-particles'
 
 // Create PIXI application
 const app = new Application()
@@ -178,13 +196,10 @@ Initializes a particle emitter with the specified configuration.
 
 ```javascript
 const particles = customPixiParticles.create({
-  textures: [String],             // Array of particle texture paths or PIXI.Texture objects
+  textures: [String],             // Array of particle texture paths
   emitterConfig: Object,          // Configuration object for the emitter (see Configuration section)
   animatedSpriteZeroPad: Number,  // Zero-padding for animated sprite names (default: 2)
   animatedSpriteIndexToStart: Number, // Initial frame index for animated sprites (default: 0)
-  animatedSprite: Boolean,        // Enable animated sprite textures (default: false)
-  animatedSpriteFrameRate: Number, // Frame rate for animated sprites
-  animatedSpriteLoop: Boolean,    // Loop animated sprites (default: true)
   finishingTextures: [String],    // Textures used for particle finishing animations
   vertices: Boolean,              // Use vertex mode for rendering (default: true)
   position: Boolean,              // Allow position-based behavior (default: true)
@@ -195,8 +210,12 @@ const particles = customPixiParticles.create({
   maxFPS: Number,                 // Cap emitter update frequency (default: 60)
   minFPS: Number,                 // Minimum FPS threshold (default: 30)
   tickerSpeed: Number,            // Speed of the PIXI ticker (default: 0.02)
+  particleLinks: Object,          // Optional proximity-line mesh between particles
+  canvasSizeProvider: Function,   // Optional callback returning { width, height } for canvas-aware bounds
 })
 ```
+
+`create(...)` usually returns a `Renderer`. If `Wireframe3DBehaviour` is enabled, it returns a wrapping `Container` exposing the same runtime control methods.
 
 ### Configuration Object Structure
 
@@ -223,8 +242,72 @@ const emitterConfig = {
   behaviours: [
     // See Behaviours section for details
   ],
+
+  // Optional — see "Textures: static, animated, and mixed" below
+  // animatedSprite: { enabled: true, frameRate: 0.25, loop: true, randomFrameStart: false },
+  // textureVariants: [ /* mix static + animated */ ],
+  // variantWeights: [0.5, 0.5],
 }
 ```
+
+### Textures: static, animated, and mixed
+
+Particle visuals come from the `textures` array you pass to `customPixiParticles.create({ textures, emitterConfig, ... })` **plus** texture-related fields on **`emitterConfig`**. All asset keys must be loaded with Pixi’s **`Assets`** (or equivalent) before particles spawn.
+
+#### 1. Static textures only (default)
+
+If animated sprites are **not** enabled, each entry in `textures` is treated as a **full texture id** (e.g. `'spark.png'`). Each new particle picks one at random.
+
+```javascript
+const textures = ['a.png', 'b.png', 'c.png']
+// emitterConfig without animatedSprite.enabled / without textureVariants
+```
+
+#### 2. Animated sprites (legacy mode, all entries are sequences)
+
+Set **`emitterConfig.animatedSprite.enabled: true`**. Then each string in `textures` is a **filename prefix** (no extension). The renderer loads consecutive frames:
+
+`{prefix}{index}.png` — e.g. `fire00.png`, `fire01.png`, … until a frame is missing.
+
+- **Padding**: use `animatedSpriteZeroPad` / `animatedSpriteIndexToStart` on `create({ ... })` (defaults: pad `2`, start index `0`). Per-sequence overrides exist on each `frames` variant when using `textureVariants` (below).
+- **Playback**: `emitterConfig.animatedSprite` typically includes `frameRate`, `loop`, and optional `randomFrameStart` (see the live editor’s General → Animated sprite for the exact shape your JSON uses).
+
+```javascript
+customPixiParticles.create({
+  textures: ['explosion_', 'smoke_'], // two different frame sequences
+  animatedSpriteZeroPad: 2,
+  emitterConfig: {
+    animatedSprite: { enabled: true, frameRate: 0.25, loop: true },
+    // ...behaviours, emitController, etc.
+  },
+})
+```
+
+#### 3. Mix static and animated (`textureVariants`)
+
+For **some particles static and some animated**, set a non-empty **`emitterConfig.textureVariants`** array. Each item is either:
+
+| Type | Meaning |
+|------|--------|
+| `{ type: 'staticRandom', textures: ['x.png', 'y.png'] }` | Pick one static texture at random for that variant. |
+| `{ type: 'frames', prefix: 'boom_', frameRate?, loop?, randomFrameStart?, animatedSpriteZeroPad?, animatedSpriteIndexToStart? }` | Load `boom_00.png`, `boom_01.png`, … (PNG, same rules as legacy animated). |
+
+Optional **`emitterConfig.variantWeights`**: same length as `textureVariants`, relative probabilities (normalized internally). If omitted, variants are equally likely.
+
+```javascript
+emitterConfig: {
+  textureVariants: [
+    { type: 'staticRandom', textures: ['spark.png', 'glow.png'] },
+    { type: 'frames', prefix: 'fire_', frameRate: 0.3, loop: true },
+  ],
+  variantWeights: [0.6, 0.4], // 60% static pool, 40% fire_ sequence
+  // ...
+}
+```
+
+When `textureVariants` is set, it **replaces** the simple “all static” / “all prefixes” derivation from `textures` alone. You still pass `textures` to `create()` for updates like `setTextures` / defaults where the code falls back to the legacy list.
+
+**Note:** `finishingTextures` apply to **static** particles when a particle enters finishing state; animated display uses `AnimatedSprite` and does not swap to finishing textures the same way.
 
 ### Event Callbacks
 Triggered when the particle animation completes.
@@ -283,6 +366,10 @@ particles.setTickerSpeed(0.02)
 Refreshes the particle texture (e.g. after changing texture source).
 ```javascript
 particles.updateTexture()
+```
+Updates particle-link settings at runtime.
+```javascript
+particles.setParticleLinks({ enabled: true, maxDistance: 100 })
 ```
 
 ### Position Updates
@@ -834,7 +921,7 @@ particles.emitter.behaviours.add(myCustomBehaviour)
 // New and existing particles will use the new behaviour on the next update
 ```
 
-**Extending built-in behaviours:** All built-in behaviour classes are exported from the package so you can extend any of them: `SpawnBehaviour`, `LifeBehaviour`, `PositionBehaviour`, `ColorBehaviour`, `SizeBehaviour`, `AngularVelocityBehaviour`, `EmitDirectionBehaviour`, `RotationBehaviour`, `TurbulenceBehaviour`, `CollisionBehaviour`, `AttractionRepulsionBehaviour`, `NoiseBasedMotionBehaviour`, `ForceFieldsBehaviour`, `TimelineBehaviour`, `GroupingBehaviour`, `SoundReactiveBehaviour`, `LightEffectBehaviour`, `StretchBehaviour`, `TemperatureBehaviour`, `MoveToPointBehaviour`, `Wireframe3DBehaviour`, `VortexBehaviour`, `PulseBehaviour`, `RippleBehaviour`, `OrbitBehaviour`, `FlickerBehaviour`, `WobbleBehaviour`, `ColorCycleBehaviour`, `ConstrainToShapeBehaviour`, `GravityWellBehaviour`, `TrailBehaviour`, `BounceBehaviour`, `HomingBehaviour`, `FloatUpBehaviour`, `MagnetBehaviour`, `NearMissDispersionBehaviour`, `ConversionCascadeBehaviour`, `BoidsFlockingBehaviour`, `ProximityStateBehaviour`, `PhaseFieldFlowBehaviour`, `PhaseCoherenceBehaviour`, `CurvatureFlowBehaviour`, `LimitCycleBehaviour`, `AizawaAttractorBehaviour`, `ToroidalFlowBehaviour`, `ProximityTriggeredPhaseBehaviour`, `LissajousHarmonicLatticeBehaviour`, `JacobianCurlFieldBehaviour`. Also exported: `Behaviour`, `BehaviourRegistry`, `EmitterBehaviours`, `BehaviourNames`.
+**Extending built-in behaviours:** Core behaviour classes are exported directly from the package (for example `SpawnBehaviour`, `LifeBehaviour`, `PositionBehaviour`, `ColorBehaviour`, `SizeBehaviour`, `FormPatternBehaviour`, `Wireframe3DBehaviour`, `ToroidalWrapBehaviour`, plus `Behaviour`, `BehaviourRegistry`, `EmitterBehaviours`, `BehaviourNames`). Advanced behaviours are available by name in emitter configs/editor presets; if you need class-level inheritance for one that is not exported at top-level, import from the package source in this repo.
 
 **Replacing a built-in behaviour:** Register your class under the same name as a built-in (e.g. `SpawnBehaviour`) **before** creating the renderer or loading config. The registry is checked first, so your implementation is used instead. Use this for customizations like multiple trails on one shape, different trailing logic (e.g. CCV-style), or any variant of spawn/trail/position without changing the library.
 
@@ -928,7 +1015,7 @@ Defines where and how particles spawn. Supports multiple spawn types.
 - `Path` - Custom path defined by points
 - `Oval` - Elliptical distributions
 
-**Additional behaviours** (see the [editor](https://okuniewicz.eu/) for full documentation): Aizawa Attractor, Boids Flocking, Bounce, Color Cycle, Constrain To Shape, Conversion Cascade, Curvature Flow, Flicker, Float Up, Gravity Well, Homing, Jacobian Curl-Field, Lissajous Harmonic Lattice, Limit Cycle, Magnet, Near Miss Dispersion, Orbit, Phase Coherence, Phase Field Flow, Proximity State, Proximity Triggered Phase, Pulse, Ripple, Trail, Toroidal Flow, Vortex, Wobble.
+**Additional behaviours** (see the [editor](https://okuniewicz.eu/) for full documentation): Aizawa Attractor, Beat Phase Lock, Bezier Flow Tube, Boids Flocking, Bounce, Color Cycle, Constrain To Shape, Conversion Cascade, Curvature Flow, Damage Flash Ripple, Emitter Attractor Link, Flicker, Float Up, Form Pattern, Gravity Well, Homing, Jacobian Curl-Field, Kelvin Wake, Lissajous Harmonic Lattice, Limit Cycle, Magnet, Near Miss Dispersion, Obstacle SDF Steer, Orbit, Phase Coherence, Phase Field Flow, Proximity State, Proximity Triggered Phase, Pulse, Ripple, RVO Avoidance, Screen Space Flow Map, Shear Flow, Toroidal Wrap, Trail, Toroidal Flow, Vortex, Wobble.
 
 #### Size Behaviour
 Controls particle size over time.
