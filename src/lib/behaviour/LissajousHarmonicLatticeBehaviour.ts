@@ -41,10 +41,10 @@ export default class LissajousHarmonicLatticeBehaviour extends Behaviour {
   /** Scale 3D position to 2D display (multiply x, y by this) */
   scaleXY = 1
 
-  /** Write distance from anchor [0,1] for alpha (far = bright). */
-  writeRestorationForAlpha = true
-  /** Write local "density" [0,1] for scale (at anchor = small). */
-  writeDensityForScale = true
+  /** Write distance from anchor [0,1] for alpha (far = bright). Default off so Color/Size drive look unless explicitly enabled (avoids “invisible” loads when JSON omits flags). */
+  writeRestorationForAlpha = false
+  /** Write local "density" [0,1] for scale (at anchor = small). Default off for same reason. */
+  writeDensityForScale = false
   /** Normalize restoration by this to get [0,1] (typical max offset). */
   restorationNormalize = 1
   /** When writing alpha directly: alpha = restoration * this. */

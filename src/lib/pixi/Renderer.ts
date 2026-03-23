@@ -7,8 +7,19 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
-import { AnimatedSprite, Loader, ParticleContainer, Sprite, Texture, Ticker } from 'pixi.js-legacy'
+import { AnimatedSprite, Loader, ParticleContainer, Graphics, Sprite, Texture, Ticker } from 'pixi.js-legacy'
 import Model from '../Model'
+import {
+  pickVariantIndex,
+  resolveTextureVariants,
+  type TextureVariantFrames,
+} from '../textureVariants'
+import {
+  drawParticleLinks,
+  mergeParticleLinkSettings,
+  type IParticleLinkSettings,
+} from './particleLinkLayer'
+import { resolveBlendMode } from '../util/resolveBlendMode'
 
 /**
  * Renderer is a class used to render particles in the Pixi library.
@@ -26,17 +37,26 @@ export default class Renderer extends ParticleContainer {
   private zeroPad: number = 2
   private indexToStart: number = 0
   private finishingTextureNames: string[]
-  private unusedSprites: any[] = []
+  private unusedStaticSprites: Sprite[] = []
+  private unusedAnimatedSprites: AnimatedSprite[] = []
   private emitterParser: EmitterParser
   private turbulenceParser: EmitterParser | undefined
   private config: any
   private anchor: { x: number; y: number } = { x: 0.5, y: 0.5 }
   private _model: Model = new Model()
+  private _canvasSizeProvider?: () => { width: number; height: number }
   private _ticker: Ticker | undefined
   private _visibilitychangeBinding: any
   private _firstParticleHasBeenDestroyed = false
   /** Set by consumer (or wrapper) when using Wireframe3DBehaviour so the behaviour can draw. */
   wireframeGraphics: any = null
+
+  /** Proximity line mesh drawn below particle sprites when `particleLinks` is enabled in settings. */
+  particleLinkGraphics: Graphics | null = null
+  /** Optional overlay when FormPatternBehaviour has showTargetsPreview. */
+  formPatternPreviewGraphics: Graphics | null = null
+  private _particleLinkSettings: IParticleLinkSettings | null = null
+  private _particleLinkFrameCounter = 0
 
   /**
    * Creates an instance of Renderer.
@@ -59,6 +79,8 @@ export default class Renderer extends ParticleContainer {
       maxFPS,
       minFPS,
       tickerSpeed,
+      particleLinks,
+      canvasSizeProvider,
     } = settings
 
     super(maxParticles, {
@@ -69,6 +91,7 @@ export default class Renderer extends ParticleContainer {
       tint,
     })
 
+    this._canvasSizeProvider = canvasSizeProvider
     this.config = emitterConfig
     this.textures = textures
     this.finishingTextureNames = finishingTextures!
@@ -93,7 +116,7 @@ export default class Renderer extends ParticleContainer {
     }
 
     if (typeof emitterConfig.blendMode !== 'undefined') {
-      this.blendMode = emitterConfig.blendMode
+      this.blendMode = resolveBlendMode(emitterConfig.blendMode)
     }
 
     if (typeof emitterConfig.anchor !== 'undefined') {
@@ -111,6 +134,19 @@ export default class Renderer extends ParticleContainer {
     this.emitter.on(Emitter.COMPLETE, this.onCompleteFN, this)
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       this.emitter.turbulencePool.list = this.turbulenceEmitter.list
+    }
+
+    if (particleLinks != null) {
+      const merged = mergeParticleLinkSettings(particleLinks)
+      if (merged.enabled) {
+        this._particleLinkSettings = merged
+        const linkG = new Graphics()
+        if (merged.blendMode != null && merged.blendMode !== '') {
+          linkG.blendMode = resolveBlendMode(merged.blendMode)
+        }
+        this.particleLinkGraphics = linkG
+        ;(this as any).addChildAt(linkG, 0)
+      }
     }
 
     this._visibilitychangeBinding = () => this.internalPause(document.hidden)
@@ -170,10 +206,37 @@ export default class Renderer extends ParticleContainer {
   }
 
   /**
+   * Feeds {@link Model.toroidalCanvasBounds} when ToroidalWrapBehaviour.useCanvasBounds is on.
+   */
+  private syncToroidalCanvasBoundsOnModel(): void {
+    const wrap = this.emitter?.behaviours?.getByName(BehaviourNames.TOROIDAL_WRAP_BEHAVIOUR) as
+      | { enabled?: boolean; useCanvasBounds?: boolean }
+      | null
+    if (!wrap?.enabled || !wrap.useCanvasBounds) {
+      this._model.clearToroidalCanvasBounds()
+      return
+    }
+    if (this._canvasSizeProvider) {
+      try {
+        const { width, height } = this._canvasSizeProvider()
+        if (width > 0 && height > 0) {
+          this._model.setToroidalCanvasBoundsFromSize(width, height)
+          return
+        }
+      } catch {
+        //
+      }
+    }
+    this._model.clearToroidalCanvasBounds()
+  }
+
+  /**
    * Updates the transform of the ParticleContainer and updates the emitters.
    */
   _updateTransform(deltaTime: number) {
     if (this._paused) return
+
+    this.syncToroidalCanvasBoundsOnModel()
 
     this.emitter?.update(deltaTime)
     if (this.turbulenceEmitter) {
@@ -183,6 +246,65 @@ export default class Renderer extends ParticleContainer {
     if (wireframeBehaviour?.enabled && this.wireframeGraphics && typeof wireframeBehaviour.draw === 'function') {
       wireframeBehaviour.draw(this.wireframeGraphics, deltaTime)
     }
+
+    const formPatternBehaviour = this.emitter?.behaviours?.getByName(BehaviourNames.FORM_PATTERN_BEHAVIOUR) as
+      | {
+          enabled?: boolean
+          active?: boolean
+          showTargetsPreview?: boolean
+          showPathPreview?: boolean
+          draw?: (g: Graphics, dt: number) => void
+        }
+      | null
+    if (
+      formPatternBehaviour?.enabled &&
+      formPatternBehaviour.active &&
+      (formPatternBehaviour.showTargetsPreview || formPatternBehaviour.showPathPreview) &&
+      typeof formPatternBehaviour.draw === 'function'
+    ) {
+      if (!this.formPatternPreviewGraphics) {
+        const g = new Graphics()
+        this.formPatternPreviewGraphics = g
+        ;(this as any).addChildAt(g, 0)
+      }
+      formPatternBehaviour.draw(this.formPatternPreviewGraphics, deltaTime)
+    } else if (this.formPatternPreviewGraphics) {
+      this.formPatternPreviewGraphics.clear()
+    }
+
+    if (this.particleLinkGraphics && this._particleLinkSettings?.enabled && this.emitter?.list) {
+      const every = Math.max(1, this._particleLinkSettings.updateEveryNFrames | 0)
+      if (this._particleLinkFrameCounter % every === 0) {
+        drawParticleLinks(this.particleLinkGraphics, this.emitter.list, this._particleLinkSettings)
+      }
+      this._particleLinkFrameCounter = (this._particleLinkFrameCounter + 1) % 4096
+    }
+  }
+
+  /**
+   * Updates particle link mesh settings (e.g. after loading JSON in the editor).
+   */
+  setParticleLinks(partial: Partial<IParticleLinkSettings> | null | undefined): void {
+    if (partial == null) return
+    const merged = mergeParticleLinkSettings({
+      ...(this._particleLinkSettings || undefined),
+      ...partial,
+    })
+    this._particleLinkSettings = merged
+    if (merged.enabled) {
+      if (!this.particleLinkGraphics) {
+        const linkG = new Graphics()
+        if (merged.blendMode != null && merged.blendMode !== '') {
+          linkG.blendMode = resolveBlendMode(merged.blendMode)
+        }
+        this.particleLinkGraphics = linkG
+        ;(this as any).addChildAt(linkG, 0)
+      } else if (merged.blendMode != null && merged.blendMode !== '') {
+        this.particleLinkGraphics.blendMode = resolveBlendMode(merged.blendMode)
+      }
+    } else if (this.particleLinkGraphics) {
+      this.particleLinkGraphics.clear()
+    }
   }
 
   /**
@@ -191,13 +313,18 @@ export default class Renderer extends ParticleContainer {
    * @description This method updates the texture of the unused sprites and children to a randomly generated texture.
    */
   updateTexture() {
-    for (let i = 0; i < this.unusedSprites.length; ++i) {
-      this.unusedSprites[i].texture = Texture.from(this.getRandomTexture())
+    const ids = this.getStaticTextureIdsForPreview()
+    const pick = () => ids[Math.floor(Math.random() * Math.max(1, ids.length))] || this.getRandomLegacyTexture()
+    for (let i = 0; i < this.unusedStaticSprites.length; ++i) {
+      const id = pick()
+      this.unusedStaticSprites[i].texture = Texture.from(id)
     }
 
     for (let i = 0; i < this.children.length; ++i) {
-      // @ts-ignore
-      this.children[i].texture = Texture.from(this.getRandomTexture())
+      const ch = this.children[i] as Sprite
+      if (ch && (ch as any).texture) {
+        ch.texture = Texture.from(pick())
+      }
     }
   }
 
@@ -243,6 +370,11 @@ export default class Renderer extends ParticleContainer {
    */
   destroy() {
     this.stopImmediately()
+    if (this.particleLinkGraphics) {
+      this.particleLinkGraphics.destroy()
+      this.particleLinkGraphics = null
+    }
+    this._particleLinkSettings = null
     super.destroy()
     if (this.emitter) {
       this.emitter.destroy()
@@ -259,7 +391,9 @@ export default class Renderer extends ParticleContainer {
     // @ts-ignore
     this.turbulenceParser = undefined
     // @ts-ignore
-    this.unusedSprites = undefined
+    this.unusedStaticSprites = undefined
+    // @ts-ignore
+    this.unusedAnimatedSprites = undefined
     // @ts-ignore
     this._model = undefined
     this.onComplete = undefined
@@ -307,12 +441,29 @@ export default class Renderer extends ParticleContainer {
   }
 
   /**
+   * Keeps Pixi container state in sync with emitter config after hot reloads.
+   */
+  private syncContainerFromEmitterConfig(config: any) {
+    this.config = config
+    if (typeof config.alpha !== 'undefined') {
+      this.alpha = config.alpha
+    }
+    if (typeof config.blendMode !== 'undefined') {
+      this.blendMode = resolveBlendMode(config.blendMode)
+    }
+    if (typeof config.anchor !== 'undefined') {
+      this.anchor = config.anchor
+    }
+  }
+
+  /**
    * Updates the configuration of the emitter
    * @param {any} config - Configuration object to be used to update the emitter
    * @param {boolean} resetDuration - should duration be reset
    */
   updateConfig(config: any, resetDuration = false) {
     this.emitterParser?.update(config, this._model, resetDuration)
+    this.syncContainerFromEmitterConfig(config)
     const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
     if (turbulenceConfigIndex === -1) return
     const turbulenceConfig = config.behaviours[turbulenceConfigIndex]
@@ -361,8 +512,21 @@ export default class Renderer extends ParticleContainer {
    * Clears the sprite pool, the unused sprites list and the turbulence and particle pools.
    */
   clearPool() {
+    const hadLinks = this.particleLinkGraphics != null
+    const linkSettings = this._particleLinkSettings
     this.removeChildren()
-    this.unusedSprites = []
+    if (hadLinks && linkSettings?.enabled) {
+      const linkG = new Graphics()
+      if (linkSettings.blendMode != null && linkSettings.blendMode !== '') {
+        linkG.blendMode = resolveBlendMode(linkSettings.blendMode)
+      }
+      this.particleLinkGraphics = linkG
+      ;(this as any).addChildAt(linkG, 0)
+    } else {
+      this.particleLinkGraphics = null
+    }
+    this.unusedStaticSprites = []
+    this.unusedAnimatedSprites = []
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       if (this.emitter) {
         this.emitter.turbulencePool.list.reset()
@@ -386,40 +550,73 @@ export default class Renderer extends ParticleContainer {
     return null
   }
 
-  private getOrCreateSprite() {
-    while (this.unusedSprites.length > 0) {
-      const sprite = this.unusedSprites.pop()
-      if (sprite) {
-        if (this.finishingTextureNames && this.finishingTextureNames.length) {
-          sprite.texture = Texture.from(this.getRandomTexture())
+  private textureFromAssetId(assetId: string): Texture {
+    return Texture.from(assetId)
+  }
+
+  private getStaticTextureIdsForPreview(): string[] {
+    const { variants } = resolveTextureVariants(this.textures, this.emitter)
+    const ids: string[] = []
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i]
+      if (v.type === 'staticRandom') {
+        for (let j = 0; j < v.textures.length; j++) {
+          ids.push(v.textures[j])
         }
-        return sprite
       }
     }
+    if (ids.length) return ids
+    return this.textures
+  }
 
-    if (this.emitter?.animatedSprite) {
-      const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
-      if (textures.length) {
-        const animation: AnimatedSprite = new AnimatedSprite(textures)
-        animation.anchor.set(this.anchor.x, this.anchor.y)
-        // @ts-ignore
-        animation.loop = this.emitter?.animatedSprite.loop
-        // @ts-ignore
-        animation.animationSpeed = this.emitter?.animatedSprite.frameRate
-        return this.addChild(animation)
+  private acquireStaticSprite(assetId: string): Sprite {
+    let sprite = this.unusedStaticSprites.pop()
+    if (sprite) {
+      if (this.finishingTextureNames && this.finishingTextureNames.length) {
+        const rnd = this.getRandomLegacyTexture()
+        sprite.texture = Texture.from(rnd)
+      } else {
+        sprite.texture = this.textureFromAssetId(assetId)
       }
+      return sprite
     }
 
-    const sprite = new Sprite(Texture.from(this.getRandomTexture()))
+    sprite = new Sprite(this.textureFromAssetId(assetId))
     sprite.anchor.set(this.anchor.x, this.anchor.y)
     return this.addChild(sprite)
   }
 
-  private createFrameAnimationByName(prefix: string, imageFileExtension: string = 'png'): Texture[] {
-    const zeroPad = this.zeroPad
+  private acquireAnimatedSprite(
+    frameTextures: Texture[],
+    loop: boolean,
+    frameRate: number,
+  ): AnimatedSprite {
+    let anim = this.unusedAnimatedSprites.pop()
+    if (anim && frameTextures.length) {
+      anim.textures = frameTextures
+      anim.loop = loop
+      anim.animationSpeed = frameRate
+      anim.gotoAndStop(0)
+      return anim
+    }
+
+    const animation: AnimatedSprite = new AnimatedSprite(frameTextures)
+    animation.anchor.set(this.anchor.x, this.anchor.y)
+    animation.loop = loop
+    animation.animationSpeed = frameRate
+    return this.addChild(animation)
+  }
+
+  private createFrameAnimationByName(
+    prefix: string,
+    imageFileExtension: string = 'png',
+    zeroPad: number = this.zeroPad,
+    indexFrameStart: number = this.indexToStart,
+  ): Texture[] {
+    const zeroPadLocal = zeroPad
     const textures: Texture[] = []
     let frame: string = ''
-    let indexFrame: number = this.indexToStart
+    let indexFrame: number = indexFrameStart
     let padding: number = 0
     let texture: Texture | null
     const sheets = []
@@ -433,7 +630,7 @@ export default class Renderer extends ParticleContainer {
 
     do {
       frame = indexFrame.toString()
-      padding = zeroPad - frame.length
+      padding = zeroPadLocal - frame.length
       if (padding > 0) {
         frame = '0'.repeat(padding) + frame
       }
@@ -467,19 +664,55 @@ export default class Renderer extends ParticleContainer {
   }
 
   private onCreate(particle: Particle) {
-    const sprite = this.getOrCreateSprite()
+    const { variants, weights } = resolveTextureVariants(this.textures, this.emitter)
+    const idx = pickVariantIndex(weights)
+    const variant = variants[idx]
+    particle.textureVariantIndex = idx
+
+    const animDefaults = this.emitter?.animatedSprite as any
+
+    if (variant.type === 'staticRandom') {
+      particle.spriteDisplayKind = 'static'
+      const pool = variant.textures.length ? variant.textures : this.textures
+      const assetId = pool[Math.floor(Math.random() * pool.length)]
+      const sprite = this.acquireStaticSprite(assetId)
+      sprite.visible = true
+      sprite.alpha = 1
+      sprite.blendMode = resolveBlendMode(this.blendMode)
+      particle.sprite = sprite
+      return
+    }
+
+    const v = variant as TextureVariantFrames
+    particle.spriteDisplayKind = 'animated'
+    const frameTextures = this.createFrameAnimationByName(
+      v.prefix,
+      'png',
+      v.animatedSpriteZeroPad ?? this.zeroPad,
+      v.animatedSpriteIndexToStart ?? this.indexToStart,
+    )
+    const loop = v.loop ?? animDefaults?.loop ?? true
+    const frameRate = v.frameRate ?? animDefaults?.frameRate ?? 0.25
+    if (!frameTextures.length) {
+      const assetId = this.getRandomLegacyTexture()
+      particle.spriteDisplayKind = 'static'
+      const sprite = this.acquireStaticSprite(assetId)
+      sprite.visible = true
+      sprite.alpha = 1
+      sprite.blendMode = resolveBlendMode(this.blendMode)
+      particle.sprite = sprite
+      return
+    }
+
+    const sprite = this.acquireAnimatedSprite(frameTextures, loop, frameRate)
     sprite.visible = true
     sprite.alpha = 1
-    if (this.blendMode) {
-      sprite.blendMode = this.blendMode
-    }
-    if (sprite instanceof AnimatedSprite) {
-      if (this.emitter?.animatedSprite.randomFrameStart) {
-        const textures: Texture[] = this.createFrameAnimationByName(this.getRandomTexture())
-        sprite.gotoAndPlay(this.getRandomFrameNumber(textures.length))
-      } else {
-        sprite.play()
-      }
+    sprite.blendMode = resolveBlendMode(this.blendMode)
+    const randomStart = v.randomFrameStart ?? animDefaults?.randomFrameStart
+    if (randomStart) {
+      sprite.gotoAndPlay(this.getRandomFrameNumber(frameTextures.length))
+    } else {
+      sprite.play()
     }
     particle.sprite = sprite
   }
@@ -489,7 +722,7 @@ export default class Renderer extends ParticleContainer {
     if (particle.showVortices) {
       sprite = new Sprite(Texture.from('vortex.png'))
     } else {
-      sprite = new Sprite()
+      sprite = new Sprite(Texture.WHITE)
     }
     sprite.anchor.set(this.anchor.x, this.anchor.y)
     this.addChild(sprite)
@@ -535,6 +768,7 @@ export default class Renderer extends ParticleContainer {
   private onFinishing(particle: Particle) {
     if (!this.finishingTextureNames || !this.finishingTextureNames.length) return
     const sprite = particle.sprite
+    if (sprite instanceof AnimatedSprite) return
     if (particle.finishingTexture <= this.finishingTextureNames.length - 1) {
       sprite.texture = Texture.from(this.getRandomFinishingTexture())
       particle.finishingTexture++
@@ -555,8 +789,10 @@ export default class Renderer extends ParticleContainer {
       }
       if (sprite instanceof AnimatedSprite) {
         sprite.stop()
+        this.unusedAnimatedSprites.push(sprite)
+      } else {
+        this.unusedStaticSprites.push(sprite as Sprite)
       }
-      this.unusedSprites.push(sprite)
       ;(particle as any).sprite = null
     }
 
@@ -573,7 +809,8 @@ export default class Renderer extends ParticleContainer {
     delete (particle as any).sprite
   }
 
-  private getRandomTexture(): string {
+  private getRandomLegacyTexture(): string {
+    if (!this.textures.length) return ''
     return this.textures[Math.floor(Math.random() * this.textures.length)]
   }
 

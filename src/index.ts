@@ -1,10 +1,46 @@
 import Renderer from './lib/pixi/Renderer'
 import { ICustomPixiParticlesSettings } from './lib/customPixiParticlesSettingsInterface'
 import TestRenderer from './lib/pixi/TestRenderer'
-import { ShatterEffect, DissolveEffect, MagneticAssemblyEffect, GhostEffect, GlitchEffect, MeltEffect, PixelSortEffect, PrismRefractionEffect, CrystallizeEffect, SlitScanEffect, GranularErosionEffect, LiquidMercuryEffect } from './lib/effects'
+import {
+  CrystallizeEffect,
+  DissolveEffect,
+  GhostEffect,
+  GlitchEffect,
+  GranularErosionEffect,
+  LiquidMercuryEffect,
+  MagneticAssemblyEffect,
+  MetaballPass,
+  MeltEffect,
+  PixelSortEffect,
+  PrismRefractionEffect,
+  ShatterEffect,
+  SlitScanEffect,
+} from './lib/effects'
 import { Container, Graphics } from 'pixi.js-legacy'
 
-export type { IShatterEffectOptions, ShatterMode, IDissolveEffectOptions, DissolveDirection, IMagneticAssemblyOptions, AssemblyMode, IGhostEffectOptions, IGlitchEffectOptions, IMeltEffectOptions, IPixelSortEffectOptions, PixelSortDirection, PixelSortMode, PixelSortOrder, IPrismRefractionEffectOptions, ICrystallizeEffectOptions, ISlitScanEffectOptions, SlitScanMode, IGranularErosionEffectOptions, ILiquidMercuryEffectOptions } from './lib/effects'
+// tslint:disable-next-line:max-line-length
+export type {
+  IShatterEffectOptions,
+  ShatterMode,
+  IDissolveEffectOptions,
+  DissolveDirection,
+  IMagneticAssemblyOptions,
+  AssemblyMode,
+  IGhostEffectOptions,
+  IGlitchEffectOptions,
+  IMeltEffectOptions,
+  IPixelSortEffectOptions,
+  PixelSortDirection,
+  PixelSortMode,
+  PixelSortOrder,
+  IPrismRefractionEffectOptions,
+  ICrystallizeEffectOptions,
+  ISlitScanEffectOptions,
+  SlitScanMode,
+  IGranularErosionEffectOptions,
+  ILiquidMercuryEffectOptions,
+  IMetaballPassOptions,
+} from './lib/effects'
 
 /**
  * Constructs a renderer for custom pixi particles
@@ -28,6 +64,8 @@ const customPixiParticles = {
       maxFPS = 60,
       minFPS = 30,
       tickerSpeed = 0.02,
+      particleLinks,
+      canvasSizeProvider,
     } = settings
     const hasWireframe = emitterConfig?.behaviours?.some((b: any) => b.name === 'Wireframe3DBehaviour')
     const renderer = new Renderer({
@@ -45,6 +83,8 @@ const customPixiParticles = {
       maxFPS,
       minFPS,
       tickerSpeed,
+      particleLinks,
+      canvasSizeProvider,
     })
     if (hasWireframe) {
       const graphics = new Graphics()
@@ -63,6 +103,7 @@ const customPixiParticles = {
       container.start = () => renderer.start()
       container.setTickerSpeed = (s: number) => renderer.setTickerSpeed(s)
       container.updateTexture = () => renderer.updateTexture()
+      container.setParticleLinks = (p: any) => renderer.setParticleLinks(p)
       const origDestroy = container.destroy.bind(container)
       container.destroy = () => {
         renderer.destroy()
@@ -85,6 +126,8 @@ const _customPixiParticlesEditorOnly = {
       maxFPS = 60,
       minFPS = 60,
       tickerSpeed = 0.02,
+      particleLinks,
+      canvasSizeProvider,
     } = settings
     return new TestRenderer({
       textures,
@@ -95,10 +138,19 @@ const _customPixiParticlesEditorOnly = {
       maxFPS,
       minFPS,
       tickerSpeed,
+      particleLinks,
+      canvasSizeProvider,
     })
   },
 }
 
+export type { TextureVariant, TextureVariantFrames, TextureVariantStaticRandom } from './lib/textureVariants'
+export type { IParticleLinkSettings } from './lib/pixi/particleLinkLayer'
+export {
+  drawParticleLinks,
+  mergeParticleLinkSettings,
+  PARTICLE_LINK_DEFAULTS,
+} from './lib/pixi/particleLinkLayer'
 export type { IBehaviour } from './lib/behaviour'
 export {
   Behaviour,
@@ -124,12 +176,66 @@ export {
   StretchBehaviour,
   TemperatureBehaviour,
   MoveToPointBehaviour,
+  FormPatternBehaviour,
+  type FormPatternMode,
+  type FormPatternProgressMode,
+  type FormPatternAssignmentMode,
+  type FormPatternBakedPolylineMode,
+  type FormPatternPathKind,
+  type FormPatternSinePhaseMode,
+  type FormPatternStaggerOrder,
+  type FormPatternPathVarietySeedMode,
+  type FormPatternVisualModulation,
   Wireframe3DBehaviour,
+  ToroidalWrapBehaviour,
   BehaviourNames,
 } from './lib/behaviour'
 
+export {
+  rasterizeTextToPoints,
+  buildPresetShape,
+  matchPointsToCount,
+  resampleToCount,
+  flattenSvgPathToPoints,
+  assignGreedyNearest,
+  assignByPolarAngle,
+  assignHungarian,
+  hungarianMinAssignment,
+  assignHungarianTargetIndices,
+  assignGreedyNearestTargetIndices,
+  assignByPolarAngleTargetIndices,
+  sortTargetIndicesByAngle,
+  blendMorphedPresets,
+  rasterizeOpaquePixelsToPoints,
+  rasterizeOpaquePixelsToPointsWithColors,
+  matchSamplesToCount,
+  sortPointsByAngle,
+  shuffledIndices,
+  seededUnit,
+  extractSvgPathDFromMarkup,
+  parseSvgViewBox,
+  normalizePointsToBounds,
+  replicatePointsByWeights,
+  sampleMorphKeyframes,
+  assignPathOrderTargetIndices,
+  rasterizeOpaquePixelsToPointsWeighted,
+  rasterizeOpaquePixelsToPointsWithColorsWeighted,
+} from './lib/util/formPatternSampling'
+export type {
+  PresetShapeType,
+  PresetShapeParams,
+  TextRasterMode,
+  RasterizeTextOptions,
+  PointRgb,
+  MorphKeyframe,
+  IParticleXYWithUid,
+} from './lib/util/formPatternSampling'
+
+export { PersistentFillEmission } from './lib/emission'
+export { PersistentWrapEmitter } from './lib/emitter'
+
 // Re-export so demos can use one import (avoids loading Pixi twice)
-export { Application, Loader } from 'pixi.js'
+export { Application, Loader } from 'pixi.js-legacy'
 
 export {
   Renderer,
@@ -148,4 +254,5 @@ export {
   SlitScanEffect,
   GranularErosionEffect,
   LiquidMercuryEffect,
+  MetaballPass,
 }
