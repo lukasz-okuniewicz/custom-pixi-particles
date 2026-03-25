@@ -42,6 +42,6 @@ export interface IBehaviour {
   update?(deltaTime: number): void
   /** Optional: called when a particle is removed */
   onParticleRemoved?(particle: Particle): void
-  /** Optional: draw wireframe/Graphics (e.g. Wireframe3DBehaviour) */
+  /** Optional: draw debug overlays (e.g. FormPatternBehaviour preview) on a Graphics instance */
   draw?(graphics: any, deltaTime: number): void
 }

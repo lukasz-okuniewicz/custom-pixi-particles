@@ -1,4 +1,5 @@
-import { Behaviour, BehaviourNames } from './index'
+import Behaviour from './Behaviour'
+import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 
 export default class CollisionBehaviour extends Behaviour {

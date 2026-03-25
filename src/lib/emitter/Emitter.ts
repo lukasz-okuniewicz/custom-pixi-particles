@@ -37,12 +37,29 @@ export default class Emitter extends eventemitter3 {
   behaviours: EmitterBehaviours = new EmitterBehaviours()
   emitController: any
   turbulencePool: TurbulencePool = new TurbulencePool()
+  /**
+   * When false (default), per-particle `Emitter.UPDATE` is not emitted; sync display objects
+   * in one batch after `update()` (e.g. from Renderer) to avoid event overhead at high N.
+   * Set true if you listen to `Emitter.UPDATE` on this emitter.
+   */
+  enablePerParticleUpdateEvents = false
+  /**
+   * When set, called after each successful `apply` in `updateParticle` so the renderer can
+   * sync display objects in the same pass as simulation (avoids a second list walk).
+   */
+  particleSpriteSync: ((particle: Particle) => void) | null = null
+  /**
+   * Incremented at the start of each `update()` so {@link EmitterBehaviours} can snapshot
+   * enabled behaviours once per frame (avoids per-particle `enabled` checks).
+   */
+  _behaviourFrameSeq = 0
   protected _play: boolean
   private _model: Model
 
   constructor(model: Model) {
     super()
     this._model = model
+    this._model.emitter = this
 
     // @ts-ignore
     this.emitController = new emission[emission.EmissionTypes.DEFAULT]()
@@ -53,12 +70,15 @@ export default class Emitter extends eventemitter3 {
    * Triggers the COMPLETE event when the duration is elapsed and the list is empty.
    * @param {number} deltaTime - Time elapsed since the last update
    */
-  async update(deltaTime: number) {
+  update(deltaTime: number) {
     if (!this._play) return
 
+    this._behaviourFrameSeq = (this._behaviourFrameSeq + 1) | 0
+    this.behaviours.prepareEnabledApplyListForFrame(this._model, this._behaviourFrameSeq)
+
     this._model.updateCamera(deltaTime)
-    this.behaviours.update(deltaTime)
     this.emitParticles(deltaTime)
+    this.behaviours.update(deltaTime, this._model)
     this.updateParticles(deltaTime)
     this.duration.update(deltaTime)
 
@@ -127,10 +147,15 @@ export default class Emitter extends eventemitter3 {
     if (particle.isDead()) {
       this.removeParticle(particle)
     } else {
+      if (this.particleSpriteSync) {
+        this.particleSpriteSync(particle)
+      }
       if (particle.isAlmostDead()) {
         this.emit(Emitter.FINISHING, particle)
       }
-      this.emit(Emitter.UPDATE, particle)
+      if (this.enablePerParticleUpdateEvents) {
+        this.emit(Emitter.UPDATE, particle)
+      }
     }
   }
 
@@ -140,7 +165,7 @@ export default class Emitter extends eventemitter3 {
    */
   removeParticle(particle: Particle) {
     this.emit(Emitter.REMOVE, particle)
-    this.behaviours.onParticleRemoved(particle) // Notify behaviours
+    this.behaviours.onParticleRemoved(particle, this._model) // Notify behaviours
     this.list.remove(particle)
     particle.reset()
     ParticlePool.global.push(particle)
@@ -252,6 +277,9 @@ export default class Emitter extends eventemitter3 {
   }
 
   destroy() {
+    if (this._model?.emitter === this) {
+      this._model.emitter = null
+    }
     this.list.reset()
     // @ts-ignore
     this.list = undefined

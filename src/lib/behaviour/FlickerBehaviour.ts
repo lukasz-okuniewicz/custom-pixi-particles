@@ -1,5 +1,6 @@
 import { createNoise2D } from 'simplex-noise'
-import { Behaviour, BehaviourNames } from './index'
+import Behaviour from './Behaviour'
+import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 
 /**

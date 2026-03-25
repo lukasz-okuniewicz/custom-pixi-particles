@@ -1,6 +1,8 @@
 import Renderer from './lib/pixi/Renderer'
+import SpriteContainerRenderer from './lib/pixi/SpriteContainerRenderer'
 import { ICustomPixiParticlesSettings } from './lib/customPixiParticlesSettingsInterface'
 import TestRenderer from './lib/pixi/TestRenderer'
+import { inferParticleContainerFeatures, preferSpriteParticlePathForTextures } from './lib/inferParticleContainerFeatures'
 import {
   CrystallizeEffect,
   DissolveEffect,
@@ -63,11 +65,6 @@ const customPixiParticles = {
       animatedSpriteZeroPad = 2,
       animatedSpriteIndexToStart = 0,
       finishingTextures = [],
-      vertices = true,
-      position = true,
-      rotation = true,
-      uvs = true,
-      tint = true,
       maxParticles = 10000,
       maxFPS = 60,
       minFPS = 30,
@@ -75,8 +72,16 @@ const customPixiParticles = {
       particleLinks,
       canvasSizeProvider,
     } = settings
-    const hasWireframe = emitterConfig?.behaviours?.some((b: any) => b.name === 'Wireframe3DBehaviour')
-    const renderer = new Renderer({
+    const texturesArr = Array.isArray(textures) ? textures : []
+    const useSpritePath = preferSpriteParticlePathForTextures(texturesArr)
+    const inferred = inferParticleContainerFeatures(emitterConfig)
+    const vertices = settings.vertices ?? inferred.vertices
+    const position = settings.position ?? inferred.position
+    const rotation = settings.rotation ?? inferred.rotation
+    const uvs = settings.uvs ?? inferred.uvs
+    const tint = settings.tint ?? inferred.tint
+    const RendererCtor = useSpritePath ? SpriteContainerRenderer : Renderer
+    const renderer = new RendererCtor({
       textures,
       animatedSpriteZeroPad,
       animatedSpriteIndexToStart,
@@ -94,31 +99,6 @@ const customPixiParticles = {
       particleLinks,
       canvasSizeProvider,
     })
-    if (hasWireframe) {
-      const graphics = new Graphics()
-      const container = new Container() as any
-      container.addChild(graphics)
-      container.addChild(renderer)
-      renderer.wireframeGraphics = graphics
-      Object.defineProperty(container, 'emitter', { get: () => renderer.emitter })
-      container.updateConfig = (c: any) => renderer.updateConfig(c)
-      container.updatePosition = (p: any) => renderer.updatePosition(p)
-      container.play = () => renderer.play()
-      container.stop = () => renderer.stop()
-      container.stopImmediately = () => renderer.stopImmediately()
-      container.pause = (p?: boolean) => renderer.pause(p)
-      container.resume = () => renderer.resume()
-      container.start = () => renderer.start()
-      container.setTickerSpeed = (s: number) => renderer.setTickerSpeed(s)
-      container.updateTexture = () => renderer.updateTexture()
-      container.setParticleLinks = (p: any) => renderer.setParticleLinks(p)
-      const origDestroy = container.destroy.bind(container)
-      container.destroy = () => {
-        renderer.destroy()
-        origDestroy()
-      }
-      return container
-    }
     return renderer
   },
 }
@@ -131,18 +111,31 @@ const _customPixiParticlesEditorOnly = {
       animatedSpriteZeroPad = 2,
       animatedSpriteIndexToStart = 0,
       finishingTextures = [],
+      maxParticles = 10000,
       maxFPS = 60,
       minFPS = 60,
       tickerSpeed = 0.02,
       particleLinks,
       canvasSizeProvider,
     } = settings
+    const inferred = inferParticleContainerFeatures(emitterConfig)
+    const vertices = settings.vertices ?? inferred.vertices
+    const position = settings.position ?? inferred.position
+    const rotation = settings.rotation ?? inferred.rotation
+    const uvs = settings.uvs ?? inferred.uvs
+    const tint = settings.tint ?? inferred.tint
     return new TestRenderer({
       textures,
       animatedSpriteZeroPad,
       animatedSpriteIndexToStart,
       emitterConfig,
       finishingTextures,
+      vertices,
+      position,
+      rotation,
+      uvs,
+      tint,
+      maxParticles,
       maxFPS,
       minFPS,
       tickerSpeed,
@@ -194,7 +187,6 @@ export {
   type FormPatternStaggerOrder,
   type FormPatternPathVarietySeedMode,
   type FormPatternVisualModulation,
-  Wireframe3DBehaviour,
   ToroidalWrapBehaviour,
   BehaviourNames,
 } from './lib/behaviour'

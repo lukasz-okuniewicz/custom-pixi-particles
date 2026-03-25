@@ -313,6 +313,8 @@ export default class FormPatternBehaviour extends Behaviour {
   private _wasActiveLastFrame = false
   private _lastConfigSig = ''
   private _lastParticleCount = -1
+  private _cachedPatternStaticString = ''
+  private _cachedPatternRuntimeString = ''
   private _cachedRaster: { x: number; y: number }[] = []
   private _lastRasterSig = ''
   private _cachedImagePoints: { x: number; y: number }[] = []
@@ -387,6 +389,24 @@ export default class FormPatternBehaviour extends Behaviour {
       this._activationGeneration++
     }
 
+    const nFast = this._cheapParticleCount()
+    if (
+      !rising &&
+      this._lastConfigSig !== '' &&
+      nFast === this._lastParticleCount &&
+      this._cachedPatternStaticString !== '' &&
+      this._cachedPatternRuntimeString !== ''
+    ) {
+      const staticNow = this._patternSignatureStaticString()
+      const runtimeNow = this._patternRuntimeFrameString()
+      if (staticNow === this._cachedPatternStaticString && runtimeNow === this._cachedPatternRuntimeString) {
+        if (this.active && this.liveFormationTransform && this._previewLocals.length > 0) {
+          this._previewTargetsWorld = this._previewLocals.map((l) => this._localToWorld(l.x, l.y))
+        }
+        return
+      }
+    }
+
     const particles = this._collectParticlesSorted()
     const n = particles.length
     const sigPattern = this._patternSignature()
@@ -426,6 +446,8 @@ export default class FormPatternBehaviour extends Behaviour {
       }
       this._lastConfigSig = sig
       this._lastParticleCount = n
+      this._cachedPatternStaticString = this._patternSignatureStaticString()
+      this._cachedPatternRuntimeString = this._patternRuntimeFrameString()
     } else if (this.active && this.liveFormationTransform && this._previewLocals.length > 0) {
       this._previewTargetsWorld = this._previewLocals.map((l) => this._localToWorld(l.x, l.y))
     }
@@ -766,15 +788,29 @@ export default class FormPatternBehaviour extends Behaviour {
     return arr
   }
 
-  private _patternSignature(): string {
-    const morph = Math.max(0, Math.min(1, this.morphBlend + this._morphBlendAudio))
-    return JSON.stringify({
+  private _cheapParticleCount(): number {
+    const list = this.particleListGetter?.() as { length?: number; forEach?: (cb: (p: Particle) => void) => void } | undefined
+    if (list && typeof list.length === 'number') return list.length
+    let n = 0
+    list?.forEach?.(() => {
+      n += 1
+    })
+    return n
+  }
+
+  private _invalidatePatternFastPathCache() {
+    this._cachedPatternStaticString = ''
+    this._cachedPatternRuntimeString = ''
+  }
+
+  /** Pattern JSON without per-frame morph — compared to detect editor/static changes cheaply vs full sort each frame. */
+  private _patternSignaturePayload() {
+    return {
       patternMode: this.patternMode,
       points: this.points,
       pointWeights: this.pointWeights,
       presetShape: this.presetShape,
       presetParams: this.presetParams,
-      morphBlend: morph,
       morphPresetShape: this.morphPresetShape,
       morphPresetParams: this.morphPresetParams,
       runtimeText: this.runtimeText,
@@ -832,6 +868,38 @@ export default class FormPatternBehaviour extends Behaviour {
       assignmentSeed: this.assignmentSeed,
       targetJitter: this.targetJitter,
       staggerOrder: this.staggerOrder,
+    }
+  }
+
+  private _patternSignatureStaticString(): string {
+    return JSON.stringify(this._patternSignaturePayload())
+  }
+
+  /** Morph, transform, image playback, and activation state that can change every frame. */
+  private _patternRuntimeFrameString(): string {
+    const morph = Math.max(0, Math.min(1, this.morphBlend + this._morphBlendAudio))
+    return JSON.stringify({
+      morphBlend: morph,
+      morphTimelinePlay: this.morphTimelinePlay,
+      morphTimelineElapsedSec: this.morphTimelineElapsedSec,
+      morphKeyframesLen: this.morphKeyframes?.length ?? 0,
+      transform: this._transformSignature(),
+      liveFormationTransform: this.liveFormationTransform,
+      followEmitterWorldPosition: this.followEmitterWorldPosition,
+      activationGeneration: this._activationGeneration,
+      activeImageFrameIndex: this._activeImageFrameIndex,
+      activeImageSource: this._activeImageSource,
+      activeImageNextSource: this._activeImageNextSource,
+      activeImageBlendT: this._activeImageBlendT,
+      imageFrameElapsedSec: this._imageFrameElapsedSec,
+    })
+  }
+
+  private _patternSignature(): string {
+    const morph = Math.max(0, Math.min(1, this.morphBlend + this._morphBlendAudio))
+    return JSON.stringify({
+      ...this._patternSignaturePayload(),
+      morphBlend: morph,
     })
   }
 
@@ -1123,6 +1191,7 @@ export default class FormPatternBehaviour extends Behaviour {
       this._debugImageSamplesWorld = []
       this._lastImageSig = sig
       this._lastConfigSig = ''
+      this._invalidatePatternFastPathCache()
       return
     }
     const id = this._drawImageToImageData(img)
@@ -1160,6 +1229,7 @@ export default class FormPatternBehaviour extends Behaviour {
     this._updateDebugOverlayFromSamples(coherent)
     this._lastImageSig = sig
     this._lastConfigSig = ''
+    this._invalidatePatternFastPathCache()
   }
 
   private _drawImageToImageData(img: HTMLImageElement): ImageData | null {
@@ -1438,6 +1508,7 @@ export default class FormPatternBehaviour extends Behaviour {
     if (src !== this._activeImageSource) {
       this._activeImageSource = src
       this._lastConfigSig = ''
+      this._invalidatePatternFastPathCache()
     }
   }
 
@@ -1612,6 +1683,7 @@ export default class FormPatternBehaviour extends Behaviour {
 
   private _ensureParticleAssigned(particle: Particle) {
     if (!this.particleListGetter) return
+    // Emitter runs emit before per-frame behaviour `update`, so batch assignment sees up-to-date counts.
     const arr = this._collectParticlesSorted()
     const idx = arr.findIndex((p) => p.uid === particle.uid)
     if (idx < 0) return

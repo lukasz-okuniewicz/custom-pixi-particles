@@ -39,6 +39,8 @@ export default class Renderer extends ParticleContainer {
   private finishingTextureNames: string[]
   private unusedStaticSprites: Sprite[] = []
   private unusedAnimatedSprites: AnimatedSprite[] = []
+  private unusedTurbulencePlainSprites: Sprite[] = []
+  private unusedTurbulenceVortexSprites: Sprite[] = []
   private emitterParser: EmitterParser
   private turbulenceParser: EmitterParser | undefined
   private config: any
@@ -48,8 +50,6 @@ export default class Renderer extends ParticleContainer {
   private _ticker: Ticker | undefined
   private _visibilitychangeBinding: any
   private _firstParticleHasBeenDestroyed = false
-  /** Set by consumer (or wrapper) when using Wireframe3DBehaviour so the behaviour can draw. */
-  wireframeGraphics: any = null
 
   /** Proximity line mesh drawn below particle sprites when `particleLinks` is enabled in settings. */
   particleLinkGraphics: Graphics | null = null
@@ -57,6 +57,18 @@ export default class Renderer extends ParticleContainer {
   formPatternPreviewGraphics: Graphics | null = null
   private _particleLinkSettings: IParticleLinkSettings | null = null
   private _particleLinkFrameCounter = 0
+  private _cachedBehavioursRevision = -1
+  private _cachedToroidalWrapBehaviour: {
+    enabled?: boolean
+    useCanvasBounds?: boolean
+  } | null = null
+  private _cachedFormPatternBehaviour: {
+    enabled?: boolean
+    active?: boolean
+    showTargetsPreview?: boolean
+    showPathPreview?: boolean
+    draw?: (g: Graphics, dt: number) => void
+  } | null = null
 
   /**
    * Creates an instance of Renderer.
@@ -93,7 +105,7 @@ export default class Renderer extends ParticleContainer {
 
     this._canvasSizeProvider = canvasSizeProvider
     this.config = emitterConfig
-    this.textures = textures
+    this.textures = Array.isArray(textures) ? textures : []
     this.finishingTextureNames = finishingTextures!
     this.zeroPad = animatedSpriteZeroPad!
     this.indexToStart = animatedSpriteIndexToStart!
@@ -105,8 +117,9 @@ export default class Renderer extends ParticleContainer {
         this.turbulenceEmitter = new engine.Emitter(this._model)
         this.turbulenceParser = this.turbulenceEmitter.getParser()
         this.turbulenceParser.read(this.buildTurbulenceConfig(turbulenceConfig), this._model)
+        this.turbulenceEmitter.enablePerParticleUpdateEvents = false
+        this.turbulenceEmitter.particleSpriteSync = (p: Particle) => this.onUpdateTurbulence(p)
         this.turbulenceEmitter.on(Emitter.CREATE, this.onCreateTurbulence, this)
-        this.turbulenceEmitter.on(Emitter.UPDATE, this.onUpdateTurbulence, this)
         this.turbulenceEmitter.on(Emitter.REMOVE, this.onRemoveTurbulence, this)
       }
     }
@@ -124,14 +137,15 @@ export default class Renderer extends ParticleContainer {
     }
 
     this.emitter = new engine.Emitter(this._model)
+    this.emitter.enablePerParticleUpdateEvents = false
     this.emitterParser = this.emitter.getParser()
     this.emitterParser.read(emitterConfig, this._model)
     this.emitter.on(Emitter.CREATE, this.onCreate, this)
-    this.emitter.on(Emitter.UPDATE, this.onUpdate, this)
     this.emitter.on(Emitter.FINISHING, this.onFinishing, this)
     this.emitter.on(Emitter.REMOVE, this.onRemove, this)
     this.onCompleteFN = () => this.onComplete()
     this.emitter.on(Emitter.COMPLETE, this.onCompleteFN, this)
+    this.emitter.particleSpriteSync = (p: Particle) => this.onUpdate(p)
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       this.emitter.turbulencePool.list = this.turbulenceEmitter.list
     }
@@ -205,13 +219,25 @@ export default class Renderer extends ParticleContainer {
     this.paused(false)
   }
 
+  private syncRendererBehaviourLookupsCache(): void {
+    const eb = this.emitter?.behaviours as { structureRevision?: number; getByName?: (n: string) => unknown } | undefined
+    if (!eb || typeof eb.structureRevision !== 'number' || typeof eb.getByName !== 'function') {
+      this._cachedBehavioursRevision = -1
+      this._cachedToroidalWrapBehaviour = null
+      this._cachedFormPatternBehaviour = null
+      return
+    }
+    if (this._cachedBehavioursRevision === eb.structureRevision) return
+    this._cachedBehavioursRevision = eb.structureRevision
+    this._cachedToroidalWrapBehaviour = eb.getByName(BehaviourNames.TOROIDAL_WRAP_BEHAVIOUR) as typeof this._cachedToroidalWrapBehaviour
+    this._cachedFormPatternBehaviour = eb.getByName(BehaviourNames.FORM_PATTERN_BEHAVIOUR) as typeof this._cachedFormPatternBehaviour
+  }
+
   /**
    * Feeds {@link Model.toroidalCanvasBounds} when ToroidalWrapBehaviour.useCanvasBounds is on.
    */
   private syncToroidalCanvasBoundsOnModel(): void {
-    const wrap = this.emitter?.behaviours?.getByName(BehaviourNames.TOROIDAL_WRAP_BEHAVIOUR) as
-      | { enabled?: boolean; useCanvasBounds?: boolean }
-      | null
+    const wrap = this._cachedToroidalWrapBehaviour
     if (!wrap?.enabled || !wrap.useCanvasBounds) {
       this._model.clearToroidalCanvasBounds()
       return
@@ -236,26 +262,17 @@ export default class Renderer extends ParticleContainer {
   _updateTransform(deltaTime: number) {
     if (this._paused) return
 
+    this.syncRendererBehaviourLookupsCache()
     this.syncToroidalCanvasBoundsOnModel()
 
     this.emitter?.update(deltaTime)
+    this.syncEmitterSpritesAfterUpdate(this.emitter, false)
     if (this.turbulenceEmitter) {
       this.turbulenceEmitter.update(deltaTime)
-    }
-    const wireframeBehaviour = this.emitter?.behaviours?.getByName(BehaviourNames.WIREFRAME_3D_BEHAVIOUR) as any
-    if (wireframeBehaviour?.enabled && this.wireframeGraphics && typeof wireframeBehaviour.draw === 'function') {
-      wireframeBehaviour.draw(this.wireframeGraphics, deltaTime)
+      this.syncEmitterSpritesAfterUpdate(this.turbulenceEmitter, true)
     }
 
-    const formPatternBehaviour = this.emitter?.behaviours?.getByName(BehaviourNames.FORM_PATTERN_BEHAVIOUR) as
-      | {
-          enabled?: boolean
-          active?: boolean
-          showTargetsPreview?: boolean
-          showPathPreview?: boolean
-          draw?: (g: Graphics, dt: number) => void
-        }
-      | null
+    const formPatternBehaviour = this._cachedFormPatternBehaviour
     if (
       formPatternBehaviour?.enabled &&
       formPatternBehaviour.active &&
@@ -373,7 +390,6 @@ export default class Renderer extends ParticleContainer {
     if (this.emitter) {
       this.emitter.destroy()
       this.emitter.off(Emitter.CREATE, this.onCreate, this)
-      this.emitter.off(Emitter.UPDATE, this.onUpdate, this)
       this.emitter.off(Emitter.FINISHING, this.onFinishing, this)
       this.emitter.off(Emitter.REMOVE, this.onRemove, this)
       this.emitter.off(Emitter.COMPLETE, this.onCompleteFN, this)
@@ -388,6 +404,10 @@ export default class Renderer extends ParticleContainer {
     this.unusedStaticSprites = undefined
     // @ts-ignore
     this.unusedAnimatedSprites = undefined
+    // @ts-ignore
+    this.unusedTurbulencePlainSprites = undefined
+    // @ts-ignore
+    this.unusedTurbulenceVortexSprites = undefined
     // @ts-ignore
     this._model = undefined
     this.onComplete = undefined
@@ -430,7 +450,7 @@ export default class Renderer extends ParticleContainer {
    * @param {string[]} textures - Array of strings containing the textures to be used by the emitter
    */
   setTextures(textures: string[]) {
-    this.textures = textures
+    this.textures = Array.isArray(textures) ? textures : []
     this.updateTexture()
   }
 
@@ -466,24 +486,28 @@ export default class Renderer extends ParticleContainer {
         this.turbulenceEmitter = new engine.Emitter(this._model)
         this.turbulenceParser = this.turbulenceEmitter.getParser()
         this.turbulenceParser.read(this.buildTurbulenceConfig(turbulenceConfig), this._model)
+        this.turbulenceEmitter.enablePerParticleUpdateEvents = false
         this.turbulenceEmitter.on(Emitter.CREATE, this.onCreateTurbulence, this)
-        this.turbulenceEmitter.on(Emitter.UPDATE, this.onUpdateTurbulence, this)
         this.turbulenceEmitter.on(Emitter.REMOVE, this.onRemoveTurbulence, this)
         if (this.turbulenceEmitter.list) {
           this.emitter.turbulencePool.list = this.turbulenceEmitter.list
         }
+        // Secondary emitter must not own model.emitter — RecursiveFireworkBehaviour etc. use it as the primary emitter.
+        this._model.emitter = this.emitter
         this.turbulenceEmitter.resetAndPlay()
       } else {
         this.turbulenceParser!.update(this.buildTurbulenceConfig(turbulenceConfig), this._model, resetDuration)
       }
     } else if (this.turbulenceEmitter) {
       this.turbulenceEmitter.stop()
+      if (this._model.emitter === this.turbulenceEmitter) {
+        this._model.emitter = this.emitter
+      }
       if (this.emitter.turbulencePool.list) {
         this.emitter.turbulencePool.list.reset()
         this.emitter.turbulencePool.list = new List()
       }
       this.turbulenceEmitter.off(Emitter.CREATE, this.onCreateTurbulence, this)
-      this.turbulenceEmitter.off(Emitter.UPDATE, this.onUpdateTurbulence, this)
       this.turbulenceEmitter.off(Emitter.REMOVE, this.onRemoveTurbulence, this)
       this.turbulenceEmitter = undefined
       this.turbulenceParser = undefined
@@ -496,6 +520,7 @@ export default class Renderer extends ParticleContainer {
    * @param {boolean} resetDuration - should duration be reset
    */
   updatePosition(position: { x: number; y: number }, resetDuration = true) {
+    this._model.pointerWorld = { x: position.x, y: position.y }
     const behaviour = this.getByName(BehaviourNames.SPAWN_BEHAVIOUR)
     behaviour.customPoints[0].position.x = position.x
     behaviour.customPoints[0].position.y = position.y
@@ -521,6 +546,8 @@ export default class Renderer extends ParticleContainer {
     }
     this.unusedStaticSprites = []
     this.unusedAnimatedSprites = []
+    this.unusedTurbulencePlainSprites = []
+    this.unusedTurbulenceVortexSprites = []
     if (this.turbulenceEmitter && this.turbulenceEmitter.list) {
       if (this.emitter) {
         this.emitter.turbulencePool.list.reset()
@@ -637,6 +664,26 @@ export default class Renderer extends ParticleContainer {
   }
 
   private onCreate(particle: Particle) {
+    const pool = particle.spawnTexturePool
+    if (pool && pool.length > 0) {
+      particle.textureVariantIndex = -1
+      particle.spriteDisplayKind = 'static'
+      const assetId = pool[Math.floor(Math.random() * pool.length)]
+      const sprite = this.acquireStaticSprite(assetId)
+      sprite.visible = true
+      sprite.alpha = particle.color.alpha
+      sprite.blendMode = resolveBlendMode(this.blendMode)
+      sprite.x = particle.x
+      sprite.y = particle.y
+      sprite.scale.x = particle.size.x
+      sprite.scale.y = particle.size.y
+      sprite.tint = particle.color.hex
+      sprite.rotation = particle.rotation
+      particle.sprite = sprite
+      particle.spawnTexturePool = null
+      return
+    }
+
     const { variants, weights } = resolveTextureVariants(this.textures, this.emitter)
     const idx = pickVariantIndex(weights)
     const variant = variants[idx]
@@ -650,8 +697,14 @@ export default class Renderer extends ParticleContainer {
       const assetId = pool[Math.floor(Math.random() * pool.length)]
       const sprite = this.acquireStaticSprite(assetId)
       sprite.visible = true
-      sprite.alpha = 1
+      sprite.alpha = particle.color.alpha
       sprite.blendMode = resolveBlendMode(this.blendMode)
+      sprite.x = particle.x
+      sprite.y = particle.y
+      sprite.scale.x = particle.size.x
+      sprite.scale.y = particle.size.y
+      sprite.tint = particle.color.hex
+      sprite.rotation = particle.rotation
       particle.sprite = sprite
       return
     }
@@ -671,16 +724,28 @@ export default class Renderer extends ParticleContainer {
       particle.spriteDisplayKind = 'static'
       const sprite = this.acquireStaticSprite(assetId)
       sprite.visible = true
-      sprite.alpha = 1
+      sprite.alpha = particle.color.alpha
       sprite.blendMode = resolveBlendMode(this.blendMode)
+      sprite.x = particle.x
+      sprite.y = particle.y
+      sprite.scale.x = particle.size.x
+      sprite.scale.y = particle.size.y
+      sprite.tint = particle.color.hex
+      sprite.rotation = particle.rotation
       particle.sprite = sprite
       return
     }
 
     const sprite = this.acquireAnimatedSprite(frameTextures, loop, frameRate)
     sprite.visible = true
-    sprite.alpha = 1
+    sprite.alpha = particle.color.alpha
     sprite.blendMode = resolveBlendMode(this.blendMode)
+    sprite.x = particle.x
+    sprite.y = particle.y
+    sprite.scale.x = particle.size.x
+    sprite.scale.y = particle.size.y
+    sprite.tint = particle.color.hex
+    sprite.rotation = particle.rotation
     const randomStart = v.randomFrameStart ?? animDefaults?.randomFrameStart
     if (randomStart) {
       sprite.gotoAndPlay(this.getRandomFrameNumber(frameTextures.length))
@@ -690,15 +755,25 @@ export default class Renderer extends ParticleContainer {
     particle.sprite = sprite
   }
 
-  private onCreateTurbulence(particle: Particle) {
-    let sprite
-    if (particle.showVortices) {
-      sprite = new Sprite(Texture.from('vortex.png'))
+  private syncEmitterSpritesAfterUpdate(emitter: Emitter | undefined, turbulence: boolean) {
+    if (!emitter) return
+    if (emitter.particleSpriteSync) return
+    if (turbulence) {
+      emitter.list.forEach((p: Particle) => this.onUpdateTurbulence(p))
     } else {
-      sprite = new Sprite(Texture.WHITE)
+      emitter.list.forEach((p: Particle) => this.onUpdate(p))
+    }
+  }
+
+  private onCreateTurbulence(particle: Particle) {
+    let sprite: Sprite
+    if (particle.showVortices) {
+      sprite = this.unusedTurbulenceVortexSprites.pop() ?? new Sprite(Texture.from('vortex.png'))
+    } else {
+      sprite = this.unusedTurbulencePlainSprites.pop() ?? new Sprite(Texture.WHITE)
     }
     sprite.anchor.set(this.anchor.x, this.anchor.y)
-    this.addChild(sprite)
+    if (!sprite.parent) this.addChild(sprite)
     sprite.visible = false
     sprite.alpha = 0
     particle.sprite = sprite
@@ -710,6 +785,7 @@ export default class Renderer extends ParticleContainer {
 
   private onUpdate(particle: Particle) {
     const sprite = particle.sprite
+    if (!sprite) return
 
     sprite.x = particle.x
     sprite.y = particle.y
@@ -774,11 +850,14 @@ export default class Renderer extends ParticleContainer {
 
   private onRemoveTurbulence(particle: Particle) {
     const sprite = particle.sprite
-    if (!particle.showVortices && sprite) {
+    if (!sprite) return
+    if (!particle.showVortices) {
       sprite.visible = false
       sprite.alpha = 0
     }
     this.removeChild(sprite)
+    if (particle.showVortices) this.unusedTurbulenceVortexSprites.push(sprite)
+    else this.unusedTurbulencePlainSprites.push(sprite)
     delete (particle as any).sprite
   }
 
@@ -895,7 +974,7 @@ export default class Renderer extends ParticleContainer {
           name: 'RotationBehaviour',
         },
         {
-          enabled: true,
+          enabled: false,
           priority: 0,
           showVortices: turbulenceConfig.showVortices || false,
           turbulence: true,

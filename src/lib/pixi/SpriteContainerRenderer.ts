@@ -22,10 +22,10 @@ import {
 import { resolveBlendMode } from '../util/resolveBlendMode'
 
 /**
- * Editor preview only: plain Pixi `Container` + `Sprite` draw path (correct with mixed textures).
- * Games should use `Renderer` (`ParticleContainer` batching) via `customPixiParticles.create`.
+ * `Container` + `Sprite` path for emitters with multiple unrelated textures (mixed base textures).
+ * Avoids Pixi `ParticleRenderer`'s single-`baseTexture` batching bug for those systems.
  */
-export default class TestRenderer extends Container {
+export default class SpriteContainerRenderer extends Container {
   blendMode: any
   emitter: Emitter
   turbulenceEmitter: Emitter | undefined
@@ -50,7 +50,9 @@ export default class TestRenderer extends Container {
   private _visibilitychangeBinding: any
   private _firstParticleHasBeenDestroyed = false
 
+  /** Proximity line mesh drawn below particle sprites when `particleLinks` is enabled in settings. */
   particleLinkGraphics: Graphics | null = null
+  /** Optional overlay when FormPatternBehaviour has showTargetsPreview. */
   formPatternPreviewGraphics: Graphics | null = null
   private _particleLinkSettings: IParticleLinkSettings | null = null
   private _particleLinkFrameCounter = 0
@@ -68,7 +70,9 @@ export default class TestRenderer extends Container {
   } | null = null
 
   /**
-   * Creates an instance of the editor preview renderer.
+   * Creates an instance of Renderer.
+   *
+   * @memberof Renderer
    */
   constructor(settings: ICustomPixiParticlesSettings) {
     const {
@@ -100,7 +104,7 @@ export default class TestRenderer extends Container {
 
     this._canvasSizeProvider = canvasSizeProvider
     this.config = emitterConfig
-    this.textures = textures
+    this.textures = Array.isArray(textures) ? textures : []
     this.finishingTextureNames = finishingTextures!
     this.zeroPad = animatedSpriteZeroPad!
     this.indexToStart = animatedSpriteIndexToStart!
@@ -164,7 +168,7 @@ export default class TestRenderer extends Container {
     const ticker = new Ticker()
     ticker.maxFPS = maxFPS || 60
     ticker.minFPS = minFPS || 60
-    ticker.speed = tickerSpeed || TestRenderer.BASE_TICKER_SPEED
+    ticker.speed = tickerSpeed || SpriteContainerRenderer.BASE_TICKER_SPEED
     ticker.stop()
     // @ts-ignore
     ticker.add(this._updateTransform, this)
@@ -191,7 +195,7 @@ export default class TestRenderer extends Container {
     }
 
     if (this._ticker) {
-      this._ticker.speed = TestRenderer.BASE_TICKER_SPEED * speedMultiplier
+      this._ticker.speed = SpriteContainerRenderer.BASE_TICKER_SPEED * speedMultiplier
     }
   }
 
@@ -252,7 +256,7 @@ export default class TestRenderer extends Container {
   }
 
   /**
-   * Updates transforms and emitters (editor `Container` + sprites path).
+   * Updates transforms and emitters (Container-backed sprite path).
    */
   _updateTransform(deltaTime: number) {
     if (this._paused) return
@@ -293,6 +297,9 @@ export default class TestRenderer extends Container {
     }
   }
 
+  /**
+   * Updates particle link mesh settings (e.g. after loading JSON in the editor).
+   */
   setParticleLinks(partial: Partial<IParticleLinkSettings> | null | undefined): void {
     if (partial == null) return
     const merged = mergeParticleLinkSettings({
@@ -326,8 +333,14 @@ export default class TestRenderer extends Container {
     const pick = () => ids[Math.floor(Math.random() * Math.max(1, ids.length))] || this.getRandomLegacyTexture()
     for (let i = 0; i < this.unusedStaticSprites.length; ++i) {
       const id = pick()
-      const t = Assets.get(id) ?? Texture.from(id)
-      this.unusedStaticSprites[i].texture = t
+      this.unusedStaticSprites[i].texture = Texture.from(id)
+    }
+
+    for (let i = 0; i < this.children.length; ++i) {
+      const ch = this.children[i] as Sprite
+      if (ch && (ch as any).texture) {
+        ch.texture = Texture.from(pick())
+      }
     }
   }
 
@@ -442,13 +455,12 @@ export default class TestRenderer extends Container {
    * @param {string[]} textures - Array of strings containing the textures to be used by the emitter
    */
   setTextures(textures: string[]) {
-    this.textures = textures
+    this.textures = Array.isArray(textures) ? textures : []
     this.updateTexture()
   }
 
   /**
    * Keeps Pixi container state in sync with emitter config after hot reloads.
-   * Sprites read blendMode from this container on create (not from emitter.blendMode).
    */
   private syncContainerFromEmitterConfig(config: any) {
     this.config = config
@@ -565,7 +577,7 @@ export default class TestRenderer extends Container {
   }
 
   private textureFromAssetId(assetId: string): Texture {
-    return Assets.get(assetId) ?? Texture.from(assetId)
+    return Texture.from(assetId)
   }
 
   private getStaticTextureIdsForPreview(): string[] {
@@ -587,7 +599,8 @@ export default class TestRenderer extends Container {
     let sprite = this.unusedStaticSprites.pop()
     if (sprite) {
       if (this.finishingTextureNames && this.finishingTextureNames.length) {
-        sprite.texture = Assets.get(this.getRandomLegacyTexture()) ?? Texture.from(this.getRandomLegacyTexture())
+        const rnd = this.getRandomLegacyTexture()
+        sprite.texture = Texture.from(rnd)
       } else {
         sprite.texture = this.textureFromAssetId(assetId)
       }
@@ -631,7 +644,7 @@ export default class TestRenderer extends Container {
     let frame: string = ''
     let indexFrame: number = indexFrameStart
     let padding: number = 0
-    let texture: any
+    let texture: Texture | null
 
     do {
       frame = indexFrame.toString()
@@ -643,7 +656,7 @@ export default class TestRenderer extends Container {
         const fileName = `${prefix}${frame}.${imageFileExtension}`
         const file = utils.TextureCache[fileName]
         if (file) {
-          texture = file
+          texture = Assets.get(fileName) as Texture
           textures.push(texture)
           indexFrame += 1
         } else {
@@ -793,7 +806,6 @@ export default class TestRenderer extends Container {
 
   private onUpdateTurbulence(particle: Particle) {
     const sprite = particle.sprite
-    if (!sprite) return
 
     sprite.x = particle.x
     sprite.y = particle.y
@@ -908,9 +920,9 @@ export default class TestRenderer extends Container {
         },
         {
           priority: 100,
+          spawnType: 'Ring',
           customPoints: [
             {
-              spawnType: 'Ring',
               radius: 0,
               position: {
                 x: turbulenceConfig.position.x || 0,
