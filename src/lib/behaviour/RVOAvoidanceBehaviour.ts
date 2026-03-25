@@ -3,9 +3,14 @@ import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 import type Model from '../Model'
 import type TurbulencePool from '../util/turbulencePool'
+import { spatialCellKey } from '../util/spatialCellKey'
+
+const MAX_POOLED_RVO_CELLS = 2048
 
 /**
  * Lightweight reciprocal avoidance: corrective velocity from nearby particles (2D).
+ *
+ * Performance: spatial grid rebuilds once per frame in `update()`; neighbor checks are O(k) per particle.
  */
 export default class RVOAvoidanceBehaviour extends Behaviour {
   enabled = true
@@ -19,13 +24,80 @@ export default class RVOAvoidanceBehaviour extends Behaviour {
 
   particleListGetter: (() => { forEach: (cb: (p: Particle) => void) => void }) | null = null
 
+  private rvoGrid = new Map<number, Particle[]>()
+  private rvoCellPool: Particle[][] = []
+  private rvoScratchParticles: Particle[] = []
+  private rvoGridCellSize = 1
+  private rvoGridSearchR = 1
+
   init(_particle: Particle, _model: Model, _turbulencePool: TurbulencePool) {}
+
+  update() {
+    const list = this.particleListGetter?.()
+    if (!list || !this.enabled) return
+
+    const cellSize = Math.max(1, this.neighborRadius)
+    this.rvoGridCellSize = cellSize
+    this.rvoGridSearchR = Math.min(4, Math.ceil(this.neighborRadius / cellSize) + 1)
+
+    this.recycleRvoGrid()
+    const particles = this.rvoScratchParticles
+    particles.length = 0
+    list.forEach((p: Particle) => particles.push(p))
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i]
+      const ox = p.movement.x
+      const oy = p.movement.y
+      const cx = Math.floor(ox / cellSize)
+      const cy = Math.floor(oy / cellSize)
+      const key = spatialCellKey(cx, cy)
+      let cell = this.rvoGrid.get(key)
+      if (!cell) {
+        cell = this.borrowRvoCell()
+        this.rvoGrid.set(key, cell)
+      }
+      cell.push(p)
+    }
+  }
+
+  private recycleRvoGrid() {
+    this.rvoGrid.forEach((cell) => {
+      cell.length = 0
+      if (this.rvoCellPool.length < MAX_POOLED_RVO_CELLS) {
+        this.rvoCellPool.push(cell)
+      }
+    })
+    this.rvoGrid.clear()
+  }
+
+  private borrowRvoCell(): Particle[] {
+    return this.rvoCellPool.pop() ?? []
+  }
+
+  private forEachNeighbor(particle: Particle, fn: (other: Particle) => void) {
+    const px = particle.movement.x
+    const py = particle.movement.y
+    const cellSize = this.rvoGridCellSize
+    const pcx = Math.floor(px / cellSize)
+    const pcy = Math.floor(py / cellSize)
+    const R = this.rvoGridSearchR
+    for (let dx = -R; dx <= R; dx++) {
+      for (let dy = -R; dy <= R; dy++) {
+        const cell = this.rvoGrid.get(spatialCellKey(pcx + dx, pcy + dy))
+        if (!cell) continue
+        for (let j = 0; j < cell.length; j++) {
+          const other = cell[j]
+          if (other !== particle) fn(other)
+        }
+      }
+    }
+  }
 
   apply(particle: Particle, deltaTime: number, _model: Model) {
     if (!this.enabled || particle.skipPositionBehaviour) return
 
-    const list = this.particleListGetter?.()
-    if (!list) return
+    if (!this.particleListGetter?.()) return
 
     const px = particle.movement.x
     const py = particle.movement.y
@@ -37,8 +109,7 @@ export default class RVOAvoidanceBehaviour extends Behaviour {
     const r = this.neighborRadius
     const rSq = r * r
 
-    list.forEach((other: Particle) => {
-      if (other === particle) return
+    this.forEachNeighbor(particle, (other: Particle) => {
       const ox = other.movement.x
       const oy = other.movement.y
       const dx = px - ox

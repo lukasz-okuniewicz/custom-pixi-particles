@@ -1,4 +1,5 @@
-import { Behaviour, BehaviourNames } from './index'
+import Behaviour from './Behaviour'
+import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 import { Color, Point } from '../util'
 
@@ -21,21 +22,40 @@ export default class SoundReactiveBehaviour extends Behaviour {
   rotationFactor = 0.05 // Scale factor for rotation effects
   beatSensitivity = 1 // Sensitivity to detect beats
   velocityFactor = new Point(1, 1) // Sensitivity to detect beats
+  private _lastFrequencySampleTime = -1
+
+  private getNormalizedFrequencyData(): Uint8Array | null {
+    const data = this.frequencyData as unknown
+    if (!data) return null
+    if (data instanceof Uint8Array) return data
+    if (Array.isArray(data)) {
+      const normalized = new Uint8Array(data.map((v) => (Number.isFinite(v) ? v : 0)))
+      this.frequencyData = normalized
+      return normalized
+    }
+    if (ArrayBuffer.isView(data)) {
+      const view = data as ArrayBufferView
+      const normalized = new Uint8Array(view.buffer, view.byteOffset, view.byteLength)
+      this.frequencyData = normalized
+      return normalized
+    }
+    return null
+  }
 
   init() {
     //
   }
 
   apply(particle: Particle, deltaTime: number) {
-    if (!this.enabled || !this.analyser || !this.frequencyData || !this.isPlaying) return
+    if (!this.enabled || !this.analyser || !this.isPlaying) return
+    const frequencyData = this.getNormalizedFrequencyData()
+    if (!frequencyData) return
 
-    // Update frequency data
-    // @ts-ignore
-    this.analyser.getByteFrequencyData(this.frequencyData)
+    this.refreshFrequencyData()
 
     // Compute amplitude and frequency effects
-    const amplitude = this.getAmplitude()
-    const dominantFrequency = this.getDominantFrequency()
+    const amplitude = this.getAmplitude(frequencyData)
+    const dominantFrequency = this.getDominantFrequency(frequencyData)
 
     if (this.useSize) {
       // Apply amplitude effect to size
@@ -74,29 +94,45 @@ export default class SoundReactiveBehaviour extends Behaviour {
   /**
    * Computes the amplitude (average volume level) from the frequency data.
    */
-  getAmplitude(): number {
-    if (!this.frequencyData) return 0
+  getAmplitude(frequencyData?: Uint8Array): number {
+    const data = frequencyData || this.getNormalizedFrequencyData()
+    if (!data || data.length === 0) return 0
 
-    const sum = this.frequencyData.reduce((a, b) => a + b, 0)
-    return sum / this.frequencyData.length
+    let sum = 0
+    for (let i = 0; i < data.length; i++) sum += data[i]
+    return sum / data.length
   }
 
   /**
    * Finds the dominant frequency (frequency with the highest amplitude).
    */
-  getDominantFrequency(): number {
-    if (!this.frequencyData) return 0
+  getDominantFrequency(frequencyData?: Uint8Array): number {
+    const data = frequencyData || this.getNormalizedFrequencyData()
+    if (!data || data.length === 0) return 0
 
     let maxAmplitude = 0
     let dominantIndex = 0
-    for (let i = 0; i < this.frequencyData.length; i++) {
-      if (this.frequencyData[i] > maxAmplitude) {
-        maxAmplitude = this.frequencyData[i]
+    for (let i = 0; i < data.length; i++) {
+      if (data[i] > maxAmplitude) {
+        maxAmplitude = data[i]
         dominantIndex = i
       }
     }
 
     return (dominantIndex * (this.analyser?.context.sampleRate ?? 0)) / (this.analyser?.fftSize ?? 1)
+  }
+
+  refreshFrequencyData() {
+    if (!this.analyser || !this.isPlaying) return
+    const frequencyData = this.getNormalizedFrequencyData()
+    if (!frequencyData) return
+    const context = this.analyser.context
+    if (!context) return
+    const now = context.currentTime
+    if (now === this._lastFrequencySampleTime) return
+    this._lastFrequencySampleTime = now
+    // Cast for Web Audio API: expects Uint8Array<ArrayBuffer>, not ArrayBufferLike.
+    this.analyser.getByteFrequencyData(frequencyData as unknown as Uint8Array<ArrayBuffer>)
   }
 
   /**

@@ -1,4 +1,4 @@
-import { Behaviour } from './index'
+import Behaviour from './Behaviour'
 import Particle from '../Particle'
 import { Color, Point } from '../util'
 import behaviourNames from './BehaviourNames'

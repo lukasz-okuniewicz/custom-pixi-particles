@@ -1,5 +1,6 @@
 import { Point } from '../util'
-import { Behaviour, BehaviourNames } from './index'
+import Behaviour from './Behaviour'
+import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 
 let canvas: any = null
@@ -231,8 +232,7 @@ export default class SpawnBehaviour extends Behaviour {
       particle.reset() // Reset the particle's position and movement
     }
 
-    // Assign a random z-coordinate within a range
-    particle.z = Math.random() * point.maxZ
+    particle.z = Math.random() * (point.maxZ || 0)
 
     if (point.spawnType === 'Rectangle') {
       particle.movement.x = this.calculate(point.position.x, point.positionVariance.x)
