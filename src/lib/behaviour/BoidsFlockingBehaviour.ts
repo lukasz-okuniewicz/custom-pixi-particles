@@ -1,8 +1,11 @@
-import { Point } from '../util'
-import { Behaviour, BehaviourNames } from './index'
+import Behaviour from './Behaviour'
+import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 import type Model from '../Model'
 import type TurbulencePool from '../util/turbulencePool'
+import { spatialCellKey } from '../util/spatialCellKey'
+
+const MAX_POOLED_BOIDS_CELLS = 2048
 
 /**
  * BoidsFlockingBehaviour — Emergent flocking via separation, alignment, cohesion.
@@ -19,7 +22,7 @@ import type TurbulencePool from '../util/turbulencePool'
  * - scaleByDensity: scale particle size by local neighbor count (dense = larger).
  * - colorBySpeed: tint by speed (e.g. fast = brighter or hue shift); apply in your color pipeline from velocity magnitude.
  *
- * Performance: O(N) per particle without spatial hash; use a spatial hash or grid for O(k) neighbors in C++/Unity.
+ * Performance: spatial grid rebuilds once per frame in `update()`; neighbor checks are O(k) per particle instead of O(N).
  * Optional: set particleListGetter = () => emitter.list so this behaviour can iterate neighbors.
  */
 export default class BoidsFlockingBehaviour extends Behaviour {
@@ -47,7 +50,81 @@ export default class BoidsFlockingBehaviour extends Behaviour {
   /** Set by user: () => emitter.list (or any forEach-able list of particles) for neighbor lookups. */
   particleListGetter: (() => { forEach: (cb: (p: Particle) => void) => void }) | null = null
 
+  private boidsGrid = new Map<number, Particle[]>()
+  private boidsCellPool: Particle[][] = []
+  private boidsScratchParticles: Particle[] = []
+  private boidsGridCellSize = 1
+  private boidsGridSearchR = 1
+
   init(_particle: Particle, _model: Model, _turbulencePool: TurbulencePool) {}
+
+  update() {
+    const list = this.particleListGetter?.()
+    if (!list || !this.enabled) return
+
+    const maxR = Math.max(
+      this.separationRadius,
+      this.alignmentRadius,
+      this.cohesionRadius,
+      this.scaleByDensity ? this.densityRadius : 0,
+    )
+    const cellSize = Math.max(1, maxR)
+    this.boidsGridCellSize = cellSize
+    this.boidsGridSearchR = Math.min(4, Math.ceil(maxR / cellSize) + 1)
+
+    this.recycleBoidsGrid()
+    const particles = this.boidsScratchParticles
+    particles.length = 0
+    list.forEach((p: Particle) => particles.push(p))
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i]
+      const ox = p.movement.x
+      const oy = p.movement.y
+      const cx = Math.floor(ox / cellSize)
+      const cy = Math.floor(oy / cellSize)
+      const key = spatialCellKey(cx, cy)
+      let cell = this.boidsGrid.get(key)
+      if (!cell) {
+        cell = this.borrowBoidsCell()
+        this.boidsGrid.set(key, cell)
+      }
+      cell.push(p)
+    }
+  }
+
+  private recycleBoidsGrid() {
+    this.boidsGrid.forEach((cell) => {
+      cell.length = 0
+      if (this.boidsCellPool.length < MAX_POOLED_BOIDS_CELLS) {
+        this.boidsCellPool.push(cell)
+      }
+    })
+    this.boidsGrid.clear()
+  }
+
+  private borrowBoidsCell(): Particle[] {
+    return this.boidsCellPool.pop() ?? []
+  }
+
+  private forEachNeighbor(particle: Particle, fn: (other: Particle) => void) {
+    const px = particle.movement.x
+    const py = particle.movement.y
+    const cellSize = this.boidsGridCellSize
+    const pcx = Math.floor(px / cellSize)
+    const pcy = Math.floor(py / cellSize)
+    const R = this.boidsGridSearchR
+    for (let dx = -R; dx <= R; dx++) {
+      for (let dy = -R; dy <= R; dy++) {
+        const cell = this.boidsGrid.get(spatialCellKey(pcx + dx, pcy + dy))
+        if (!cell) continue
+        for (let j = 0; j < cell.length; j++) {
+          const other = cell[j]
+          if (other !== particle) fn(other)
+        }
+      }
+    }
+  }
 
   apply(particle: Particle, deltaTime: number, model: Model) {
     if (!this.enabled || particle.skipPositionBehaviour) return
@@ -70,8 +147,7 @@ export default class BoidsFlockingBehaviour extends Behaviour {
       cohY = 0,
       cohN = 0
 
-    list.forEach((other: Particle) => {
-      if (other === particle) return
+    this.forEachNeighbor(particle, (other: Particle) => {
       const ox = other.movement.x
       const oy = other.movement.y
       const dx = px - ox
@@ -150,11 +226,11 @@ export default class BoidsFlockingBehaviour extends Behaviour {
 
     if (this.scaleByDensity) {
       let densityN = 0
-      list.forEach((other: Particle) => {
-        if (other === particle) return
+      const d2Max = this.densityRadius * this.densityRadius
+      this.forEachNeighbor(particle, (other: Particle) => {
         const dx = particle.movement.x - other.movement.x
         const dy = particle.movement.y - other.movement.y
-        if (dx * dx + dy * dy < this.densityRadius * this.densityRadius) densityN += 1
+        if (dx * dx + dy * dy < d2Max) densityN += 1
       })
       const t = Math.min(1, densityN / 8)
       const scale = this.densityScaleMin + (this.densityScaleMax - this.densityScaleMin) * t

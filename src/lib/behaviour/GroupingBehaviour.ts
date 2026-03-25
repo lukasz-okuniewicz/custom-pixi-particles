@@ -1,5 +1,6 @@
 import { Point } from '../util'
-import { Behaviour, BehaviourNames } from './index'
+import Behaviour from './Behaviour'
+import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 
 export default class GroupingBehaviour extends Behaviour {

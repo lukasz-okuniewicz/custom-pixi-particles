@@ -1,5 +1,6 @@
 // src/lib/behaviour/MoveToPointBehaviour.ts
-import { Behaviour, BehaviourNames } from './index'
+import Behaviour from './Behaviour'
+import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 import { Point } from '../util'
 

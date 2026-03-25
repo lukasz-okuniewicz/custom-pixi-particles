@@ -215,7 +215,7 @@ const particles = customPixiParticles.create({
 })
 ```
 
-`create(...)` usually returns a `Renderer`. If `Wireframe3DBehaviour` is enabled, it returns a wrapping `Container` exposing the same runtime control methods.
+`create(...)` returns a `Renderer`.
 
 ### Configuration Object Structure
 
@@ -921,7 +921,7 @@ particles.emitter.behaviours.add(myCustomBehaviour)
 // New and existing particles will use the new behaviour on the next update
 ```
 
-**Extending built-in behaviours:** Core behaviour classes are exported directly from the package (for example `SpawnBehaviour`, `LifeBehaviour`, `PositionBehaviour`, `ColorBehaviour`, `SizeBehaviour`, `FormPatternBehaviour`, `Wireframe3DBehaviour`, `ToroidalWrapBehaviour`, plus `Behaviour`, `BehaviourRegistry`, `EmitterBehaviours`, `BehaviourNames`). Advanced behaviours are available by name in emitter configs/editor presets; if you need class-level inheritance for one that is not exported at top-level, import from the package source in this repo.
+**Extending built-in behaviours:** Core behaviour classes are exported directly from the package (for example `SpawnBehaviour`, `LifeBehaviour`, `PositionBehaviour`, `ColorBehaviour`, `SizeBehaviour`, `FormPatternBehaviour`, `ToroidalWrapBehaviour`, plus `Behaviour`, `BehaviourRegistry`, `EmitterBehaviours`, `BehaviourNames`). Advanced behaviours are available by name in emitter configs/editor presets; if you need class-level inheritance for one that is not exported at top-level, import from the package source in this repo.
 
 **Replacing a built-in behaviour:** Register your class under the same name as a built-in (e.g. `SpawnBehaviour`) **before** creating the renderer or loading config. The registry is checked first, so your implementation is used instead. Use this for customizations like multiple trails on one shape, different trailing logic (e.g. CCV-style), or any variant of spawn/trail/position without changing the library.
 
@@ -1280,60 +1280,6 @@ Moves particles toward specific points.
 }
 ```
 
-#### Wireframe3D Behaviour
-Renders 3D wireframe shapes (cube, sphere, pyramid, torus, cylinder, etc.) with optional orbit, pulsate, path motion, dashed lines, and depth styling. When this behaviour is present, the emitter is wrapped in a container that provides a Graphics object for the wireframe; use it for 3D-style particle backdrops or decorative shapes.
-
-```javascript
-{
-  priority: 50,
-  enabled: true,
-  shapeType: 'cube',           // 'cube' | 'sphere' | 'pyramid' | 'torus' | 'cylinder' | 'tetrahedron' | 'octahedron' | 'grid' | 'lattice' | 'custom'
-  size: 100,
-  rotationSpeedX: 0.5,
-  rotationSpeedY: 0.3,
-  rotationSpeedZ: 0.2,
-  lineColor: 0xffffff,
-  lineWidth: 1,
-  perspective: 400,
-  cameraZ: 500,
-  depthStyle: 'none',          // 'none' | 'fade' | 'thickness' | 'both'
-  sortByDepth: false,
-  orbitEnabled: false,
-  orbitRadius: 50,
-  orbitSpeed: 1,
-  pulsateEnabled: false,
-  pulsateMin: 80,
-  pulsateMax: 120,
-  pulsateSpeed: 2,
-  pathType: 'none',
-  pathSpeed: 1,
-  pathScale: 50,
-  dashedEnabled: false,
-  dashLength: 10,
-  gapLength: 5,
-  colorOverTimeEnabled: false,
-  colorOverTimeSpeed: 1,
-  perVertexColor: false,
-  noiseWobbleEnabled: false,
-  noiseWobbleAmount: 10,
-  noiseWobbleSpeed: 1,
-  attractParticlesEnabled: false,
-  attractStrength: 0,
-  latticeSegmentsX: 4,
-  latticeSegmentsY: 4,
-  latticeSegmentsZ: 4,
-  gridSegments: 4,
-  torusInnerRadius: 0.5,
-  cylinderHeight: 1,
-  customVertices: [],
-  customEdges: [],
-  wireframes: [],
-  name: 'Wireframe3DBehaviour',
-}
-```
-
----
-
 ## 💡 Examples
 
 ### Fire Effect
@@ -1508,6 +1454,14 @@ const textConfig = {
 5. **FPS Capping**: Use `maxFPS` and `minFPS` to control update frequency
 6. **Batch Updates**: Update multiple emitters in a single frame when possible
 7. **Clean Up**: Call `destroy()` and `clearPool()` when done with emitters
+8. **Runtime `behaviour.enabled` toggles**: If you flip `enabled` on an existing behaviour instance without re-running the emitter parser (add/remove), call `emitter.behaviours.invalidateEnabledApplySnapshot()` before particle simulation runs, or rely on the next full `emitter.update()` after toggling in the same frame as other code paths that only call `apply`/`init` without going through `update()`.
+
+### Profiling checklist (Chrome / Chromium)
+
+1. Open **Performance** (or **JavaScript Profiler**), record while your effect runs at target particle count.
+2. In the flame chart, look for **`Emitter.update`**, **`EmitterBehaviours.apply`**, and behaviour names in hot frames.
+3. Confirm **GC** time: high allocation rates often come from per-frame object creation outside this library; spatial grids here use numeric cell keys to avoid string churn on neighbor queries.
+4. Compare **GPU** vs **CPU**: if the bottleneck is upload/draw, reduce `ParticleContainer` feature flags (`rotation`, `tint`, `uvs`) and particle count before micro-optimizing simulation.
 
 ---
 

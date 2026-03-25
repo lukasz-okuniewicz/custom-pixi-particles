@@ -19,7 +19,6 @@ const behaviourNames = {
   STRETCH_BEHAVIOUR: 'StretchBehaviour',
   TEMPERATURE_BEHAVIOUR: 'TemperatureBehaviour',
   MOVE_TO_POINT_BEHAVIOUR: 'MoveToPointBehaviour',
-  WIREFRAME_3D_BEHAVIOUR: 'Wireframe3DBehaviour',
   VORTEX_BEHAVIOUR: 'VortexBehaviour',
   PULSE_BEHAVIOUR: 'PulseBehaviour',
   RIPPLE_BEHAVIOUR: 'RippleBehaviour',
@@ -57,6 +56,7 @@ const behaviourNames = {
   SCREEN_SPACE_FLOW_MAP_BEHAVIOUR: 'ScreenSpaceFlowMapBehaviour',
   BEAT_PHASE_LOCK_BEHAVIOUR: 'BeatPhaseLockBehaviour',
   DAMAGE_FLASH_RIPPLE_BEHAVIOUR: 'DamageFlashRippleBehaviour',
+  RECURSIVE_FIREWORK_BEHAVIOUR: 'RecursiveFireworkBehaviour',
   FORM_PATTERN_BEHAVIOUR: 'FormPatternBehaviour',
 }
 

@@ -1,7 +1,11 @@
-import { Behaviour, BehaviourNames } from './index'
+import Behaviour from './Behaviour'
+import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 import type Model from '../Model'
 import type TurbulencePool from '../util/turbulencePool'
+import { spatialCellKey } from '../util/spatialCellKey'
+
+const MAX_POOLED_PHASE_CELLS = 2048
 
 /**
  * PhaseCoherenceBehaviour — Kuramoto-style phase coupling for emergent synchronization.
@@ -19,7 +23,7 @@ import type TurbulencePool from '../util/turbulencePool'
  * - colorByOrder: use particle.phaseCoherenceOrder (r) for intensity (in-sync = bright).
  * - scaleByOrder: scale size by order (sync = larger).
  *
- * Performance: O(N) per particle without spatial hash; use grid/spatial hash in C++/Unity for O(k).
+ * Performance: spatial grid rebuilds once per frame in `update()`; neighbor checks are O(k) per particle.
  * Set particleListGetter = () => emitter.list (wired by parser when available).
  */
 export default class PhaseCoherenceBehaviour extends Behaviour {
@@ -45,10 +49,78 @@ export default class PhaseCoherenceBehaviour extends Behaviour {
 
   particleListGetter: (() => { forEach: (cb: (p: Particle) => void) => void }) | null = null
 
+  private phaseGrid = new Map<number, Particle[]>()
+  private phaseCellPool: Particle[][] = []
+  private phaseScratchParticles: Particle[] = []
+  private phaseGridCellSize = 1
+  private phaseGridSearchR = 1
+
   init(particle: Particle, _model: Model, _turbulencePool: TurbulencePool) {
     // Spread initial phase so they are not all in sync at start
     const p = particle as any
     p.phaseCoherencePhaseRad = (particle.uid * 0.618033988749895) % (2 * Math.PI)
+  }
+
+  update() {
+    const list = this.particleListGetter?.()
+    if (!list || !this.enabled) return
+
+    const cellSize = Math.max(1, this.radius)
+    this.phaseGridCellSize = cellSize
+    this.phaseGridSearchR = Math.min(4, Math.ceil(this.radius / cellSize) + 1)
+
+    this.recyclePhaseGrid()
+    const particles = this.phaseScratchParticles
+    particles.length = 0
+    list.forEach((p: Particle) => particles.push(p))
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i]
+      const ox = (p as any).movement?.x ?? p.x
+      const oy = (p as any).movement?.y ?? p.y
+      const cx = Math.floor(ox / cellSize)
+      const cy = Math.floor(oy / cellSize)
+      const key = spatialCellKey(cx, cy)
+      let cell = this.phaseGrid.get(key)
+      if (!cell) {
+        cell = this.borrowPhaseCell()
+        this.phaseGrid.set(key, cell)
+      }
+      cell.push(p)
+    }
+  }
+
+  private recyclePhaseGrid() {
+    this.phaseGrid.forEach((cell) => {
+      cell.length = 0
+      if (this.phaseCellPool.length < MAX_POOLED_PHASE_CELLS) {
+        this.phaseCellPool.push(cell)
+      }
+    })
+    this.phaseGrid.clear()
+  }
+
+  private borrowPhaseCell(): Particle[] {
+    return this.phaseCellPool.pop() ?? []
+  }
+
+  private forEachNeighbor(particle: Particle, fn: (other: Particle) => void) {
+    const px = particle.movement.x
+    const py = particle.movement.y
+    const cellSize = this.phaseGridCellSize
+    const pcx = Math.floor(px / cellSize)
+    const pcy = Math.floor(py / cellSize)
+    const R = this.phaseGridSearchR
+    for (let dx = -R; dx <= R; dx++) {
+      for (let dy = -R; dy <= R; dy++) {
+        const cell = this.phaseGrid.get(spatialCellKey(pcx + dx, pcy + dy))
+        if (!cell) continue
+        for (let j = 0; j < cell.length; j++) {
+          const other = cell[j]
+          if (other !== particle) fn(other)
+        }
+      }
+    }
   }
 
   apply(particle: Particle, deltaTime: number, _model: Model) {
@@ -67,8 +139,7 @@ export default class PhaseCoherenceBehaviour extends Behaviour {
       const py = particle.movement.y
       const r2 = this.radius * this.radius
 
-      list.forEach((other: Particle) => {
-        if (other === particle) return
+      this.forEachNeighbor(particle, (other: Particle) => {
         const ox = (other as any).movement?.x ?? other.x
         const oy = (other as any).movement?.y ?? other.y
         const dx = px - ox

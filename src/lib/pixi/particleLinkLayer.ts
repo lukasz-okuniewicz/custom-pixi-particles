@@ -2,6 +2,7 @@
 import type { BLEND_MODES, Graphics } from 'pixi.js-legacy'
 import type Particle from '../Particle'
 import type List from '../util/List'
+import { spatialCellKey } from '../util/spatialCellKey'
 
 /**
  * Settings for drawing proximity links between particles (Particle Love–style mesh).
@@ -36,7 +37,7 @@ export const PARTICLE_LINK_DEFAULTS: IParticleLinkSettings = {
   lineColor: 0x88ccff,
   useParticleTint: false,
   fadeByDistance: true,
-  updateEveryNFrames: 1,
+  updateEveryNFrames: 2,
 }
 
 export function mergeParticleLinkSettings(
@@ -63,6 +64,31 @@ function blendRgb(a: number, b: number): number {
   return (r << 16) | (g << 8) | bl
 }
 
+type LinkCand = { q: Particle; d2: number }
+
+const linkDrawScratch = {
+  particles: [] as Particle[],
+  grid: new Map<number, Particle[]>(),
+  cellPool: [] as Particle[][],
+  candidates: [] as LinkCand[],
+}
+
+const MAX_POOLED_CELLS = 2048
+
+function borrowCell(): Particle[] {
+  return linkDrawScratch.cellPool.pop() ?? []
+}
+
+function recycleGrid(grid: Map<number, Particle[]>) {
+  grid.forEach((cell) => {
+    cell.length = 0
+    if (linkDrawScratch.cellPool.length < MAX_POOLED_CELLS) {
+      linkDrawScratch.cellPool.push(cell)
+    }
+  })
+  grid.clear()
+}
+
 /**
  * Draws line segments between nearby particles using a uniform grid for O(n·k) neighbor checks.
  */
@@ -80,10 +106,12 @@ export function drawParticleLinks(
   const cellSize = Math.max(1, maxD)
   const K = settings.maxLinksPerParticle
 
-  const particles: Particle[] = []
+  const particles = linkDrawScratch.particles
+  particles.length = 0
   list.forEach((p: Particle) => particles.push(p))
 
-  const grid = new Map<string, Particle[]>()
+  const grid = linkDrawScratch.grid
+  recycleGrid(grid)
 
   for (let i = 0; i < particles.length; i++) {
     const p = particles[i]
@@ -91,14 +119,16 @@ export function drawParticleLinks(
     const y = p.y
     const cx = Math.floor(x / cellSize)
     const cy = Math.floor(y / cellSize)
-    const key = `${cx},${cy}`
+    const key = spatialCellKey(cx, cy)
     let cell = grid.get(key)
     if (!cell) {
-      cell = []
+      cell = borrowCell()
       grid.set(key, cell)
     }
     cell.push(p)
   }
+
+  const candidates = linkDrawScratch.candidates
 
   for (let i = 0; i < particles.length; i++) {
     const p = particles[i]
@@ -107,12 +137,11 @@ export function drawParticleLinks(
     const pcx = Math.floor(px / cellSize)
     const pcy = Math.floor(py / cellSize)
 
-    type Cand = { q: Particle; d2: number }
-    const candidates: Cand[] = []
+    candidates.length = 0
 
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
-        const cell = grid.get(`${pcx + dx},${pcy + dy}`)
+        const cell = grid.get(spatialCellKey(pcx + dx, pcy + dy))
         if (!cell) continue
         for (let j = 0; j < cell.length; j++) {
           const q = cell[j]

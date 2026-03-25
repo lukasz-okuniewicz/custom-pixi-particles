@@ -11,6 +11,7 @@ export interface ICustomPixiParticlesSettings {
   finishingTextures?: string[]
   animatedSpriteFrameRate?: number
   animatedSpriteLoop?: boolean
+  /** ParticleContainer flags; omitted fields are inferred from `emitterConfig` (e.g. `uvs` off for static-only textures). */
   vertices?: boolean
   position?: boolean
   rotation?: boolean

@@ -5,7 +5,7 @@ import * as behaviours from '../behaviour'
 import { BehaviourRegistry } from '../behaviour/BehaviourRegistry'
 import PlaceholderBehaviour from '../behaviour/PlaceholderBehaviour'
 import BehaviourNames from '../behaviour/BehaviourNames'
-import { Emitter } from '../emitter'
+import type Emitter from '../emitter/Emitter'
 import Model from '../Model'
 import { resolveBlendMode } from '../util/resolveBlendMode'
 

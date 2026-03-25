@@ -182,6 +182,12 @@ export default class Particle {
   /** Index into resolved `textureVariants` for this spawn (-1 if unused). */
   textureVariantIndex: number
 
+  /**
+   * When set before `emitter/create`, Renderer picks a random static texture from this list
+   * instead of emitter texture variants. Cleared after sprite creation.
+   */
+  spawnTexturePool: string[] | null = null
+
   /** Whether the display object plays a frame strip or a single texture. */
   spriteDisplayKind: 'static' | 'animated'
 
@@ -370,6 +376,7 @@ export default class Particle {
 
     this.finishingTexture = 0
     this.textureVariantIndex = -1
+    this.spawnTexturePool = null
     this.spriteDisplayKind = 'static'
 
     this.showVortices = false
