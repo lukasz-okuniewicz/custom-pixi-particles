@@ -22,7 +22,6 @@ import LightEffectBehaviour from './LightEffectBehaviour'
 import StretchBehaviour from './StretchBehaviour'
 import TemperatureBehaviour from './TemperatureBehaviour'
 import MoveToPointBehaviour from './MoveToPointBehaviour'
-import Wireframe3DBehaviour from './Wireframe3DBehaviour'
 import VortexBehaviour from './VortexBehaviour'
 import PulseBehaviour from './PulseBehaviour'
 import RippleBehaviour from './RippleBehaviour'
@@ -60,6 +59,7 @@ import BezierFlowTubeBehaviour from './BezierFlowTubeBehaviour'
 import ScreenSpaceFlowMapBehaviour from './ScreenSpaceFlowMapBehaviour'
 import BeatPhaseLockBehaviour from './BeatPhaseLockBehaviour'
 import DamageFlashRippleBehaviour from './DamageFlashRippleBehaviour'
+import RecursiveFireworkBehaviour from './RecursiveFireworkBehaviour'
 import FormPatternBehaviour from './FormPatternBehaviour'
 
 export type { IBehaviour } from './IBehaviour'
@@ -91,7 +91,6 @@ export {
   TemperatureBehaviour,
   BehaviourNames,
   MoveToPointBehaviour,
-  Wireframe3DBehaviour,
   VortexBehaviour,
   PulseBehaviour,
   RippleBehaviour,
@@ -129,6 +128,7 @@ export {
   ScreenSpaceFlowMapBehaviour,
   BeatPhaseLockBehaviour,
   DamageFlashRippleBehaviour,
+  RecursiveFireworkBehaviour,
   FormPatternBehaviour,
 }
 

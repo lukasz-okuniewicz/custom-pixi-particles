@@ -1,5 +1,6 @@
 import { createNoise3D } from 'simplex-noise'
-import { Behaviour, BehaviourNames } from './index'
+import Behaviour from './Behaviour'
+import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 import type Model from '../Model'
 import type TurbulencePool from '../util/turbulencePool'

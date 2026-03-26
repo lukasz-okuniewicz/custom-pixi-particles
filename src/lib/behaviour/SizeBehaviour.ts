@@ -1,5 +1,6 @@
 import { Point } from '../util'
-import { Behaviour, BehaviourNames } from './index'
+import Behaviour from './Behaviour'
+import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 
 export default class SizeBehaviour extends Behaviour {
@@ -27,6 +28,7 @@ export default class SizeBehaviour extends Behaviour {
 
   init = (particle: Particle) => {
     if (!this.enabled) return
+    if (particle.skipSizeBehaviour) return
 
     let variance = this.varianceFrom(this.startVariance)
     const sizeStartX = this.sizeStart.x + variance

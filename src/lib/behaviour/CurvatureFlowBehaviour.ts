@@ -1,7 +1,11 @@
-import { Behaviour, BehaviourNames } from './index'
+import Behaviour from './Behaviour'
+import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 import type Model from '../Model'
 import type TurbulencePool from '../util/turbulencePool'
+import { spatialCellKey } from '../util/spatialCellKey'
+
+const MAX_POOLED_CURVATURE_CELLS = 2048
 
 /**
  * CurvatureFlowBehaviour — Particles advect along the gradient of local density.
@@ -47,7 +51,9 @@ export default class CurvatureFlowBehaviour extends Behaviour {
   particleListGetter: (() => { forEach: (cb: (p: Particle) => void) => void }) | null = null
 
   /** Spatial grid: cell key -> particles in that cell. Built once per frame in update(). */
-  private _spatialGrid: Map<string, Particle[]> = new Map()
+  private _spatialGrid: Map<number, Particle[]> = new Map()
+  private _spatialCellPool: Particle[][] = []
+  private _candidateScratch: Particle[] = []
   private _cellSize = 1
 
   init(_particle: Particle, _model: Model, _turbulencePool: TurbulencePool) {}
@@ -58,34 +64,49 @@ export default class CurvatureFlowBehaviour extends Behaviour {
    */
   update(deltaTime: number): void {
     const list = this.particleListGetter?.()
-    if (!list) return
+    if (!list || !this.enabled) return
 
     this._cellSize = Math.max(1, this.radius)
-    this._spatialGrid.clear()
+    this.recycleSpatialGrid()
 
     list.forEach((p: Particle) => {
       const x = (p as any).movement?.x ?? p.x
       const y = (p as any).movement?.y ?? p.y
       const cx = Math.floor(x / this._cellSize)
       const cy = Math.floor(y / this._cellSize)
-      const key = `${cx},${cy}`
+      const key = spatialCellKey(cx, cy)
       let cell = this._spatialGrid.get(key)
       if (!cell) {
-        cell = []
+        cell = this.borrowSpatialCell()
         this._spatialGrid.set(key, cell)
       }
       cell.push(p)
     })
   }
 
-  /** Get candidates from 3×3 cells around (cx, cy). */
+  private recycleSpatialGrid() {
+    this._spatialGrid.forEach((cell) => {
+      cell.length = 0
+      if (this._spatialCellPool.length < MAX_POOLED_CURVATURE_CELLS) {
+        this._spatialCellPool.push(cell)
+      }
+    })
+    this._spatialGrid.clear()
+  }
+
+  private borrowSpatialCell(): Particle[] {
+    return this._spatialCellPool.pop() ?? []
+  }
+
+  /** Get candidates from 3×3 cells around (cx, cy). Reuses internal scratch; valid until next call. */
   private _getCandidates(px: number, py: number): Particle[] {
     const cx = Math.floor(px / this._cellSize)
     const cy = Math.floor(py / this._cellSize)
-    const out: Particle[] = []
+    const out = this._candidateScratch
+    out.length = 0
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
-        const key = `${cx + dx},${cy + dy}`
+        const key = spatialCellKey(cx + dx, cy + dy)
         const cell = this._spatialGrid.get(key)
         if (cell) for (let i = 0; i < cell.length; i++) out.push(cell[i])
       }
