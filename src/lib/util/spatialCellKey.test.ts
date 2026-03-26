@@ -11,4 +11,8 @@ describe('spatialCellKey', () => {
     expect(spatialCellKey(1, 0)).not.toBe(a)
     expect(spatialCellKey(0, 1)).not.toBe(a)
   })
+
+  it('is stable for negative cell coordinates', () => {
+    expect(spatialCellKey(-100, 42)).toBe(spatialCellKey(-100, 42))
+  })
 })

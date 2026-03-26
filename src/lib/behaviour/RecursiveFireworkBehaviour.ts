@@ -286,6 +286,16 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
   explosionAlphaEnd = 0
   spreadDegrees = 360
   explosionDirectionDegrees = -90
+  /** Extra offset (px) along velocity, root comet only — added on top of auto scale; use for fine-tuning. */
+  explosionOriginAlongVelocityPx = 0
+  /**
+   * Multiplier on half the comet’s **on-screen** span (max of texture w×scale, h×scale), along velocity (root comet).
+   * `particle.size` is only a scale factor (~1), not pixels — auto uses the live sprite texture size when available.
+   * Default 1 ≈ shift by half the larger axis (typical ~30px for a 64px texture). Set 0 to disable auto (only `explosionOriginAlongVelocityPx`).
+   */
+  burstOriginAlongVelocityAutoScale = 1
+  /** When the particle has no sprite/texture yet: half-extent ≈ 0.5 × this × max(size) (nominal texture px × scale). */
+  burstOriginAlongVelocityFallbackHalfExtentPx = 64
   directionByDepth: number[] = []
   spreadByDepth: number[] = []
   burstStaggerMs = 0
@@ -709,13 +719,15 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
     if (seeded) {
       this.perUid.set(particle.uid, seeded)
       this.pendingSeed.delete(particle.uid)
+      particle.skipSizeBehaviour = true
       this.applySpawnTexturePool(particle, seeded)
       return
     }
     const rootState = this.createState(0)
-    rootState.originX = particle.movement.x
-    rootState.originY = particle.movement.y
+    rootState.originX = particle.x
+    rootState.originY = particle.y
     this.perUid.set(particle.uid, rootState)
+    particle.skipSizeBehaviour = true
     this.applySpawnTexturePool(particle, rootState)
   }
 
@@ -726,8 +738,8 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
     this.latestModel = model
     this.latestEmitter = (model as any).emitter as MutableEmitter
     if (this.triggerMode === 'distanceFromOrigin' && state.depth === 0 && !state.originAnchored) {
-      state.originX = particle.movement.x
-      state.originY = particle.movement.y
+      state.originX = particle.x
+      state.originY = particle.y
       state.originAnchored = true
     }
 
@@ -831,7 +843,7 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
         trail = []
         this.cometTrailByUid.set(particle.uid, trail)
       }
-      trail.push({ x: particle.movement.x, y: particle.movement.y, vx: particle.velocity.x, vy: particle.velocity.y })
+      trail.push({ x: particle.x, y: particle.y, vx: particle.velocity.x, vy: particle.velocity.y })
       const cap = Math.max(4, Math.round(this.echoTrailSampleCap))
       while (trail.length > cap) trail.shift()
     }
@@ -917,8 +929,8 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
     if (this.magneticMousePullEnabled && this.mousePullStrength > 0) {
       const pw = this.latestModel?.pointerWorld
       if (pw && p >= this.clamp01(this.mousePullStartProgress)) {
-        const dx = pw.x - particle.movement.x
-        const dy = pw.y - particle.movement.y
+        const dx = pw.x - particle.x
+        const dy = pw.y - particle.y
         const len = Math.hypot(dx, dy) || 1
         const pull = this.mousePullStrength * 0.22
         particle.velocity.x += (dx / len) * pull * deltaTime
@@ -928,8 +940,8 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
 
     if (this.minefieldCellSize > 0.5) {
       const g = this.minefieldCellSize
-      const ix = Math.floor(particle.movement.x / g)
-      const iy = Math.floor(particle.movement.y / g)
+      const ix = Math.floor(particle.x / g)
+      const iy = Math.floor(particle.y / g)
       if (state.lastMineIx !== ix || state.lastMineIy !== iy) {
         state.lastMineIx = ix
         state.lastMineIy = iy
@@ -941,8 +953,8 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
           this.minesSpawnedThisShot += 1
           this.mineBurstQueue.push({
             delaySec: (this.mineStaggerMs / 1000) * (0.2 + this.random(particle.uid + 901) * 0.8),
-            x: particle.movement.x,
-            y: particle.movement.y,
+            x: particle.x,
+            y: particle.y,
             z: particle.z,
             depth: state.depth,
             color: { ...state.startColor },
@@ -1260,6 +1272,50 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
     return this.saturateRgb(this.shiftHue(color, hueShift), satBoost)
   }
 
+  /** Pixels to shift burst along velocity for root comet: auto (from sprite pixels × scale) + manual extra. */
+  private getRootCometAlongVelocityOffsetPx(particle: Particle): number {
+    const extra = this.explosionOriginAlongVelocityPx
+    if (this.burstOriginAlongVelocityAutoScale <= 0) return extra
+    let halfMax = 0
+    const spr: any = particle.sprite
+    const tex = spr?.texture
+    if (tex && typeof tex.width === 'number' && tex.width > 0 && typeof tex.height === 'number') {
+      const sx = Math.abs(particle.size.x)
+      const sy = Math.abs(particle.size.y)
+      halfMax = 0.5 * Math.max(tex.width * sx, tex.height * sy)
+    } else {
+      halfMax =
+        0.5 *
+        this.burstOriginAlongVelocityFallbackHalfExtentPx *
+        Math.max(particle.size.x, particle.size.y, 0.02)
+    }
+    return this.burstOriginAlongVelocityAutoScale * halfMax + extra
+  }
+
+  /** Display-space position used for bursts (matches renderer); root comet gets velocity-aligned nudge (auto + optional extra px). */
+  private getBurstAnchor(particle: Particle, state?: FireworkState) {
+    let x = particle.x
+    let y = particle.y
+    if (state && state.depth === 0 && state.phase === 'comet') {
+      const alongPx = this.getRootCometAlongVelocityOffsetPx(particle)
+      if (Math.abs(alongPx) > 1e-6) {
+        let vx = particle.velocity.x
+        let vy = particle.velocity.y
+        let len = Math.hypot(vx, vy)
+        if (len <= 1e-6) {
+          vx = particle.directionCos ?? 0
+          vy = particle.directionSin ?? 0
+          len = Math.hypot(vx, vy)
+        }
+        if (len > 1e-6) {
+          x += (vx / len) * alongPx
+          y += (vy / len) * alongPx
+        }
+      }
+    }
+    return { x, y }
+  }
+
   private triggerExplosion(particle: Particle, state: FireworkState, model: Model) {
     const emitter = (model as any).emitter as MutableEmitter | undefined
     if (!emitter) return
@@ -1293,6 +1349,7 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
       const reactiveOn = this.reactiveMode !== 'off'
       const v2 = this.evalReactiveV2(reactive, state)
       this.applyDepthProgramForState()
+      const burst = this.getBurstAnchor(particle, state)
       const depthCount = this.getByDepth(this.countByDepth, state.depth, this.explosionParticleCount)
       const depthScale = Math.max(0, this.getByDepth(this.childBurstScaleByDepth, state.depth, 1))
       const envelope = this.getBranchEnvelope(state.depth)
@@ -1360,13 +1417,13 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
         if (this.waveK1 !== 0 || this.waveK2 !== 0) {
           const ox = state.originX
           const oy = state.originY
-          const d1 = Math.hypot(particle.movement.x - ox, particle.movement.y - oy)
+          const d1 = Math.hypot(particle.x - ox, particle.y - oy)
           let d2 = d1
           if (this.waveAnchorMode === 'originAndPointer') {
             const pw = this.latestModel?.pointerWorld
-            d2 = pw ? Math.hypot(particle.movement.x - pw.x, particle.movement.y - pw.y) : d1
+            d2 = pw ? Math.hypot(particle.x - pw.x, particle.y - pw.y) : d1
           } else if (this.waveAnchorMode === 'mirroredDepth') {
-            d2 = Math.hypot(particle.movement.x + ox * 0.22, particle.movement.y + oy * 0.22)
+            d2 = Math.hypot(particle.x + ox * 0.22, particle.y + oy * 0.22)
           }
           const phase = Math.sin(d1 * this.waveK1 + d2 * this.waveK2 + state.depth * 0.85 + i * 0.07)
           const th = this.interferenceThreshold
@@ -1406,10 +1463,10 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
         childState.zSheetSlot = sheetSlot
         const p = this.spawnParticle(emitter, model, childState)
         if (!p) break
-        p.movement.x = particle.movement.x
-        p.movement.y = particle.movement.y
-        p.x = particle.x
-        p.y = particle.y
+        p.movement.x = burst.x
+        p.movement.y = burst.y
+        p.x = burst.x
+        p.y = burst.y
         p.z = particle.z
         if (this.zSheetSeparation !== 0) {
           const sign = sheetSlot === 0 ? 1 : -1
@@ -1438,8 +1495,8 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
         childState.activationDelaySec = this.calculateActivationDelaySec(i, cappedAmount, state.depth, childState.depth)
         childState.depthDelaySec = this.getByDepth(this.depthDelayByLevel, childState.depth, 0)
         if (asChildComet) childState.depthDelaySec += Math.max(0, this.getByDepth(this.recursionDelayByDepth, childState.depth, 0))
-        childState.originX = particle.movement.x
-        childState.originY = particle.movement.y
+        childState.originX = burst.x
+        childState.originY = burst.y
         childState.originAnchored = true
         const depthEnergyScale = Math.max(0, this.getByDepth(this.depthEnergyByLevel, childState.depth, 1))
         childState.burstEnergy = asChildComet ? Math.max(0, availableEnergy - this.energyCostPerChild) * (1 - this.energyLossPerDepth) * depthEnergyScale : 0
@@ -1470,10 +1527,10 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
           const sp = this.spawnParticle(emitter, model, this.createSparkState(state.depth, state.startColor, 'explosionParticle', state))
           if (!sp) break
           const jit = (this.random(j + 4401) - 0.5) * 0.55
-          sp.movement.x = particle.movement.x
-          sp.movement.y = particle.movement.y
-          sp.x = particle.x
-          sp.y = particle.y
+          sp.movement.x = burst.x
+          sp.movement.y = burst.y
+          sp.x = burst.x
+          sp.y = burst.y
           sp.z = particle.z
           const ms = this.explosionSpeed * 0.42
           sp.velocity.x = (tgx + jit * tgy) * ms
@@ -1633,8 +1690,8 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
   private shouldExplode(particle: Particle, state: FireworkState) {
     if (this.triggerMode === 'apex') return particle.velocity.y >= 0
     if (this.triggerMode === 'distanceFromOrigin') {
-      const dx = particle.movement.x - state.originX
-      const dy = particle.movement.y - state.originY
+      const dx = particle.x - state.originX
+      const dy = particle.y - state.originY
       return dx * dx + dy * dy >= this.explodeDistance * this.explodeDistance
     }
     const basic = particle.lifeProgress >= state.explodeAtProgress
@@ -1706,8 +1763,8 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
     const fields = this.fieldForces
     if (!fields || fields.length === 0) return
     const dt = deltaTime > 2 ? deltaTime / 1000 : deltaTime
-    const px = particle.movement.x
-    const py = particle.movement.y
+    const px = particle.x
+    const py = particle.y
     let ax = 0
     let ay = 0
     for (const f of fields) {
@@ -1764,8 +1821,8 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
         if (!p) continue
         const s = this.perUid.get(p.uid)
         if (!s) continue
-        const dx = p.movement.x - e.x
-        const dy = p.movement.y - e.y
+        const dx = p.x - e.x
+        const dy = p.y - e.y
         const d2 = dx * dx + dy * dy
         if (d2 > r2) continue
         const d = Math.sqrt(Math.max(1e-6, d2))
@@ -1839,8 +1896,8 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
     if (this.directionMode === 'followVelocity') {
       baseAngle = Math.atan2(particle.velocity.y || particle.directionSin || 0, particle.velocity.x || particle.directionCos || 1)
     } else if (this.directionMode === 'awayFromCenter') {
-      const dx = particle.movement.x - state.originX
-      const dy = particle.movement.y - state.originY
+      const dx = particle.x - state.originX
+      const dy = particle.y - state.originY
       baseAngle = Math.atan2(dy, dx)
     } else if (this.directionMode === 'randomPerBurst') {
       baseAngle = this.random(particle.uid + 5001) * Math.PI * 2
@@ -1860,8 +1917,8 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
     if (this.magneticMousePullEnabled && this.outwardBiasDegrees !== 0) {
       const pw = this.latestModel?.pointerWorld
       if (pw) {
-        const ax = particle.movement.x - pw.x
-        const ay = particle.movement.y - pw.y
+        const ax = particle.x - pw.x
+        const ay = particle.y - pw.y
         const away = Math.atan2(ay, ax)
         const blend = this.clamp01(Math.abs(this.outwardBiasDegrees) / 120)
         let d2 = away - baseAngle
@@ -2205,8 +2262,8 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
       const event = this.chainReactionEvents[i]
       if (event.delaySec > 0) continue
       if (state.depth > event.depth + this.chainReactionDepthBoost + 1) continue
-      const dx = particle.movement.x - event.x
-      const dy = particle.movement.y - event.y
+      const dx = particle.x - event.x
+      const dy = particle.y - event.y
       if (dx * dx + dy * dy > event.radius * event.radius) continue
       if (this.random(particle.uid + i * 97) > this.chainReactionProbability) continue
       state.chainTriggered = true
@@ -2221,9 +2278,10 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
   }
 
   private enqueueChainReaction(particle: Particle, state: FireworkState) {
+    const b = this.getBurstAnchor(particle, state)
     this.chainReactionEvents.push({
-      x: particle.movement.x,
-      y: particle.movement.y,
+      x: b.x,
+      y: b.y,
       depth: state.depth,
       delaySec: Math.max(0, this.chainReactionDelayMs / 1000),
       ttlSec: Math.max(0.1, this.chainReactionDelayMs / 1000 + 1.2),
@@ -2232,11 +2290,12 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
   }
 
   private spawnLayeredExplosions(particle: Particle, state: FireworkState) {
+    const b = this.getBurstAnchor(particle, state)
     const layers = Math.max(2, Math.round(this.layeredExplosionCount))
     for (let layer = 1; layer < layers; layer++) {
       this.chainReactionEvents.push({
-        x: particle.movement.x,
-        y: particle.movement.y,
+        x: b.x,
+        y: b.y,
         depth: state.depth + 1,
         delaySec: Math.max(0, (this.layeredExplosionDelayMs * layer) / 1000),
         ttlSec: Math.max(0.2, (this.layeredExplosionDelayMs * layer) / 1000 + 0.7),
@@ -2394,10 +2453,11 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
   private spawnSecondarySparkle(emitter: MutableEmitter, model: Model, src: Particle, state: FireworkState) {
     const sparkle = this.spawnParticle(emitter, model, this.createSparkState(state.depth, state.startColor, 'explosion', state))
     if (!sparkle) return
-    sparkle.movement.x = src.movement.x
-    sparkle.movement.y = src.movement.y
-    sparkle.x = src.x
-    sparkle.y = src.y
+    const b = this.getBurstAnchor(src, state)
+    sparkle.movement.x = b.x
+    sparkle.movement.y = b.y
+    sparkle.x = b.x
+    sparkle.y = b.y
     sparkle.velocity.x = src.velocity.x * 0.3
     sparkle.velocity.y = src.velocity.y * 0.3
     sparkle.size.x *= this.secondarySparkleScale
@@ -2413,10 +2473,11 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
       if (!crack) return
       const a = this.random(i + 401) * Math.PI * 2
       const speed = this.explosionSpeed * 0.35
-      crack.movement.x = src.movement.x
-      crack.movement.y = src.movement.y
-      crack.x = src.x
-      crack.y = src.y
+      const b = this.getBurstAnchor(src, state)
+      crack.movement.x = b.x
+      crack.movement.y = b.y
+      crack.x = b.x
+      crack.y = b.y
       crack.velocity.x = Math.cos(a) * speed
       crack.velocity.y = Math.sin(a) * speed
       crack.maxLifeTime *= 0.35
@@ -2427,10 +2488,11 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
   private spawnCometTailSpark(emitter: MutableEmitter, model: Model, src: Particle, state: FireworkState) {
     const spark = this.spawnParticle(emitter, model, this.createSparkState(state.depth, state.startColor, 'explosion', state))
     if (!spark) return
-    spark.movement.x = src.movement.x
-    spark.movement.y = src.movement.y
-    spark.x = src.x
-    spark.y = src.y
+    const b = this.getBurstAnchor(src, state)
+    spark.movement.x = b.x
+    spark.movement.y = b.y
+    spark.x = b.x
+    spark.y = b.y
     spark.velocity.x = src.velocity.x * 0.25
     spark.velocity.y = src.velocity.y * 0.25
     spark.size.x *= this.cometTailScale
@@ -2442,16 +2504,17 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
   private spawnCarriers(emitter: MutableEmitter, model: Model, src: Particle, state: FireworkState, base: number) {
     const carriers = Math.max(1, Math.round(this.carrierCount * this.getLodSecondaryGovernor(emitter)))
     const useOrbit = this.orbitRadius > 1
+    const basePos = this.getBurstAnchor(src, state)
     for (let i = 0; i < carriers; i++) {
       const c = this.spawnParticle(emitter, model, this.createSparkState(state.depth, state.startColor, 'explosion', state))
       if (!c) return
       const ringA = useOrbit ? (i / Math.max(1, carriers - 1)) * Math.PI * 2 + base : base + (this.random(i + 8001) - 0.5) * (Math.PI * 2)
       const ox = useOrbit ? Math.cos(ringA) * this.orbitRadius : 0
       const oy = useOrbit ? Math.sin(ringA) * this.orbitRadius : 0
-      c.movement.x = src.movement.x + ox
-      c.movement.y = src.movement.y + oy
-      c.x = src.x + ox
-      c.y = src.y + oy
+      c.movement.x = basePos.x + ox
+      c.movement.y = basePos.y + oy
+      c.x = basePos.x + ox
+      c.y = basePos.y + oy
       if (useOrbit) {
         const tx = -Math.sin(ringA)
         const ty = Math.cos(ringA)
@@ -2488,10 +2551,11 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
       const p = this.spawnParticle(emitter, model, childState)
       if (!p) return
       const a = Math.atan2(src.velocity.y, src.velocity.x) - spread * 0.5 + this.random(i + 9301) * spread
-      p.movement.x = src.movement.x
-      p.movement.y = src.movement.y
-      p.x = src.x
-      p.y = src.y
+      const b = this.getBurstAnchor(src, state)
+      p.movement.x = b.x
+      p.movement.y = b.y
+      p.x = b.x
+      p.y = b.y
       const sp = this.explosionSpeed * (hatch ? 0.62 : 0.55)
       p.velocity.x = Math.cos(a) * sp
       p.velocity.y = Math.sin(a) * sp
@@ -2505,10 +2569,11 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
   private spawnShockwave(emitter: MutableEmitter, model: Model, src: Particle, state: FireworkState) {
     const s = this.spawnParticle(emitter, model, this.createSparkState(state.depth, state.startColor, 'explosion', state))
     if (!s) return
-    s.movement.x = src.movement.x
-    s.movement.y = src.movement.y
-    s.x = src.x
-    s.y = src.y
+    const b = this.getBurstAnchor(src, state)
+    s.movement.x = b.x
+    s.movement.y = b.y
+    s.x = b.x
+    s.y = b.y
     s.velocity.set(0, 0)
     const depthScale = this.getByDepth(this.shockwaveByDepth, state.depth, 1)
     s.size.x = this.shockwaveSize * depthScale
@@ -2517,8 +2582,8 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
     s.lifeTime = 0
     emitter.emit('emitter/create', s)
     this.shockwaveEvents.push({
-      x: src.movement.x,
-      y: src.movement.y,
+      x: b.x,
+      y: b.y,
       z: src.z,
       radius: Math.max(10, this.chainReactionRadius * 0.6 + this.shockwaveSize * 90),
       strength: Math.max(5, this.shockwaveSize * 22),
@@ -2530,10 +2595,11 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
   private spawnGlow(emitter: MutableEmitter, model: Model, src: Particle, state: FireworkState) {
     const g = this.spawnParticle(emitter, model, this.createSparkState(state.depth, state.startColor, 'explosion', state))
     if (!g) return
-    g.movement.x = src.movement.x
-    g.movement.y = src.movement.y
-    g.x = src.x
-    g.y = src.y
+    const b = this.getBurstAnchor(src, state)
+    g.movement.x = b.x
+    g.movement.y = b.y
+    g.x = b.x
+    g.y = b.y
     g.velocity.set(0, 0)
     const depthScale = this.getByDepth(this.glowByDepth, state.depth, 1)
     g.size.x *= this.glowScale * depthScale
@@ -2554,8 +2620,8 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
         if (used.has(j)) continue
         const a = group[i]
         const b = group[j]
-        const dx = a.movement.x - b.movement.x
-        const dy = a.movement.y - b.movement.y
+        const dx = a.x - b.x
+        const dy = a.y - b.y
         if (dx * dx + dy * dy > r2) continue
         if (this.random(i * 17 + j + 6601) > this.mergeProbability) continue
         used.add(j)
@@ -2733,8 +2799,9 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
   private scheduleCrystallize(particle: Particle, state: FireworkState, amount: number, start: number, spread: number) {
     const g = Math.max(6, this.gridCellPx)
     const cells = new Map<number, { x: number; y: number; n: number }>()
-    const baseX = particle.movement.x
-    const baseY = particle.movement.y
+    const burst = this.getBurstAnchor(particle, state)
+    const baseX = burst.x
+    const baseY = burst.y
     const stride = Math.max(1, Math.floor(amount / Math.max(2, this.maxCrystallizeNuclei)))
     for (let i = 0; i < amount; i += stride) {
       const dir = this.getShapeDirection(start, spread, i, amount, particle, state.depth)
@@ -2960,6 +3027,9 @@ export default class RecursiveFireworkBehaviour extends Behaviour {
       explosionAlphaEnd: this.explosionAlphaEnd,
       spreadDegrees: this.spreadDegrees,
       explosionDirectionDegrees: this.explosionDirectionDegrees,
+      explosionOriginAlongVelocityPx: this.explosionOriginAlongVelocityPx,
+      burstOriginAlongVelocityAutoScale: this.burstOriginAlongVelocityAutoScale,
+      burstOriginAlongVelocityFallbackHalfExtentPx: this.burstOriginAlongVelocityFallbackHalfExtentPx,
       directionByDepth: this.directionByDepth,
       spreadByDepth: this.spreadByDepth,
       burstStaggerMs: this.burstStaggerMs,
