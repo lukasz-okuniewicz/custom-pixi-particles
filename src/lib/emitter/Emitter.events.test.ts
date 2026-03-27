@@ -65,4 +65,20 @@ describe('Emitter events', () => {
     vi.runAllTimers()
     expect(complete).toEqual(['done'])
   })
+
+  it('removes particle early when killAtProgress threshold is reached', () => {
+    const emitter = new Emitter(new Model())
+    emitter.play()
+    const p = emitter.list.add(new Particle())
+    p.maxLifeTime = 10
+    p.lifeTime = 1
+    p.lifeProgress = 0.6
+    p.killAtProgress = 0.5
+    p.sprite = {} as any
+    const removed: Particle[] = []
+    emitter.on(Emitter.REMOVE, (particle: Particle) => removed.push(particle))
+    emitter['updateParticle'](p, 0)
+    expect(removed).toEqual([p])
+    expect(emitter.list.isEmpty()).toBe(true)
+  })
 })

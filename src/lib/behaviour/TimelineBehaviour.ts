@@ -43,6 +43,25 @@ export default class TimelineBehaviour extends Behaviour {
 
     const { lifeTime, maxLifeTime } = particle
 
+    if (!Number.isFinite(maxLifeTime)) {
+      if (!particle.timelineUseLifeProgressForInfinite) {
+        return
+      }
+      const normalizedTime = particle.lifeProgress
+      const before = this.timeline
+        .slice()
+        .reverse()
+        .find((entry) => entry.time <= normalizedTime)
+      const after = this.timeline.find((entry) => entry.time > normalizedTime)
+      if (before && after) {
+        const progress = (normalizedTime - before.time) / (after.time - before.time)
+        this.interpolateProperties(particle, before.properties, after.properties, progress)
+      } else if (before) {
+        this.setProperties(particle, before.properties)
+      }
+      return
+    }
+
     if (maxLifeTime <= 0) return
 
     const normalizedTime = lifeTime / maxLifeTime

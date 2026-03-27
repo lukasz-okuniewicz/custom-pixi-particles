@@ -52,6 +52,13 @@ export default class UniformEmission extends AbstractEmission {
     this._frames = 1.0
   }
 
+  validate() {
+    this._maxParticles = Math.max(0, this._maxParticles)
+    this._maxLife = Math.max(1, this._maxLife)
+    this._emitPerSecond = Math.max(0, this._emitPerSecond)
+    this._frames = Math.max(0, this._frames)
+  }
+
   /**
    * Recalculates the emitPerSecond value based on the maxParticles and maxLife values.
    */

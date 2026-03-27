@@ -156,6 +156,7 @@ export {
   SpawnBehaviour,
   LifeBehaviour,
   PositionBehaviour,
+  WarpBehaviour,
   ColorBehaviour,
   SizeBehaviour,
   AngularVelocityBehaviour,
@@ -186,6 +187,16 @@ export {
   ToroidalWrapBehaviour,
   BehaviourNames,
 } from './lib/behaviour'
+export {
+  EmissionRegistry,
+  RandomEmission,
+  StandardEmission,
+  UniformEmission,
+  PersistentFillEmission,
+  BurstScheduleEmission,
+  CurveEmission,
+  EmissionTypes,
+} from './lib/emission'
 
 export {
   rasterizeTextToPoints,
@@ -227,7 +238,6 @@ export type {
   IParticleXYWithUid,
 } from './lib/util/formPatternSampling'
 
-export { PersistentFillEmission } from './lib/emission'
 export { PersistentWrapEmitter } from './lib/emitter'
 
 // Re-export so demos can use one import (avoids loading Pixi twice)
