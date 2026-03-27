@@ -2,6 +2,7 @@ import { Point } from '../util'
 import Behaviour from './Behaviour'
 import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
+import { getSpawnTypeCapability } from './spawnTypeCapabilities'
 
 let canvas: any = null
 let imageData: any = null
@@ -21,8 +22,13 @@ export default class SpawnBehaviour extends Behaviour {
   trailRangeSegments: number = 20 // Number of segments for trail range sampling (higher = finer distribution)
   trailRangeWeightFactor: number = 4 // Weight decay toward trail end (higher = more particles near leading edge)
   trailRangeLength: number = 1 // Length of trail to spawn along (0-1)
+  randomSeed: number | null = null
+  compositionMode: string = 'random'
+  maxSpawnCalcMs: number = 4
   currentProgress: number = 0
   trailJustWrapped: boolean = false // True only right after a loop wrap
+  private seededState: number = 1
+  private seededFrom: number | null = null
 
   customPoints: any[] = [
     {
@@ -62,10 +68,68 @@ export default class SpawnBehaviour extends Behaviour {
       pitch: 50, // Vertical distance between consecutive loops
       turns: 5, // Number of turns in the helix
       pathPoints: [],
+      distribution: 'uniform',
+      emissionArea: 'edge',
+      weight: 1,
+      polygonSides: 6,
+      innerRadius: 40,
+      startAngle: 0,
+      endAngle: 180,
+      closedPath: false,
+      pathInterpolation: 'linear',
+      pathSampling: 'bySegment',
     },
   ]
 
   lastWordSettings: any = {}
+  private sequenceIndex: number = 0
+  private sampleCache: Map<string, any> = new Map()
+
+  private random = () => {
+    if (this.randomSeed === null || Number.isNaN(this.randomSeed)) {
+      return Math.random()
+    }
+    this.seededState = (1664525 * this.seededState + 1013904223) >>> 0
+    return this.seededState / 0x100000000
+  }
+
+  private choosePoint = () => {
+    const points = this.customPoints || []
+    if (points.length === 0) return null
+    if (this.compositionMode === 'sequence' || this.compositionMode === 'burstCycle') {
+      const point = points[this.sequenceIndex % points.length]
+      this.sequenceIndex += 1
+      return point
+    }
+    if (this.compositionMode === 'weighted') {
+      const sum = points.reduce((acc, p) => acc + Math.max(0, Number(p.weight ?? 1)), 0)
+      if (sum > 0) {
+        let r = this.random() * sum
+        for (const p of points) {
+          r -= Math.max(0, Number(p.weight ?? 1))
+          if (r <= 0) return p
+        }
+      }
+    }
+    return points[Math.floor(this.random() * points.length)]
+  }
+
+  private distributionT = (point: any) => {
+    const mode = point.distribution || 'uniform'
+    const u = this.random()
+    if (mode === 'gaussian-center') return Math.min(1, Math.max(0, (u + this.random()) * 0.5))
+    if (mode === 'gaussian-edge') return Math.sqrt(u)
+    if (mode === 'weighted') return u ** 0.35
+    return u
+  }
+
+  private angularLerp = (startDeg: number, endDeg: number, t: number) => {
+    const start = (startDeg * Math.PI) / 180
+    const end = (endDeg * Math.PI) / 180
+    return start + (end - start) * t
+  }
+
+  private nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
 
   /**
    * Initialize particles for each custom point.
@@ -74,12 +138,15 @@ export default class SpawnBehaviour extends Behaviour {
   init = (particle: Particle) => {
     if (this.customPoints.length === 0) return
 
-    // Choose a random custom point
-    const point = this.customPoints[Math.floor(Math.random() * this.customPoints.length)]
+    if (this.randomSeed !== null && Number.isFinite(this.randomSeed) && this.seededFrom !== this.randomSeed) {
+      this.seededState = (Math.floor(this.randomSeed) >>> 0) || 1
+      this.seededFrom = this.randomSeed
+    }
+    const point = this.choosePoint()
+    if (!point) return
 
-    // Safety check: Disable trailing for restricted spawn types
-    const restrictedSpawnTypes = ['Word', 'Sphere', 'Rectangle', 'Helix', 'Grid', 'Cone']
-    if (this.trailingEnabled && restrictedSpawnTypes.includes(point.spawnType)) {
+    // Safety check: Disable trailing for spawn types that don't support it.
+    if (this.trailingEnabled && !getSpawnTypeCapability(point.spawnType).supportsTrail) {
       this.trailingEnabled = false
       this.trailProgress = 0
       this.currentProgress = 0
@@ -98,7 +165,12 @@ export default class SpawnBehaviour extends Behaviour {
       particle.movement.y = position.y + this.varianceFrom(point.positionVariance.y)
       particle.z = position.z !== 0 ? position.z : Math.random() * (point.maxZ || 0)
     } else {
+      const start = this.nowMs()
       this.spawnParticleAtPoint(particle, point)
+      if (this.maxSpawnCalcMs > 0 && this.nowMs() - start > this.maxSpawnCalcMs) {
+        particle.movement.x = this.calculate(point.position.x, point.positionVariance.x)
+        particle.movement.y = this.calculate(point.position.y, point.positionVariance.y)
+      }
     }
 
     if (point.perspective && point.maxZ) {
@@ -204,9 +276,6 @@ export default class SpawnBehaviour extends Behaviour {
    * @param {Object} point - The custom point configuration.
    */
   spawnParticleAtPoint = (particle: Particle, point: any) => {
-    // Assign particle z-coordinate within the max range
-    // particle.z = Math.random() * point.maxZ
-
     if (
       point.spawnType === 'Word' &&
       (this.lastWordSettings.word !== point.word ||
@@ -232,48 +301,55 @@ export default class SpawnBehaviour extends Behaviour {
       particle.reset() // Reset the particle's position and movement
     }
 
-    particle.z = Math.random() * (point.maxZ || 0)
+    particle.z = this.random() * (point.maxZ || 0)
+    const areaMode = point.emissionArea || 'edge'
 
     if (point.spawnType === 'Rectangle') {
       particle.movement.x = this.calculate(point.position.x, point.positionVariance.x)
       particle.movement.y = this.calculate(point.position.y, point.positionVariance.y)
     } else if (point.spawnType === 'Ring') {
-      const angle = Math.random() * Math.PI * 2
-      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + Math.cos(angle) * point.radius
-      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + Math.sin(angle) * point.radius
+      const angle = this.random() * Math.PI * 2
+      const radius = areaMode === 'fill' ? point.radius * Math.sqrt(this.distributionT(point)) : point.radius
+      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + Math.cos(angle) * radius
+      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + Math.sin(angle) * radius
     } else if (point.spawnType === 'Star') {
       const points = point.starPoints // Configurable number of star points
-      const angle = (Math.PI * 2 * particle.uid) / points
-      const radius = particle.uid % 2 === 0 ? point.radius : point.radius / 2
+      const angle = this.random() * Math.PI * 2
+      const outer = point.radius
+      const inner = point.innerRadius || point.radius / 2
+      const wedge = (Math.PI * 2) / Math.max(2, points * 2)
+      const local = angle % wedge
+      const edgeRadius = inner + ((outer - inner) * local) / wedge
+      const radius = areaMode === 'fill' ? edgeRadius * Math.sqrt(this.distributionT(point)) : edgeRadius
       particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + Math.cos(angle) * radius
       particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + Math.sin(angle) * radius
     } else if (point.spawnType === 'FrameRectangle') {
       const w = point.radiusX
       const h = point.radiusY
-      if (Math.random() < w / (w + h)) {
-        particle.movement.x = Math.random() * w + particle.movement.x
-        particle.movement.y = Math.random() < 0.5 ? particle.movement.y : particle.movement.y + h - 1
+      if (this.random() < w / (w + h)) {
+        particle.movement.x = this.random() * w + particle.movement.x
+        particle.movement.y = this.random() < 0.5 ? particle.movement.y : particle.movement.y + h - 1
       } else {
-        particle.movement.y = Math.random() * h + particle.movement.y
-        particle.movement.x = Math.random() < 0.5 ? particle.movement.x : particle.movement.x + w - 1
+        particle.movement.y = this.random() * h + particle.movement.y
+        particle.movement.x = this.random() < 0.5 ? particle.movement.x : particle.movement.x + w - 1
       }
       particle.movement.x += this.calculate(point.position.x, point.positionVariance.x) - w / 2
       particle.movement.y += this.calculate(point.position.y, point.positionVariance.y) - h / 2
     } else if (point.spawnType === 'Frame') {
       const w = point.radius
       const h = point.radius
-      if (Math.random() < w / (w + h)) {
-        particle.movement.x = Math.random() * w + particle.movement.x
-        particle.movement.y = Math.random() < 0.5 ? particle.movement.y : particle.movement.y + h - 1
+      if (this.random() < w / (w + h)) {
+        particle.movement.x = this.random() * w + particle.movement.x
+        particle.movement.y = this.random() < 0.5 ? particle.movement.y : particle.movement.y + h - 1
       } else {
-        particle.movement.y = Math.random() * h + particle.movement.y
-        particle.movement.x = Math.random() < 0.5 ? particle.movement.x : particle.movement.x + w - 1
+        particle.movement.y = this.random() * h + particle.movement.y
+        particle.movement.x = this.random() < 0.5 ? particle.movement.x : particle.movement.x + w - 1
       }
       particle.movement.x += this.calculate(point.position.x, point.positionVariance.x) - w / 2
       particle.movement.y += this.calculate(point.position.y, point.positionVariance.y) - h / 2
     } else if (point.spawnType === 'Sphere') {
-      const phi = Math.random() * Math.PI * 2 // Random azimuthal angle
-      const theta = Math.random() * (point.spread / 180) * Math.PI // Random polar angle
+      const phi = this.random() * Math.PI * 2 // Random azimuthal angle
+      const theta = this.random() * (point.spread / 180) * Math.PI // Random polar angle
       particle.movement.x =
         this.calculate(point.position.x, point.positionVariance.x) +
         point.center.x +
@@ -284,8 +360,8 @@ export default class SpawnBehaviour extends Behaviour {
         point.radius * Math.sin(theta) * Math.sin(phi)
       particle.z = point.center.z + point.radius * Math.cos(theta)
     } else if (point.spawnType === 'Cone') {
-      const angle = (Math.random() * point.coneAngle - point.coneAngle / 2) * (Math.PI / 180)
-      const distance = Math.random() * point.baseRadius // Random distance from apex
+      const angle = (this.random() * point.coneAngle - point.coneAngle / 2) * (Math.PI / 180)
+      const distance = this.random() * point.baseRadius // Random distance from apex
       const localX = Math.cos(angle) * distance // Local x position within cone
       const localY = Math.sin(angle) * distance // Local y position within cone
 
@@ -305,23 +381,23 @@ export default class SpawnBehaviour extends Behaviour {
         Math.sin(coneDirectionRad) * localX +
         Math.cos(coneDirectionRad) * localY
 
-      particle.z = point.apex.z + Math.random() * point.height
+      particle.z = point.apex.z + this.random() * point.height
     } else if (point.spawnType === 'Grid') {
-      const row = Math.floor(Math.random() * point.rows)
-      const column = Math.floor(Math.random() * point.columns)
+      const row = Math.floor(this.random() * point.rows)
+      const column = Math.floor(this.random() * point.columns)
       const offsetX = (column - (point.columns - 1) / 2) * point.cellSize
       const offsetY = (row - (point.rows - 1) / 2) * point.cellSize
       particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + offsetX
       particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + offsetY
     } else if (point.spawnType === 'Word') {
       if (particleCount > 0 && pixelPositions.length > 0) {
-        const selectedPixel = pixelPositions[Math.floor(Math.random() * particleCount)]
+        const selectedPixel = pixelPositions[Math.floor(this.random() * particleCount)]
         particle.movement.x = point.position.x + selectedPixel.x - canvas.width / 2
         particle.movement.y = point.position.y + selectedPixel.y - canvas.height / 2
 
         // Add a bit of random jitter to make the word more dynamic
-        particle.movement.x += Math.random() * point.positionVariance.x - point.positionVariance.x / 2
-        particle.movement.y += Math.random() * point.positionVariance.y - point.positionVariance.y / 2
+        particle.movement.x += this.random() * point.positionVariance.x - point.positionVariance.x / 2
+        particle.movement.y += this.random() * point.positionVariance.y - point.positionVariance.y / 2
       }
     } else if (point.spawnType === 'Lissajous') {
       const a = point.frequency.x // Frequency in x-axis
@@ -332,7 +408,7 @@ export default class SpawnBehaviour extends Behaviour {
         this.calculate(point.position.x, point.positionVariance.x) + Math.sin(a * t + delta) * point.radius
       particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + Math.sin(b * t) * point.radius
     } else if (point.spawnType === 'Bezier') {
-      const t = Math.random() // Progress along the curve
+      const t = this.random() // Progress along the curve
       const cx1 = point.control1.x
       const cy1 = point.control1.y
       const cx2 = point.control2.x
@@ -353,21 +429,22 @@ export default class SpawnBehaviour extends Behaviour {
       particle.movement.y = y
     } else if (point.spawnType === 'Heart') {
       // Heart shape formula: (x^2 + y^2 - 1)^3 - x^2 * y^3 = 0
-      const t = Math.random() * 2 * Math.PI // Parametric angle
+      const t = this.random() * 2 * Math.PI // Parametric angle
       const scale = point.radius || 100 // Scale based on radius
+      const fillScale = areaMode === 'fill' ? Math.sqrt(this.distributionT(point)) : 1
       const x = scale * 16 * Math.sin(t) ** 3 // Parametric x-coordinate
       const y = -scale * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))
 
-      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + x
-      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + y
+      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + x * fillScale
+      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + y * fillScale
     } else if (point.spawnType === 'Helix') {
       const turns = point.turns || 5 // Default number of turns
       const pitch = point.pitch || 50 // Default pitch
       const radius = point.radius || 100 // Default radius
       const height = point.height || turns * pitch // Default height if not specified
 
-      const t = Math.random() * turns * Math.PI * 2 // Angle along the helix
-      const z = Math.random() * height // Random height within the helix
+      const t = this.random() * turns * Math.PI * 2 // Angle along the helix
+      const z = this.random() * height // Random height within the helix
 
       const x = radius * Math.cos(t) // X-coordinate based on angle
       const y = radius * Math.sin(t) // Y-coordinate based on angle
@@ -382,7 +459,7 @@ export default class SpawnBehaviour extends Behaviour {
       const radius = point.radius || 100 // Radius of the spring
 
       // Generate random position along the spring
-      const t = Math.random() * turns * Math.PI * 2 // Angle in radians along the spring
+      const t = this.random() * turns * Math.PI * 2 // Angle in radians along the spring
       const z = (t / (Math.PI * 2)) * pitch // Z position increases linearly with the angle
 
       // Compute 3D positions
@@ -410,19 +487,11 @@ export default class SpawnBehaviour extends Behaviour {
       // Assign Z-coordinate for reference
       particle.z = z
     } else if (point.spawnType === 'Path') {
-      const pathPoints = point.pathPoints || [] // List of path points [{ x, y, z }]
-      if (pathPoints.length < 2) return // Ensure at least two points for a path
-
-      // Choose a random segment along the path
-      const segmentIndex = Math.floor(Math.random() * (pathPoints.length - 1))
-      const start = pathPoints[segmentIndex]
-      const end = pathPoints[segmentIndex + 1]
-
-      // Interpolate between the start and end points
-      const t = Math.random() // Random position along the segment (0 to 1)
-      const x = start.x + t * (end.x - start.x)
-      const y = start.y + t * (end.y - start.y)
-      const z = start.z + t * (end.z - start.z || 0) // Support z if defined
+      const p = this.samplePathPoint(point, this.random(), point.pathSampling || 'bySegment')
+      if (!p) return
+      const x = p.x
+      const y = p.y
+      const z = p.z
 
       // Apply perspective scaling if enabled
       if (point.perspective > 0 && point.maxZ > 0) {
@@ -441,14 +510,98 @@ export default class SpawnBehaviour extends Behaviour {
       }
 
       particle.z = z // Assign Z-coordinate
+    } else if (point.spawnType === 'Polygon') {
+      const sides = Math.max(3, point.polygonSides || 6)
+      const angle = this.random() * Math.PI * 2
+      const step = (Math.PI * 2) / sides
+      const local = angle % step
+      const edgeRadius = point.radius * Math.cos(Math.PI / sides) / Math.cos(local - step / 2)
+      const radius = areaMode === 'fill' ? edgeRadius * Math.sqrt(this.distributionT(point)) : edgeRadius
+      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + Math.cos(angle) * radius
+      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + Math.sin(angle) * radius
+    } else if (point.spawnType === 'Arc' || point.spawnType === 'Sector') {
+      const t = this.distributionT(point)
+      const angle = this.angularLerp(point.startAngle || 0, point.endAngle || 180, t)
+      const inner = point.innerRadius || 0
+      const outer = point.radius || 100
+      const radius = point.spawnType === 'Sector' || areaMode === 'fill' ? inner + (outer - inner) * Math.sqrt(t) : outer
+      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + Math.cos(angle) * radius
+      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + Math.sin(angle) * radius
     } else if (point.spawnType === 'Oval') {
-      const angle = Math.random() * Math.PI * 2 // Random angle around the ellipse
+      const angle = this.random() * Math.PI * 2 // Random angle around the ellipse
       const radiusX = point.radiusX || 100 // Default radiusX
       const radiusY = point.radiusY || 50 // Default radiusY
+      const scale = areaMode === 'fill' ? Math.sqrt(this.distributionT(point)) : 1
 
-      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + Math.cos(angle) * radiusX
+      particle.movement.x = this.calculate(point.position.x, point.positionVariance.x) + Math.cos(angle) * radiusX * scale
 
-      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + Math.sin(angle) * radiusY
+      particle.movement.y = this.calculate(point.position.y, point.positionVariance.y) + Math.sin(angle) * radiusY * scale
+    }
+  }
+
+  private samplePathPoint = (point: any, t: number, samplingMode: string) => {
+    const pathPoints = point.pathPoints || []
+    if (pathPoints.length < 2) return null
+    const closed = Boolean(point.closedPath)
+    const pts = closed ? [...pathPoints, pathPoints[0]] : pathPoints
+    const segCount = pts.length - 1
+    if (segCount <= 0) return null
+
+    let segmentIndex = 0
+    let localT = t
+    if (samplingMode === 'byDistance') {
+      const pathKey = `path:${JSON.stringify(pts)}`
+      let lengths: number[] = []
+      let total = 0
+      const cached = this.sampleCache.get(pathKey)
+      if (cached) {
+        lengths = cached.lengths
+        total = cached.total
+      } else {
+        for (let i = 0; i < segCount; i++) {
+          const a = pts[i]
+          const b = pts[i + 1]
+          const len = Math.hypot((b.x || 0) - (a.x || 0), (b.y || 0) - (a.y || 0), (b.z || 0) - (a.z || 0))
+          lengths.push(len)
+          total += len
+        }
+        this.sampleCache.set(pathKey, { lengths, total })
+      }
+      let d = t * total
+      for (let i = 0; i < lengths.length; i++) {
+        if (d <= lengths[i]) {
+          segmentIndex = i
+          localT = lengths[i] > 0 ? d / lengths[i] : 0
+          break
+        }
+        d -= lengths[i]
+      }
+    } else {
+      segmentIndex = Math.min(segCount - 1, Math.floor(t * segCount))
+      localT = (t * segCount) % 1
+    }
+
+    const start = pts[segmentIndex]
+    const end = pts[segmentIndex + 1]
+    if ((point.pathInterpolation || 'linear') !== 'catmullRom') {
+      return {
+        x: start.x + localT * (end.x - start.x),
+        y: start.y + localT * (end.y - start.y),
+        z: (start.z || 0) + localT * ((end.z || 0) - (start.z || 0)),
+      }
+    }
+    const p0 = pts[Math.max(0, segmentIndex - 1)]
+    const p1 = start
+    const p2 = end
+    const p3 = pts[Math.min(pts.length - 1, segmentIndex + 2)]
+    const tt = localT * localT
+    const ttt = tt * localT
+    const catmull = (a: number, b: number, c: number, d: number) =>
+      0.5 * (2 * b + (-a + c) * localT + (2 * a - 5 * b + 4 * c - d) * tt + (-a + 3 * b - 3 * c + d) * ttt)
+    return {
+      x: catmull(p0.x || 0, p1.x || 0, p2.x || 0, p3.x || 0),
+      y: catmull(p0.y || 0, p1.y || 0, p2.y || 0, p3.y || 0),
+      z: catmull(p0.z || 0, p1.z || 0, p2.z || 0, p3.z || 0),
     }
   }
 
@@ -459,6 +612,13 @@ export default class SpawnBehaviour extends Behaviour {
   calculateCtx = (point: any) => {
     const text = point.word // The word to render
     const fontSize = point.fontSize // Font size for rendering
+    const cacheKey = `word:${text}:${fontSize}:${point.fontSpacing}:${point.particleDensity}:${point.fontMaxWidth}:${point.fontMaxHeight}:${point.textAlign}:${point.textBaseline}`
+    const cached = this.sampleCache.get(cacheKey)
+    if (cached) {
+      pixelPositions = cached.pixelPositions
+      particleCount = cached.particleCount
+      return
+    }
 
     if (!canvas) {
       canvas = document.createElement('canvas')
@@ -495,6 +655,10 @@ export default class SpawnBehaviour extends Behaviour {
 
     // Use particleDensity to limit the number of particles
     particleCount = Math.floor(pixelPositions.length * point.particleDensity)
+    this.sampleCache.set(cacheKey, {
+      pixelPositions: [...pixelPositions],
+      particleCount,
+    })
   }
 
   calculateTrailPosition = (point: any, overrideProgress?: number) => {
@@ -565,21 +729,9 @@ export default class SpawnBehaviour extends Behaviour {
       }
 
       case 'Path': {
-        const pathPoints = point.pathPoints || []
-        if (pathPoints.length < 2) return { x: 0, y: 0, z: 0 }
-
-        const totalSegments = pathPoints.length - 1
-        const segmentIndex = Math.floor(progress * totalSegments)
-        const localProgress = (progress * totalSegments) % 1
-
-        const start = pathPoints[segmentIndex]
-        const end = pathPoints[segmentIndex + 1]
-
-        const localX = start.x + localProgress * (end.x - start.x)
-        const localY = start.y + localProgress * (end.y - start.y)
-        const z = start.z + localProgress * (end.z - start.z || 0)
-
-        return { x: point.position.x + localX, y: point.position.y + localY, z }
+        const sampled = this.samplePathPoint(point, progress, point.pathSampling || 'bySegment')
+        if (!sampled) return { x: 0, y: 0, z: 0 }
+        return { x: point.position.x + sampled.x, y: point.position.y + sampled.y, z: sampled.z }
       }
 
       case 'Lissajous': {
@@ -711,6 +863,30 @@ export default class SpawnBehaviour extends Behaviour {
         return { x, y, z: 0 }
       }
 
+      case 'Polygon': {
+        const sides = Math.max(3, point.polygonSides || 6)
+        const angle = progress * Math.PI * 2
+        const step = (Math.PI * 2) / sides
+        const local = angle % step
+        const edgeRadius = point.radius * Math.cos(Math.PI / sides) / Math.cos(local - step / 2)
+        return {
+          x: point.position.x + Math.cos(angle) * edgeRadius,
+          y: point.position.y + Math.sin(angle) * edgeRadius,
+          z: 0,
+        }
+      }
+
+      case 'Arc':
+      case 'Sector': {
+        const angle = this.angularLerp(point.startAngle || 0, point.endAngle || 180, progress)
+        const r = point.radius || 100
+        return {
+          x: point.position.x + Math.cos(angle) * r,
+          y: point.position.y + Math.sin(angle) * r,
+          z: 0,
+        }
+      }
+
       case 'Word': {
         if (!pixelPositions || pixelPositions.length === 0) {
           return { x: point.position.x, y: point.position.y, z: 0 } // Fallback if no pixel data is available
@@ -783,7 +959,7 @@ export default class SpawnBehaviour extends Behaviour {
       return acc
     }, [])
 
-    const randomValue = Math.random()
+    const randomValue = this.random()
     return cumulative.findIndex((c: number) => randomValue <= c)
   }
 
@@ -829,6 +1005,9 @@ export default class SpawnBehaviour extends Behaviour {
       trailRangeSegments: this.trailRangeSegments,
       trailRangeWeightFactor: this.trailRangeWeightFactor,
       trailRangeLength: this.trailRangeLength,
+      randomSeed: this.randomSeed,
+      compositionMode: this.compositionMode,
+      maxSpawnCalcMs: this.maxSpawnCalcMs,
       customPoints: this.customPoints,
       name: this.getName(),
     }

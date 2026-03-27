@@ -4,6 +4,7 @@ import Behaviour from './Behaviour'
 import { BehaviourRegistry } from './BehaviourRegistry'
 import LifeBehaviour from './LifeBehaviour'
 import PositionBehaviour from './PositionBehaviour'
+import WarpBehaviour from './WarpBehaviour'
 import ColorBehaviour from './ColorBehaviour'
 import AttractionRepulsionBehaviour from './AttractionRepulsionBehaviour'
 import SizeBehaviour from './SizeBehaviour'
@@ -22,6 +23,7 @@ import LightEffectBehaviour from './LightEffectBehaviour'
 import StretchBehaviour from './StretchBehaviour'
 import TemperatureBehaviour from './TemperatureBehaviour'
 import MoveToPointBehaviour from './MoveToPointBehaviour'
+import PointToPointBehaviour from './PointToPointBehaviour'
 import VortexBehaviour from './VortexBehaviour'
 import PulseBehaviour from './PulseBehaviour'
 import RippleBehaviour from './RippleBehaviour'
@@ -61,6 +63,11 @@ import BeatPhaseLockBehaviour from './BeatPhaseLockBehaviour'
 import DamageFlashRippleBehaviour from './DamageFlashRippleBehaviour'
 import RecursiveFireworkBehaviour from './RecursiveFireworkBehaviour'
 import FormPatternBehaviour from './FormPatternBehaviour'
+import FlockingBehaviour from './FlockingBehaviour'
+import FlowFieldDriftBehaviour from './FlowFieldDriftBehaviour'
+import TemperatureSimulationBehaviour from './TemperatureSimulationBehaviour'
+import PredatorPreyBehaviour from './PredatorPreyBehaviour'
+import GlitchBehaviour from './GlitchBehaviour'
 
 export type { IBehaviour } from './IBehaviour'
 export type { IColorStop } from './ColorCycleBehaviour'
@@ -73,6 +80,7 @@ export {
   SpawnBehaviour,
   LifeBehaviour,
   PositionBehaviour,
+  WarpBehaviour,
   ColorBehaviour,
   SizeBehaviour,
   AngularVelocityBehaviour,
@@ -91,6 +99,7 @@ export {
   TemperatureBehaviour,
   BehaviourNames,
   MoveToPointBehaviour,
+  PointToPointBehaviour,
   VortexBehaviour,
   PulseBehaviour,
   RippleBehaviour,
@@ -130,6 +139,11 @@ export {
   DamageFlashRippleBehaviour,
   RecursiveFireworkBehaviour,
   FormPatternBehaviour,
+  FlockingBehaviour,
+  FlowFieldDriftBehaviour,
+  TemperatureSimulationBehaviour,
+  PredatorPreyBehaviour,
+  GlitchBehaviour,
 }
 
 export type {

@@ -283,6 +283,20 @@ export default class TestRenderer extends Container {
     } else if (this.formPatternPreviewGraphics) {
       this.formPatternPreviewGraphics.clear()
     }
+    if (this.formPatternPreviewGraphics && this.emitter?.behaviours) {
+      const behaviours = this.emitter.behaviours.getAll() as any[]
+      for (let i = 0; i < behaviours.length; i++) {
+        const behaviour = behaviours[i]
+        if (
+          behaviour &&
+          behaviour !== formPatternBehaviour &&
+          behaviour.enabled &&
+          typeof behaviour.draw === 'function'
+        ) {
+          behaviour.draw(this.formPatternPreviewGraphics, deltaTime)
+        }
+      }
+    }
 
     if (this.particleLinkGraphics && this._particleLinkSettings?.enabled && this.emitter?.list) {
       const every = Math.max(1, this._particleLinkSettings.updateEveryNFrames | 0)
@@ -469,12 +483,27 @@ export default class TestRenderer extends Container {
     }
   }
 
+  /** Defensive cleanup: editor/hot updates can briefly duplicate behaviour names. */
+  private dedupeBehaviourNames(config: any) {
+    if (!config || !Array.isArray(config.behaviours)) return config
+    const seen = new Set<string>()
+    config.behaviours = config.behaviours.filter((b: any) => {
+      const name = b && b.name
+      if (!name) return false
+      if (seen.has(name)) return false
+      seen.add(name)
+      return true
+    })
+    return config
+  }
+
   /**
    * Updates the configuration of the emitter
    * @param {any} config - Configuration object to be used to update the emitter
    * @param {boolean} resetDuration - should duration be reset
    */
   updateConfig(config: any, resetDuration = false) {
+    this.dedupeBehaviourNames(config)
     this.emitterParser?.update(config, this._model, resetDuration)
     this.syncContainerFromEmitterConfig(config)
     const turbulenceConfigIndex = this.getConfigIndexByName(BehaviourNames.TURBULENCE_BEHAVIOUR, config)
@@ -523,6 +552,7 @@ export default class TestRenderer extends Container {
     const behaviour = this.getByName(BehaviourNames.SPAWN_BEHAVIOUR)
     behaviour.customPoints[0].position.x = position.x
     behaviour.customPoints[0].position.y = position.y
+    this.dedupeBehaviourNames(this.config)
     this.emitterParser?.update(this.config, this._model, resetDuration)
   }
 

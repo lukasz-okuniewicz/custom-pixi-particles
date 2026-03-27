@@ -94,6 +94,12 @@ export default class StandardEmission extends AbstractEmission {
     return count
   }
 
+  validate() {
+    this._emitCounter = Math.max(0, this._emitCounter)
+    this._maxParticles = Math.max(0, this._maxParticles)
+    this._emissionRate = Math.max(0, this._emissionRate)
+  }
+
   /**
    * GetName() returns the type of the emission.
    * @return {EmissionTypes} - The type of the emission.

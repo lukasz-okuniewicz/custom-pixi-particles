@@ -91,6 +91,16 @@ export default class Particle {
    * Stores the current life progress of the particle
    */
   lifeProgress: number
+  /** Per-particle delay before life starts progressing (seconds). */
+  lifeStartDelayRemaining: number
+  /** Per-particle life progression multiplier. */
+  lifeTimeScale: number
+  /** Phase offset for infinite-life visual progress (seconds). */
+  infiniteLifePhaseOffsetSeconds: number
+  /** Optional early-death threshold based on lifeProgress (0..1). */
+  killAtProgress: number
+  /** Whether TimelineBehaviour should use lifeProgress for infinite life. */
+  timelineUseLifeProgressForInfinite: boolean
 
   /**
    * Stores the x position of the particle
@@ -190,36 +200,10 @@ export default class Particle {
 
   /** Whether the display object plays a frame strip or a single texture. */
   spriteDisplayKind: 'static' | 'animated'
-
-  /**
-   * Stores the camera z position of the particle
-   */
-  cameraZ: number
-
-  /**
-   * Stores the camera z position converter of the particle
-   */
-  cameraZConverter: number
-
-  /**
-   * Stores the warp speed of the particle
-   */
-  warpSpeed: number
-
-  /**
-   * Stores the warp base speed of the particle
-   */
-  warpBaseSpeed: number
-
-  /**
-   * Stores the warp field of view of the particle
-   */
-  warpFov: number
-
-  /**
-   * Stores the warp stretch of the particle
-   */
-  warpStretch: number
+  /** PositionBehaviour: per-particle drag computed from base + variance. */
+  positionDrag: number
+  /** PositionBehaviour: per-particle max speed computed from base + variance. */
+  positionMaxSpeed: number
 
   skipPositionBehaviour: boolean = false
   skipAngularVelocityBehaviour: boolean = false
@@ -228,11 +212,6 @@ export default class Particle {
   skipRotationBehaviour: boolean = false
   skipSizeBehaviour: boolean = false
   skipAttractionRepulsionBehaviour: boolean = false
-
-  /**
-   * Stores the warp distance scale converter of the particle
-   */
-  warpDistanceScaleConverter: number
 
   sizeDifference: { x: number; y: number }
 
@@ -345,6 +324,11 @@ export default class Particle {
     this.maxLifeTime = 0
     this.lifeTime = 0
     this.lifeProgress = 0
+    this.lifeStartDelayRemaining = 0
+    this.lifeTimeScale = 1
+    this.infiniteLifePhaseOffsetSeconds = 0
+    this.killAtProgress = 2
+    this.timelineUseLifeProgressForInfinite = false
     this.x = 0
     this.y = 0
     this.z = 0
@@ -378,6 +362,8 @@ export default class Particle {
     this.textureVariantIndex = -1
     this.spawnTexturePool = null
     this.spriteDisplayKind = 'static'
+    this.positionDrag = 0
+    this.positionMaxSpeed = -1
 
     this.showVortices = false
     this.turbulence = false
@@ -394,14 +380,6 @@ export default class Particle {
     this.colorStart.set(0, 0, 0, 1)
     this.colorEnd.set(0, 0, 0, 1)
     this.superColorAlphaEnd = 1
-
-    this.cameraZ = 0
-    this.cameraZConverter = 10
-    this.warpSpeed = 0
-    this.warpBaseSpeed = 0
-    this.warpFov = 20
-    this.warpStretch = 5
-    this.warpDistanceScaleConverter = 2000
 
     this.sizeDifference = { x: 1, y: 1 }
 

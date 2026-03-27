@@ -24,6 +24,14 @@ export default class AbstractEmission {
   }
 
   /**
+   * Optional post-parse validation hook.
+   * Subclasses can clamp or normalize config after parser assignment.
+   */
+  validate() {
+    //
+  }
+
+  /**
    * Get the name of the emission
    * @return {string} - the name of the emission
    * @throws {Error} - when the method is not overridden in subclass

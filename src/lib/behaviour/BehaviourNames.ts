@@ -3,6 +3,7 @@ const behaviourNames = {
   LIFE_BEHAVIOUR: 'LifeBehaviour',
   COLOR_BEHAVIOUR: 'ColorBehaviour',
   POSITION_BEHAVIOUR: 'PositionBehaviour',
+  WARP_BEHAVIOUR: 'WarpBehaviour',
   SIZE_BEHAVIOUR: 'SizeBehaviour',
   EMIT_DIRECTION: 'EmitDirectionBehaviour',
   ROTATION_BEHAVIOUR: 'RotationBehaviour',
@@ -19,6 +20,7 @@ const behaviourNames = {
   STRETCH_BEHAVIOUR: 'StretchBehaviour',
   TEMPERATURE_BEHAVIOUR: 'TemperatureBehaviour',
   MOVE_TO_POINT_BEHAVIOUR: 'MoveToPointBehaviour',
+  POINT_TO_POINT_BEHAVIOUR: 'PointToPointBehaviour',
   VORTEX_BEHAVIOUR: 'VortexBehaviour',
   PULSE_BEHAVIOUR: 'PulseBehaviour',
   RIPPLE_BEHAVIOUR: 'RippleBehaviour',
@@ -58,6 +60,11 @@ const behaviourNames = {
   DAMAGE_FLASH_RIPPLE_BEHAVIOUR: 'DamageFlashRippleBehaviour',
   RECURSIVE_FIREWORK_BEHAVIOUR: 'RecursiveFireworkBehaviour',
   FORM_PATTERN_BEHAVIOUR: 'FormPatternBehaviour',
+  FLOCKING_BEHAVIOUR: 'FlockingBehaviour',
+  FLOW_FIELD_DRIFT_BEHAVIOUR: 'FlowFieldDriftBehaviour',
+  TEMPERATURE_SIMULATION_BEHAVIOUR: 'TemperatureSimulationBehaviour',
+  PREDATOR_PREY_BEHAVIOUR: 'PredatorPreyBehaviour',
+  GLITCH_BEHAVIOUR: 'GlitchBehaviour',
 }
 
 export default behaviourNames
