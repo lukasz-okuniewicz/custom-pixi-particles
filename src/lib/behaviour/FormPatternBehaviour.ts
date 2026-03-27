@@ -758,7 +758,7 @@ export default class FormPatternBehaviour extends Behaviour {
     particle.movement.y = particle.y
 
     const pos = this.positionBehaviourGetter?.()
-    if (pos && pos.enabled && !particle.skipPositionBehaviour && !pos.fromAtoB) {
+    if (pos && pos.enabled && !particle.skipPositionBehaviour) {
       particle.velocity.x = pos.calculate(pos.velocity.x, pos.velocityVariance.x)
       particle.velocity.y = pos.calculate(pos.velocity.y, pos.velocityVariance.y)
       particle.acceleration.x = pos.calculate(pos.acceleration.x, pos.accelerationVariance.x)

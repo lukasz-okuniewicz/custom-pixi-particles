@@ -16,6 +16,16 @@ export default class RandomEmission extends AbstractEmission {
    * Emission rate
    */
   _emissionRate = 0
+  _seed?: number
+  _rngState = 1
+
+  private randomUnit(maxValue: number) {
+    if (typeof this._seed !== 'number' || !Number.isFinite(this._seed)) {
+      return Random.uniform(0, maxValue)
+    }
+    this._rngState = (1664525 * this._rngState + 1013904223) >>> 0
+    return (this._rngState / 4294967296) * maxValue
+  }
 
   /**
    * Calculates how many particles to emit
@@ -25,11 +35,27 @@ export default class RandomEmission extends AbstractEmission {
   howMany(deltaTime: number, particlesCount: number) {
     if (particlesCount < this.maxParticles) {
       const potential = Math.ceil(this.emissionRate * deltaTime)
-      const count = Math.round(Random.uniform(0, potential))
+      const count = Math.round(this.randomUnit(potential))
 
       return Math.min(count, this.maxParticles - particlesCount)
     }
     return 0
+  }
+
+  reset() {
+    if (typeof this._seed === 'number' && Number.isFinite(this._seed)) {
+      this._rngState = (Math.abs(Math.floor(this._seed)) >>> 0) || 1
+    }
+  }
+
+  validate() {
+    this._maxParticles = Math.max(0, this._maxParticles)
+    this._emissionRate = Math.max(0, this._emissionRate)
+    if (typeof this._seed === 'number' && Number.isFinite(this._seed)) {
+      this._rngState = (Math.abs(Math.floor(this._seed)) >>> 0) || 1
+    } else {
+      this._seed = undefined
+    }
   }
 
   /**

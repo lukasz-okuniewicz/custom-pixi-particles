@@ -4,6 +4,9 @@ import UniformEmission from './UniformEmission'
 import RandomEmission from './RandomEmission'
 import StandardEmission from './StandardEmission'
 import PersistentFillEmission from './PersistentFillEmission'
+import BurstScheduleEmission from './BurstScheduleEmission'
+import CurveEmission from './CurveEmission'
+import { EmissionRegistry } from './EmissionRegistry'
 
 export {
   EmissionTypes,
@@ -12,4 +15,7 @@ export {
   RandomEmission,
   StandardEmission,
   PersistentFillEmission,
+  BurstScheduleEmission,
+  CurveEmission,
+  EmissionRegistry,
 }

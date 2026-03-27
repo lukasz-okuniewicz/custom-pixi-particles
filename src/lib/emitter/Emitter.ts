@@ -76,7 +76,6 @@ export default class Emitter extends eventemitter3 {
     this._behaviourFrameSeq = (this._behaviourFrameSeq + 1) | 0
     this.behaviours.prepareEnabledApplyListForFrame(this._model, this._behaviourFrameSeq)
 
-    this._model.updateCamera(deltaTime)
     this.emitParticles(deltaTime)
     this.behaviours.update(deltaTime, this._model)
     this.updateParticles(deltaTime)
@@ -147,6 +146,14 @@ export default class Emitter extends eventemitter3 {
     if (particle.isDead()) {
       this.removeParticle(particle)
     } else {
+      if (
+        particle.killAtProgress >= 0 &&
+        particle.killAtProgress <= 1 &&
+        particle.lifeProgress >= particle.killAtProgress
+      ) {
+        this.removeParticle(particle)
+        return
+      }
       if (this.particleSpriteSync) {
         this.particleSpriteSync(particle)
       }

@@ -4,7 +4,12 @@ import StandardEmission from './StandardEmission'
 import UniformEmission from './UniformEmission'
 import RandomEmission from './RandomEmission'
 import PersistentFillEmission from './PersistentFillEmission'
+import BurstScheduleEmission from './BurstScheduleEmission'
+import CurveEmission from './CurveEmission'
+import { EmissionRegistry } from './EmissionRegistry'
 import * as util from '../util'
+import Emitter from '../emitter/Emitter'
+import Model from '../Model'
 
 describe('AbstractEmission', () => {
   it('howMany throws by default', () => {
@@ -108,5 +113,125 @@ describe('RandomEmission', () => {
     expect(r.howMany(1, 3)).toBe(5)
     vi.spyOn(util.Random, 'uniform').mockReturnValue(100)
     expect(r.howMany(1, 3)).toBe(7)
+  })
+
+  it('supports deterministic seeded emission', () => {
+    const r = new RandomEmission()
+    r.maxParticles = 100
+    r.emissionRate = 20
+    ;(r as any)._seed = 42
+    r.reset()
+
+    const first = r.howMany(0.5, 0)
+    const second = r.howMany(0.5, 0)
+
+    r.reset()
+    expect(r.howMany(0.5, 0)).toBe(first)
+    expect(r.howMany(0.5, 0)).toBe(second)
+  })
+})
+
+describe('BurstScheduleEmission', () => {
+  it('emits burst on cadence and respects capacity', () => {
+    const b = new BurstScheduleEmission()
+    b._maxParticles = 50
+    b._burstCount = 10
+    b._cooldown = 0.5
+    b._jitter = 0
+    b.reset()
+
+    expect(b.howMany(0.1, 0)).toBe(10)
+    expect(b.howMany(0.1, 0)).toBe(0)
+    expect(b.howMany(0.4, 0)).toBe(10)
+    expect(b.howMany(0.5, 45)).toBe(5)
+  })
+})
+
+describe('CurveEmission', () => {
+  it('samples curve rate and accumulates emissions', () => {
+    const c = new CurveEmission()
+    c._maxParticles = 100
+    c._duration = 1
+    c._curve = [
+      [0, 0],
+      [0.5, 20],
+      [1, 0],
+    ]
+    c.validate()
+
+    expect(c.howMany(0.25, 0)).toBe(2)
+    expect(c.howMany(0.25, 0)).toBe(5)
+  })
+})
+
+describe('EmissionRegistry + parser integration', () => {
+  it('creates custom emission from registry', () => {
+    class CustomEmission extends AbstractEmission {
+      _maxParticles = 10
+      _customRate = 0
+      howMany() {
+        return 0
+      }
+      getName() {
+        return 'CustomEmission'
+      }
+    }
+    EmissionRegistry.register('CustomEmission', CustomEmission as any)
+
+    const model = new Model()
+    const emitter = new Emitter(model)
+    const parser = emitter.getParser()
+    parser.read(
+      {
+        behaviours: [],
+        emitController: {
+          name: 'CustomEmission',
+          _maxParticles: 20,
+          _customRate: 7,
+        },
+        duration: 1,
+      },
+      model,
+    )
+
+    expect(emitter.emitController.getName()).toBe('CustomEmission')
+    expect((emitter.emitController as any)._customRate).toBe(7)
+    EmissionRegistry.unregister('CustomEmission')
+  })
+
+  it('swaps emit controller class during update when name changes', () => {
+    const model = new Model()
+    const emitter = new Emitter(model)
+    const parser = emitter.getParser()
+
+    parser.read(
+      {
+        behaviours: [],
+        emitController: {
+          name: 'UniformEmission',
+          _maxParticles: 20,
+          _emitPerSecond: 10,
+        },
+        duration: 1,
+      },
+      model,
+    )
+    expect(emitter.emitController).toBeInstanceOf(UniformEmission)
+
+    parser.update(
+      {
+        behaviours: [],
+        emitController: {
+          name: 'RandomEmission',
+          _maxParticles: 20,
+          _emissionRate: 15,
+        },
+        duration: 1,
+      },
+      model,
+      false,
+    )
+    expect(emitter.emitController).toBeInstanceOf(RandomEmission)
+    expect((emitter.emitController as RandomEmission).emissionRate).toBe(15)
   })
 })
