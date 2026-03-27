@@ -5,6 +5,7 @@ import * as behaviours from '../behaviour'
 import { BehaviourRegistry } from '../behaviour/BehaviourRegistry'
 import PlaceholderBehaviour from '../behaviour/PlaceholderBehaviour'
 import BehaviourNames from '../behaviour/BehaviourNames'
+import { EmissionRegistry } from '../emission/EmissionRegistry'
 import type Emitter from '../emitter/Emitter'
 import Model from '../Model'
 
@@ -74,7 +75,7 @@ export default class EmitterParser {
    * @returns {Emitter} - the emitter
    */
   read = (config: any, model: Model) => {
-    const behavioursConfig = config.behaviours
+    const behavioursConfig = this.sanitizeBehaviours(config.behaviours)
     const existingBehaviours = this.emitter.behaviours.getAll()
     const alwaysCreate = this.emitter.behaviours.isEmpty()
 
@@ -85,9 +86,6 @@ export default class EmitterParser {
       behaviour.getParser().read(behavioursConfig[i])
       this.emitter.behaviours.add(behaviour)
 
-      if (behaviour.name === 'PositionBehaviour') {
-        model.update(behaviour)
-      }
     }
 
     this.wireBoidsParticleList()
@@ -96,6 +94,9 @@ export default class EmitterParser {
       config.emitController.name || emissions.EmissionTypes.DEFAULT,
     )
     this.emitter.emitController.getParser().read(config.emitController)
+    if (this.emitter.emitController.validate) {
+      this.emitter.emitController.validate()
+    }
     this.emitter.duration.maxTime = CompatibilityHelper.readDuration(config)
     if (typeof config.alpha !== 'undefined') {
       this.emitter.alpha = config.alpha
@@ -132,7 +133,7 @@ export default class EmitterParser {
    * @returns {Emitter} - the emitter
    */
   update = (config: any, model: Model, resetDuration: boolean) => {
-    const behavioursConfig = config.behaviours
+    const behavioursConfig = this.sanitizeBehaviours(config.behaviours)
     const existingBehaviours = this.emitter.behaviours.getAll()
     const alwaysCreate = this.emitter.behaviours.isEmpty()
 
@@ -143,14 +144,20 @@ export default class EmitterParser {
       behaviour.getParser().read(behavioursConfig[i])
       this.emitter.behaviours.add(behaviour)
 
-      if (behaviour.name === 'PositionBehaviour') {
-        model.update(behaviour)
-      }
     }
 
     this.wireBoidsParticleList()
 
+    const requestedName = (config.emitController && config.emitController.name) || emissions.EmissionTypes.DEFAULT
+    const currentName = this.emitter.emitController.getName()
+    if (requestedName !== currentName) {
+      this.emitter.emitController = this.createEmitController(requestedName)
+    }
+
     this.emitter.emitController.getParser().read(config.emitController)
+    if (this.emitter.emitController.validate) {
+      this.emitter.emitController.validate()
+    }
     this.emitter.duration.maxTime = CompatibilityHelper.readDuration(config)
     if (resetDuration) {
       this.emitter.duration.reset()
@@ -182,6 +189,79 @@ export default class EmitterParser {
     return this.emitter
   }
 
+  private sanitizeBehaviours = (behavioursConfig: any) => {
+    if (!Array.isArray(behavioursConfig)) return []
+    const migrated = this.migrateLegacyPointToPoint(behavioursConfig)
+    const seen = new Set<string>()
+    const out: any[] = []
+    for (let i = 0; i < migrated.length; i++) {
+      const entry = migrated[i]
+      const name = entry && entry.name
+      if (!name || seen.has(name)) continue
+      seen.add(name)
+      out.push(entry)
+    }
+    return out
+  }
+
+  private migrateLegacyPointToPoint = (behavioursConfig: any[]) => {
+    const migrated = behavioursConfig.map((entry) => (entry && typeof entry === 'object' ? { ...entry } : entry))
+    const hasPointToPoint = migrated.some((entry: any) => entry?.name === BehaviourNames.POINT_TO_POINT_BEHAVIOUR)
+    let shouldInjectPointToPoint = false
+    let extractedConfig: any = null
+
+    for (let i = 0; i < migrated.length; i++) {
+      const entry = migrated[i]
+      if (!entry || entry.name !== BehaviourNames.POSITION_BEHAVIOUR) continue
+
+      const hasLegacyPointToPointConfig =
+        entry.fromAtoB === true ||
+        typeof entry.fromAtoBTwoWays !== 'undefined' ||
+        typeof entry.pointA !== 'undefined' ||
+        typeof entry.pointB !== 'undefined' ||
+        typeof entry.thereDuration !== 'undefined' ||
+        typeof entry.thereAmplitude !== 'undefined' ||
+        typeof entry.backDuration !== 'undefined' ||
+        typeof entry.backAmplitude !== 'undefined' ||
+        typeof entry.there !== 'undefined' ||
+        typeof entry.back !== 'undefined'
+
+      if (hasLegacyPointToPointConfig && !hasPointToPoint) {
+        shouldInjectPointToPoint = true
+        extractedConfig = {
+          name: BehaviourNames.POINT_TO_POINT_BEHAVIOUR,
+          enabled: true,
+          fromAtoBTwoWays: entry.fromAtoBTwoWays ?? false,
+          pointA: entry.pointA ?? { x: -300, y: 0 },
+          pointB: entry.pointB ?? { x: 300, y: 0 },
+          thereDuration: entry.thereDuration ?? { min: 7, max: 7 },
+          thereAmplitude: entry.thereAmplitude ?? { min: 220, max: 330 },
+          backDuration: entry.backDuration ?? { min: 7, max: 7 },
+          backAmplitude: entry.backAmplitude ?? { min: -220, max: -320 },
+          there: entry.there ?? { x: 'Sin', y: 'Tan', ease: 'power1.inOut' },
+          back: entry.back ?? { x: 'Sin', y: 'Tan', ease: 'power1.inOut' },
+        }
+      }
+
+      delete entry.fromAtoB
+      delete entry.fromAtoBTwoWays
+      delete entry.pointA
+      delete entry.pointB
+      delete entry.thereDuration
+      delete entry.thereAmplitude
+      delete entry.backDuration
+      delete entry.backAmplitude
+      delete entry.there
+      delete entry.back
+    }
+
+    if (shouldInjectPointToPoint && extractedConfig) {
+      migrated.push(extractedConfig)
+    }
+
+    return migrated
+  }
+
   /**
    * Wires neighbour-based behaviours to use this emitter's particle list.
    */
@@ -201,6 +281,14 @@ export default class EmitterParser {
     const rvo = this.emitter.behaviours.getByName(BehaviourNames.RVO_AVOIDANCE_BEHAVIOUR) as any
     if (rvo && typeof rvo.particleListGetter !== 'undefined') {
       rvo.particleListGetter = () => this.emitter.list
+    }
+    const flocking = this.emitter.behaviours.getByName(BehaviourNames.FLOCKING_BEHAVIOUR) as any
+    if (flocking && typeof flocking.particleListGetter !== 'undefined') {
+      flocking.particleListGetter = () => this.emitter.list
+    }
+    const predatorPrey = this.emitter.behaviours.getByName(BehaviourNames.PREDATOR_PREY_BEHAVIOUR) as any
+    if (predatorPrey && typeof predatorPrey.particleListGetter !== 'undefined') {
+      predatorPrey.particleListGetter = () => this.emitter.list
     }
     const formPattern = this.emitter.behaviours.getByName(BehaviourNames.FORM_PATTERN_BEHAVIOUR) as any
     // Always wire: optional getter was never set, so the old undefined-check skipped assignment.
@@ -273,7 +361,21 @@ export default class EmitterParser {
    * @return {any} The new emission controller
    */
   createEmitController = (name: string) => {
-    // @ts-ignore
-    return new emissions[name]()
+    const CustomEmission = EmissionRegistry.get(name)
+    if (CustomEmission) {
+      return new CustomEmission()
+    }
+
+    const BuiltIn = (emissions as any)[name]
+    if (BuiltIn && typeof BuiltIn === 'function') {
+      return new BuiltIn()
+    }
+
+    const DefaultEmission = (emissions as any)[emissions.EmissionTypes.DEFAULT]
+    if (DefaultEmission && typeof DefaultEmission === 'function') {
+      return new DefaultEmission()
+    }
+
+    throw new Error(`Unable to create emit controller: ${name}`)
   }
 }

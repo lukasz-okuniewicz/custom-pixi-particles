@@ -25,6 +25,11 @@ export default class PersistentFillEmission extends AbstractEmission {
     //
   }
 
+  validate() {
+    this._maxParticles = Math.max(0, this._maxParticles)
+    this._burstPerFrame = Math.max(1, Math.floor(this._burstPerFrame))
+  }
+
   set maxParticles(value: number) {
     this._maxParticles = Math.max(value, 0)
   }
