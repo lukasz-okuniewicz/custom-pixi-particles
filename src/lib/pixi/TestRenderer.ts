@@ -291,7 +291,7 @@ export default class TestRenderer extends Container {
           behaviour.enabled &&
           typeof behaviour.draw === 'function'
         ) {
-          behaviour.draw(this.formPatternPreviewGraphics, deltaTime)
+          behaviour.draw(this.formPatternPreviewGraphics, ticker.deltaTime)
         }
       }
     }
