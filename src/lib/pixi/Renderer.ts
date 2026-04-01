@@ -7,7 +7,7 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
-import { AnimatedSprite, Assets, ParticleContainer, Graphics, Sprite, Texture, Ticker, utils } from 'pixi.js'
+import { AnimatedSprite, ParticleContainer, Graphics, Sprite, Texture, Ticker, utils } from 'pixi.js'
 import Model from '../Model'
 import {
   pickVariantIndex,
@@ -20,6 +20,8 @@ import {
   type IParticleLinkSettings,
 } from './particleLinkLayer'
 import { resolveBlendMode } from '../util/resolveBlendMode'
+import { resolveLoaderAssetId } from '../util/resolveLoaderAssetId'
+import { resolveTextureByAssetId } from '../util/resolveTextureByAssetId'
 
 /**
  * Renderer is a class used to render particles in the Pixi library.
@@ -348,8 +350,7 @@ export default class Renderer extends ParticleContainer {
     const pick = () => ids[Math.floor(Math.random() * Math.max(1, ids.length))] || this.getRandomLegacyTexture()
     for (let i = 0; i < this.unusedStaticSprites.length; ++i) {
       const id = pick()
-      const t = Assets.get(id) ?? Texture.from(id)
-      this.unusedStaticSprites[i].texture = t
+      this.unusedStaticSprites[i].texture = resolveTextureByAssetId(id)
     }
   }
 
@@ -602,7 +603,7 @@ export default class Renderer extends ParticleContainer {
   }
 
   private textureFromAssetId(assetId: string): Texture {
-    return Assets.get(assetId) ?? Texture.from(assetId)
+    return resolveTextureByAssetId(assetId)
   }
 
   private getStaticTextureIdsForPreview(): string[] {
@@ -624,7 +625,7 @@ export default class Renderer extends ParticleContainer {
     let sprite = this.unusedStaticSprites.pop()
     if (sprite) {
       if (this.finishingTextureNames && this.finishingTextureNames.length) {
-        sprite.texture = Assets.get(this.getRandomLegacyTexture()) ?? Texture.from(this.getRandomLegacyTexture())
+        sprite.texture = resolveTextureByAssetId(this.getRandomLegacyTexture())
       } else {
         sprite.texture = this.textureFromAssetId(assetId)
       }
@@ -680,7 +681,7 @@ export default class Renderer extends ParticleContainer {
         const fileName = `${prefix}${frame}.${imageFileExtension}`
         const file = utils.TextureCache[fileName]
         if (file) {
-          texture = Assets.get(fileName)
+          texture = resolveTextureByAssetId(fileName)
           textures.push(texture)
           indexFrame += 1
         } else {
@@ -849,7 +850,10 @@ export default class Renderer extends ParticleContainer {
     const sprite = particle.sprite
     if (sprite instanceof AnimatedSprite) return
     if (particle.finishingTexture <= this.finishingTextureNames.length - 1) {
-      sprite.texture = Texture.from(this.getRandomFinishingTexture())
+      const assetId = this.getRandomFinishingTexture()
+      if (assetId) {
+        sprite.texture = Texture.from(assetId)
+      }
       particle.finishingTexture++
     }
   }
@@ -897,7 +901,9 @@ export default class Renderer extends ParticleContainer {
   }
 
   private getRandomFinishingTexture(): string {
-    return this.finishingTextureNames[Math.floor(Math.random() * this.finishingTextureNames.length)]
+    const raw =
+      this.finishingTextureNames[Math.floor(Math.random() * this.finishingTextureNames.length)]
+    return resolveLoaderAssetId(raw)
   }
 
   private getRandomFrameNumber(textures: number): number {

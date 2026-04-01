@@ -20,6 +20,14 @@ export function resolveBlendMode(mode: unknown): BLEND_MODES {
 
   if (typeof mode === 'string') {
     const s = mode.trim().toLowerCase().replace(/_/g, '-')
+    // HTML select / JSON often use numeric strings ("0"–"29"); BLEND_MODES[n] is reverse-mapped to a name string, not a number.
+    if (/^\d+$/.test(s)) {
+      const n = parseInt(s, 10)
+      if (Number.isFinite(n) && n >= 0 && n <= 29) {
+        return n as BLEND_MODES
+      }
+      return BLEND_MODES.NORMAL
+    }
     const table: Record<string, BLEND_MODES> = {
       normal: BLEND_MODES.NORMAL,
       'src-over': BLEND_MODES.NORMAL,

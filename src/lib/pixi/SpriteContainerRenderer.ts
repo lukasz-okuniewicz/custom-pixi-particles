@@ -7,7 +7,7 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
-import { AnimatedSprite, Assets, Container, Graphics, Sprite, Texture, Ticker, utils } from 'pixi.js'
+import { AnimatedSprite, Container, Graphics, Sprite, Texture, Ticker, utils } from 'pixi.js'
 import Model from '../Model'
 import {
   pickVariantIndex,
@@ -20,6 +20,8 @@ import {
   type IParticleLinkSettings,
 } from './particleLinkLayer'
 import { resolveBlendMode } from '../util/resolveBlendMode'
+import { resolveLoaderAssetId } from '../util/resolveLoaderAssetId'
+import { resolveTextureByAssetId } from '../util/resolveTextureByAssetId'
 
 /**
  * `Container` + `Sprite` path for emitters with multiple unrelated textures (mixed base textures).
@@ -607,7 +609,7 @@ export default class SpriteContainerRenderer extends Container {
   }
 
   private textureFromAssetId(assetId: string): Texture {
-    return Texture.from(assetId)
+    return resolveTextureByAssetId(assetId)
   }
 
   private getStaticTextureIdsForPreview(): string[] {
@@ -686,7 +688,7 @@ export default class SpriteContainerRenderer extends Container {
         const fileName = `${prefix}${frame}.${imageFileExtension}`
         const file = utils.TextureCache[fileName]
         if (file) {
-          texture = Assets.get(fileName) as Texture
+          texture = resolveTextureByAssetId(fileName)
           textures.push(texture)
           indexFrame += 1
         } else {
@@ -855,7 +857,10 @@ export default class SpriteContainerRenderer extends Container {
     const sprite = particle.sprite
     if (sprite instanceof AnimatedSprite) return
     if (particle.finishingTexture <= this.finishingTextureNames.length - 1) {
-      sprite.texture = Texture.from(this.getRandomFinishingTexture())
+      const assetId = this.getRandomFinishingTexture()
+      if (assetId) {
+        sprite.texture = Texture.from(assetId)
+      }
       particle.finishingTexture++
     }
   }
@@ -903,7 +908,9 @@ export default class SpriteContainerRenderer extends Container {
   }
 
   private getRandomFinishingTexture(): string {
-    return this.finishingTextureNames[Math.floor(Math.random() * this.finishingTextureNames.length)]
+    const raw =
+      this.finishingTextureNames[Math.floor(Math.random() * this.finishingTextureNames.length)]
+    return resolveLoaderAssetId(raw)
   }
 
   private getRandomFrameNumber(textures: number): number {
