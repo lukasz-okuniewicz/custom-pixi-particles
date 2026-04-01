@@ -20,6 +20,7 @@ import {
   type IParticleLinkSettings,
 } from './particleLinkLayer'
 import { resolveBlendMode } from '../util/resolveBlendMode'
+import { resolveLoaderAssetId } from '../util/resolveLoaderAssetId'
 
 /**
  * Renderer is a class used to render particles in the Pixi library.
@@ -876,7 +877,10 @@ export default class Renderer extends ParticleContainer {
     const sprite = particle.sprite
     if (sprite instanceof AnimatedSprite) return
     if (particle.finishingTexture <= this.finishingTextureNames.length - 1) {
-      sprite.texture = Texture.from(this.getRandomFinishingTexture())
+      const assetId = this.getRandomFinishingTexture()
+      if (assetId) {
+        sprite.texture = Texture.from(assetId)
+      }
       particle.finishingTexture++
     }
   }
@@ -924,7 +928,9 @@ export default class Renderer extends ParticleContainer {
   }
 
   private getRandomFinishingTexture(): string {
-    return this.finishingTextureNames[Math.floor(Math.random() * this.finishingTextureNames.length)]
+    const raw =
+      this.finishingTextureNames[Math.floor(Math.random() * this.finishingTextureNames.length)]
+    return resolveLoaderAssetId(raw)
   }
 
   private getRandomFrameNumber(textures: number): number {

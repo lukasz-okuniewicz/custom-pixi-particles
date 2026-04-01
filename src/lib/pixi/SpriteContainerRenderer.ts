@@ -20,6 +20,7 @@ import {
   type IParticleLinkSettings,
 } from './particleLinkLayer'
 import { resolveBlendMode } from '../util/resolveBlendMode'
+import { resolveLoaderAssetId } from '../util/resolveLoaderAssetId'
 
 /**
  * `Container` + `Sprite` path for emitters with multiple unrelated textures (mixed base textures).
@@ -875,7 +876,10 @@ export default class SpriteContainerRenderer extends Container {
     const sprite = particle.sprite
     if (sprite instanceof AnimatedSprite) return
     if (particle.finishingTexture <= this.finishingTextureNames.length - 1) {
-      sprite.texture = Texture.from(this.getRandomFinishingTexture())
+      const assetId = this.getRandomFinishingTexture()
+      if (assetId) {
+        sprite.texture = Texture.from(assetId)
+      }
       particle.finishingTexture++
     }
   }
@@ -923,7 +927,9 @@ export default class SpriteContainerRenderer extends Container {
   }
 
   private getRandomFinishingTexture(): string {
-    return this.finishingTextureNames[Math.floor(Math.random() * this.finishingTextureNames.length)]
+    const raw =
+      this.finishingTextureNames[Math.floor(Math.random() * this.finishingTextureNames.length)]
+    return resolveLoaderAssetId(raw)
   }
 
   private getRandomFrameNumber(textures: number): number {
