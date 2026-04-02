@@ -84,12 +84,24 @@ describe('PersistentFillEmission', () => {
     expect(p.howMany(16, 100)).toBe(0)
   })
 
-  it('burstPerFrame floors and has minimum 1', () => {
+  it('supports fractional burstPerFrame via frame carry', () => {
+    const p = new PersistentFillEmission()
+    p.maxParticles = 100
+    p.burstPerFrame = 0.1
+
+    for (let i = 0; i < 9; i++) {
+      expect(p.howMany(16, 0)).toBe(0)
+    }
+    expect(p.howMany(16, 0)).toBe(1)
+
+    p.reset()
+    expect(p.howMany(16, 0)).toBe(0)
+  })
+
+  it('clamps negative burstPerFrame to 0', () => {
     const p = new PersistentFillEmission()
     p.burstPerFrame = -5 as any
-    expect(p.burstPerFrame).toBe(1)
-    p.burstPerFrame = 3.7 as any
-    expect(p.burstPerFrame).toBe(3)
+    expect(p.burstPerFrame).toBe(0)
   })
 })
 
