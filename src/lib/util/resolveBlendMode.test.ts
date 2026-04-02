@@ -1,39 +1,45 @@
 import { describe, expect, it } from 'vitest'
-import { BLEND_MODES } from 'pixi.js-legacy'
 import { resolveBlendMode } from './resolveBlendMode'
 
 describe('resolveBlendMode', () => {
-  it('returns NORMAL for null, undefined, empty string', () => {
-    expect(resolveBlendMode(null)).toBe(BLEND_MODES.NORMAL)
-    expect(resolveBlendMode(undefined)).toBe(BLEND_MODES.NORMAL)
-    expect(resolveBlendMode('')).toBe(BLEND_MODES.NORMAL)
+  it('returns normal for null, undefined, empty string', () => {
+    expect(resolveBlendMode(null)).toBe('normal')
+    expect(resolveBlendMode(undefined)).toBe('normal')
+    expect(resolveBlendMode('')).toBe('normal')
   })
 
-  it('passes through valid numeric codes', () => {
-    expect(resolveBlendMode(BLEND_MODES.ADD)).toBe(BLEND_MODES.ADD)
-    expect(resolveBlendMode(1)).toBe(1 as typeof BLEND_MODES.NORMAL)
+  it('maps legacy numeric indices to v8 strings', () => {
+    expect(resolveBlendMode(0)).toBe('normal')
+    expect(resolveBlendMode(1)).toBe('add')
+    expect(resolveBlendMode(3)).toBe('screen')
+    expect(resolveBlendMode(20)).toBe('none')
   })
 
   it('floors non-integer numbers', () => {
-    expect(resolveBlendMode(2.7)).toBe(2)
+    expect(resolveBlendMode(2.7)).toBe('multiply')
   })
 
-  it('returns NORMAL for out-of-range numeric', () => {
-    expect(resolveBlendMode(-1)).toBe(BLEND_MODES.NORMAL)
-    expect(resolveBlendMode(100)).toBe(BLEND_MODES.NORMAL)
-    expect(resolveBlendMode(Number.NaN)).toBe(BLEND_MODES.NORMAL)
+  it('returns normal for out-of-range numeric', () => {
+    expect(resolveBlendMode(-1)).toBe('normal')
+    expect(resolveBlendMode(100)).toBe('normal')
+    expect(resolveBlendMode(Number.NaN)).toBe('normal')
   })
 
   it('maps kebab-case strings', () => {
-    expect(resolveBlendMode('color-dodge')).toBe(BLEND_MODES.COLOR_DODGE)
-    expect(resolveBlendMode('  SCREEN  ')).toBe(BLEND_MODES.SCREEN)
+    expect(resolveBlendMode('color-dodge')).toBe('color-dodge')
+    expect(resolveBlendMode('  SCREEN  ')).toBe('screen')
   })
 
   it('normalizes underscores to hyphens before lookup', () => {
-    expect(resolveBlendMode('hard_light')).toBe(BLEND_MODES.HARD_LIGHT)
+    expect(resolveBlendMode('hard_light')).toBe('hard-light')
   })
 
-  it('falls back to NORMAL for unknown strings', () => {
-    expect(resolveBlendMode('not-a-real-blend')).toBe(BLEND_MODES.NORMAL)
+  it('maps numeric strings to legacy blend names', () => {
+    expect(resolveBlendMode('1')).toBe('add')
+    expect(resolveBlendMode('3')).toBe('screen')
+  })
+
+  it('falls back to normal for unknown strings', () => {
+    expect(resolveBlendMode('not-a-real-blend')).toBe('normal')
   })
 })

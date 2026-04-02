@@ -8,6 +8,7 @@ import EmissionTypes from './EmissionTypes'
 export default class PersistentFillEmission extends AbstractEmission {
   _maxParticles = 0
   _burstPerFrame = 500
+  _carry = 0
 
   /**
    * @param deltaTime - unused; API matches other emission controllers
@@ -17,17 +18,27 @@ export default class PersistentFillEmission extends AbstractEmission {
     if (particlesCount >= this._maxParticles) {
       return 0
     }
+
+    this._carry += this._burstPerFrame
+    const wholeParticles = Math.floor(this._carry + 1e-9)
+    if (wholeParticles <= 0) {
+      return 0
+    }
+
     const capacity = this._maxParticles - particlesCount
-    return Math.min(capacity, this._burstPerFrame)
+    const toEmit = Math.min(capacity, wholeParticles)
+    this._carry -= toEmit
+    return toEmit
   }
 
   reset() {
-    //
+    this._carry = 0
   }
 
   validate() {
     this._maxParticles = Math.max(0, this._maxParticles)
-    this._burstPerFrame = Math.max(1, Math.floor(this._burstPerFrame))
+    this._burstPerFrame = Math.max(0, this._burstPerFrame)
+    this._carry = 0
   }
 
   set maxParticles(value: number) {
@@ -39,7 +50,7 @@ export default class PersistentFillEmission extends AbstractEmission {
   }
 
   set burstPerFrame(value: number) {
-    this._burstPerFrame = Math.max(1, Math.floor(value))
+    this._burstPerFrame = Math.max(value, 0)
   }
 
   get burstPerFrame() {
