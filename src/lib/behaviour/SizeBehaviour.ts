@@ -57,14 +57,29 @@ export default class SizeBehaviour extends Behaviour {
     particle.size.copyFrom(particle.sizeStart)
   }
 
+  /**
+   * Infinite life: `lifeProgress` loops 0→1 over `infiniteLifeVisualPeriod`.
+   * Map phase to a triangle 0→1→0 so size eases start→end→start smoothly (no jump at wrap).
+   */
+  private infiniteSizeProgress(phase01: number): number {
+    const phase = ((phase01 % 1) + 1) % 1
+    return 1 - Math.abs(2 * phase - 1)
+  }
+
   apply = (particle: Particle, deltaTime: number) => {
     if (!this.enabled || particle.skipSizeBehaviour) return
 
-    let lifeProgress = particle.lifeProgress - this.timeOffset
-    if (lifeProgress < 0) return // Skip if delayed
+    const t = particle.lifeProgress - this.timeOffset
+    if (t < 0) return // Skip if delayed
 
-    if (this.invertAtMidpoint && lifeProgress > 0.5) {
-      lifeProgress = 1 - lifeProgress // Invert at midpoint
+    let lifeProgress: number
+    if (Number.isFinite(particle.maxLifeTime)) {
+      lifeProgress = t
+      if (this.invertAtMidpoint && lifeProgress > 0.5) {
+        lifeProgress = 1 - lifeProgress // Invert at midpoint
+      }
+    } else {
+      lifeProgress = this.infiniteSizeProgress(t)
     }
 
     // Handle multi-step transitions
