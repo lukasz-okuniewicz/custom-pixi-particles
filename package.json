@@ -51,5 +51,5 @@
     "lint:fix": "tslint --fix 'src/**/*.ts'",
     "test": "vitest run"
   },
-  "version": "7.14.2"
+  "version": "7.15.0"
 }
