@@ -57,7 +57,7 @@ If you find **custom-pixi-particles** useful and would like to support my work, 
 ---
 
 ## 🎮 Demo
-Try it out here: [custom-pixi-particles Live Editor](https://okuniewicz.eu/)
+Try it out here: [custom-pixi-particles Live Editor](https:/particle-editor.okuniewicz.eu/)
 
 ---
 
@@ -1015,7 +1015,7 @@ Defines where and how particles spawn. Supports multiple spawn types.
 - `Path` - Custom path defined by points
 - `Oval` - Elliptical distributions
 
-**Additional behaviours** (see the [editor](https://okuniewicz.eu/) for full documentation): Aizawa Attractor, Beat Phase Lock, Bezier Flow Tube, Boids Flocking, Bounce, Color Cycle, Constrain To Shape, Conversion Cascade, Curvature Flow, Damage Flash Ripple, Emitter Attractor Link, Flicker, Float Up, Form Pattern, Gravity Well, Homing, Jacobian Curl-Field, Kelvin Wake, Lissajous Harmonic Lattice, Limit Cycle, Magnet, Near Miss Dispersion, Obstacle SDF Steer, Orbit, Phase Coherence, Phase Field Flow, Proximity State, Proximity Triggered Phase, Pulse, Ripple, RVO Avoidance, Screen Space Flow Map, Shear Flow, Toroidal Wrap, Trail, Toroidal Flow, Vortex, Wobble.
+**Additional behaviours** (see the [editor](https://particle-editor.okuniewicz.eu/) for full documentation): Aizawa Attractor, Beat Phase Lock, Bezier Flow Tube, Boids Flocking, Bounce, Color Cycle, Constrain To Shape, Conversion Cascade, Curvature Flow, Damage Flash Ripple, Emitter Attractor Link, Flicker, Float Up, Form Pattern, Gravity Well, Homing, Jacobian Curl-Field, Kelvin Wake, Lissajous Harmonic Lattice, Limit Cycle, Magnet, Near Miss Dispersion, Obstacle SDF Steer, Orbit, Phase Coherence, Phase Field Flow, Proximity State, Proximity Triggered Phase, Pulse, Ripple, RVO Avoidance, Screen Space Flow Map, Shear Flow, Toroidal Wrap, Trail, Toroidal Flow, Vortex, Wobble.
 
 #### Size Behaviour
 Controls particle size over time.
@@ -1545,9 +1545,7 @@ Design and fine-tune particle effects visually with the **custom-pixi-particles-
 - Export/import of emitter configurations as JSON
 - Built-in descriptions for every behaviour and property
 
-**Run locally:** Clone the [custom-pixi-particles-editor](https://github.com/lukasz-okuniewicz/custom-pixi-particles-editor) repository and run `npm install` then `npm run dev` from the editor folder.
-
-**Try online:** [custom-pixi-particles Live Editor](https://okuniewicz.eu/)
+**Try online:** [custom-pixi-particles Live Editor](https://particle-editor.okuniewicz.eu/)
 
 ---
 
