@@ -57,7 +57,7 @@ If you find **custom-pixi-particles** useful and would like to support my work, 
 ---
 
 ## 🎮 Demo
-Try it out here: [custom-pixi-particles Live Editor](https:/particle-editor.okuniewicz.eu/)
+Try it out here: [custom-pixi-particles Live Editor](https://particle-editor.okuniewicz.eu/)
 
 ---
 
