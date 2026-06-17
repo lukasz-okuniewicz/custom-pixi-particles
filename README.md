@@ -1050,17 +1050,21 @@ Controls particle color and alpha over time.
 ```
 
 #### Rotation Behaviour
-Controls particle rotation.
+Controls particle rotation at spawn and over time.
 
 ```javascript
 {
   priority: 0,
   enabled: true,
-  rotation: 0,          // Initial rotation in radians
-  variance: 0.2,         // Rotation randomness
+  startRotation: 0,              // Initial sprite angle at spawn (radians)
+  startRotationVariance: Math.PI, // Random spread on spawn (±variance)
+  rotation: 0,                   // Spin speed (radians per second)
+  variance: 0.2,                 // Random variance on spin speed
   name: 'RotationBehaviour',
 }
 ```
+
+For a uniform random angle on spawn with no spin, use `startRotation: Math.PI`, `startRotationVariance: Math.PI`, and `rotation: 0`.
 
 #### Angular Velocity Behaviour
 Controls particle spin speed and orbital motion.
