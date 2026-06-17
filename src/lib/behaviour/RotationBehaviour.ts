@@ -9,8 +9,10 @@ import Particle from '../Particle'
 export default class RotationBehaviour extends Behaviour {
   enabled = false
   priority = 0
-  rotation = 0 // Base rotation speed
+  rotation = 0 // Base rotation speed (radians per second)
   variance = 0 // Variance in rotation speed
+  startRotation = 0 // Initial sprite rotation at spawn (radians)
+  startRotationVariance = 0 // Random variance applied to startRotation at spawn
   oscillate = false // Enable oscillation
   oscillationSpeed = 1 // Speed of oscillation
   oscillationAmplitude = 0 // Amplitude of oscillation
@@ -26,11 +28,11 @@ export default class RotationBehaviour extends Behaviour {
   init = (particle: Particle) => {
     if (!this.enabled) return
 
-    // Set base rotation delta with variance
+    particle.rotation = this.startRotation + this.varianceFrom(this.startRotationVariance)
+
     const baseRotation = this.rotation + this.varianceFrom(this.variance)
     particle.rotationDelta = this.clockwise ? baseRotation : -baseRotation
 
-    // Initialize acceleration if enabled
     particle.rotationAcceleration = this.acceleration
   }
 
@@ -95,6 +97,8 @@ export default class RotationBehaviour extends Behaviour {
       priority: this.priority,
       rotation: this.rotation,
       variance: this.variance,
+      startRotation: this.startRotation,
+      startRotationVariance: this.startRotationVariance,
       oscillate: this.oscillate,
       oscillationSpeed: this.oscillationSpeed,
       oscillationAmplitude: this.oscillationAmplitude,
