@@ -35,6 +35,10 @@ describe('isInsideRoundedRect', () => {
   it('accepts point on straight edge', () => {
     expect(isInsideRoundedRect(0, -60, 100, 60, corners)).toBe(true)
   })
+
+  it('rejects exterior notch in top-left corner', () => {
+    expect(isInsideRoundedRect(-95, -55, 100, 60, corners)).toBe(false)
+  })
 })
 
 describe('buildRoundedRectOutline', () => {
@@ -43,6 +47,15 @@ describe('buildRoundedRectOutline', () => {
     expect(pts.length).toBeGreaterThan(8)
     expect(pts[0].x).toBeCloseTo(pts[pts.length - 1].x)
     expect(pts[0].y).toBeCloseTo(pts[pts.length - 1].y)
+  })
+
+  it('has no long chords skipping rounded corners', () => {
+    const corners = { topLeft: 50, topRight: 50, bottomRight: 50, bottomLeft: 50 }
+    const pts = buildRoundedRectOutline(250, 250, corners, 96)
+    for (let i = 1; i < pts.length; i++) {
+      const len = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y)
+      expect(len).toBeLessThan(80)
+    }
   })
 })
 
@@ -59,5 +72,35 @@ describe('pointOnRoundedRectPerimeter', () => {
     const p = pointOnRoundedRectPerimeter(0.01, 100, 50, { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 })
     expect(p.y).toBeCloseTo(-50, 0)
     expect(Math.abs(p.x)).toBeLessThanOrEqual(100)
+  })
+
+  it('covers top-left corner on edge emission path', () => {
+    const corners = { topLeft: 50, topRight: 50, bottomRight: 50, bottomLeft: 50 }
+    const hw = 250
+    const hh = 250
+    const cx = -hw + 50
+    const cy = -hh + 50
+    let onArc = 0
+    for (let i = 0; i < 5000; i++) {
+      const p = pointOnRoundedRectPerimeter(i / 5000, hw, hh, corners)
+      const d = Math.hypot(p.x - cx, p.y - cy)
+      if (Math.abs(d - 50) < 4) onArc++
+    }
+    expect(onArc).toBeGreaterThan(10)
+  })
+
+  it('covers top-left corner near t=1 (closing segment)', () => {
+    const corners = { topLeft: 50, topRight: 50, bottomRight: 50, bottomLeft: 50 }
+    const hw = 250
+    const hh = 250
+    const cx = -hw + 50
+    const cy = -hh + 50
+    let onArc = 0
+    for (let i = 0; i < 500; i++) {
+      const p = pointOnRoundedRectPerimeter(0.9 + (i / 500) * 0.1, hw, hh, corners)
+      const d = Math.hypot(p.x - cx, p.y - cy)
+      if (Math.abs(d - 50) < 4) onArc++
+    }
+    expect(onArc).toBeGreaterThan(5)
   })
 })
