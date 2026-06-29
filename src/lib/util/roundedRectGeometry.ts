@@ -1,5 +1,4 @@
 import Point from './Point'
-import { resampleToCount } from './formPatternSampling'
 
 export interface CornerRadii {
   topLeft: number
@@ -63,48 +62,87 @@ export function clampCornerRadii(hw: number, hh: number, corners: CornerRadii): 
   return { topLeft: tl, topRight: tr, bottomRight: br, bottomLeft: bl }
 }
 
-function arcPoints(cx: number, cy: number, r: number, startAngle: number, endAngle: number, steps: number): Point[] {
-  if (r <= 0 || steps <= 0) return []
-  const pts: Point[] = []
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps
-    const a = startAngle + (endAngle - startAngle) * t
-    pts.push(new Point(cx + Math.cos(a) * r, cy + Math.sin(a) * r))
-  }
-  return pts
+type PerimeterSegment = {
+  length: number
+  at: (u: number) => Point
 }
 
-function pushEdge(pts: Point[], x0: number, y0: number, x1: number, y1: number, steps: number) {
-  for (let s = 0; s < steps; s++) {
-    const t = steps <= 0 ? 0 : s / steps
-    pts.push(new Point(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t))
+function lineSegment(x0: number, y0: number, x1: number, y1: number): PerimeterSegment {
+  const length = Math.hypot(x1 - x0, y1 - y0)
+  return {
+    length,
+    at: (u) => new Point(x0 + (x1 - x0) * u, y0 + (y1 - y0) * u),
   }
+}
+
+function arcSegment(cx: number, cy: number, r: number, startAngle: number, endAngle: number): PerimeterSegment {
+  const length = Math.abs(endAngle - startAngle) * Math.max(0, r)
+  return {
+    length,
+    at: (u) => {
+      const a = startAngle + (endAngle - startAngle) * u
+      return new Point(cx + Math.cos(a) * r, cy + Math.sin(a) * r)
+    },
+  }
+}
+
+/** Clockwise perimeter from the top edge start (after the top-left arc). */
+function buildPerimeterSegments(hw: number, hh: number, corners: CornerRadii): PerimeterSegment[] {
+  const c = clampCornerRadii(hw, hh, corners)
+  const { topLeft: tl, topRight: tr, bottomRight: br, bottomLeft: bl } = c
+  const segments: PerimeterSegment[] = []
+
+  segments.push(lineSegment(-hw + tl, -hh, hw - tr, -hh))
+  if (tr > 0) segments.push(arcSegment(hw - tr, -hh + tr, tr, -Math.PI / 2, 0))
+  segments.push(lineSegment(hw, -hh + tr, hw, hh - br))
+  if (br > 0) segments.push(arcSegment(hw - br, hh - br, br, 0, Math.PI / 2))
+  segments.push(lineSegment(hw - br, hh, -hw + bl, hh))
+  if (bl > 0) segments.push(arcSegment(-hw + bl, hh - bl, bl, Math.PI / 2, Math.PI))
+  segments.push(lineSegment(-hw, hh - bl, -hw, -hh + tl))
+  if (tl > 0) segments.push(arcSegment(-hw + tl, -hh + tl, tl, Math.PI, Math.PI * 1.5))
+
+  return segments.filter((s) => s.length > 1e-8)
+}
+
+function perimeterLength(segments: PerimeterSegment[]): number {
+  return segments.reduce((sum, s) => sum + s.length, 0)
+}
+
+function pointAtPerimeterDistance(segments: PerimeterSegment[], dist: number): Point {
+  if (segments.length === 0) return new Point(0, 0)
+  let remaining = dist
+  for (const seg of segments) {
+    if (remaining <= seg.length + 1e-8) {
+      return seg.at(seg.length > 1e-8 ? remaining / seg.length : 0)
+    }
+    remaining -= seg.length
+  }
+  return segments[0].at(0)
+}
+
+const perimeterCache = new Map<string, PerimeterSegment[]>()
+
+function getPerimeterSegments(hw: number, hh: number, corners: CornerRadii): PerimeterSegment[] {
+  const c = clampCornerRadii(hw, hh, corners)
+  const key = `${hw}|${hh}|${c.topLeft}|${c.topRight}|${c.bottomRight}|${c.bottomLeft}`
+  let segments = perimeterCache.get(key)
+  if (!segments) {
+    segments = buildPerimeterSegments(hw, hh, c)
+    perimeterCache.set(key, segments)
+  }
+  return segments
 }
 
 /** Build a closed rounded-rect outline centered at origin (half extents hw, hh). */
 export function buildRoundedRectOutline(hw: number, hh: number, corners: CornerRadii, segmentBudget = 64): Point[] {
-  const c = clampCornerRadii(hw, hh, corners)
-  const { topLeft: tl, topRight: tr, bottomRight: br, bottomLeft: bl } = c
+  const count = Math.max(16, segmentBudget)
   const pts: Point[] = []
-
-  const arcSeg = Math.max(4, Math.floor(segmentBudget / 8))
-  const edgeSeg = Math.max(2, Math.floor(segmentBudget / 8))
-
-  // Clockwise from top-left corner start on top edge
-  pushEdge(pts, -hw + tl, -hh, hw - tr, -hh, edgeSeg)
-  pts.push(...arcPoints(hw - tr, -hh + tr, tr, -Math.PI / 2, 0, arcSeg).slice(1))
-  pushEdge(pts, hw, -hh + tr, hw, hh - br, edgeSeg)
-  pts.push(...arcPoints(hw - br, hh - br, br, 0, Math.PI / 2, arcSeg).slice(1))
-  pushEdge(pts, hw - br, hh, -hw + bl, hh, edgeSeg)
-  pts.push(...arcPoints(-hw + bl, hh - bl, bl, Math.PI / 2, Math.PI, arcSeg).slice(1))
-  pushEdge(pts, -hw, hh - bl, -hw, -hh + tl, edgeSeg)
-  pts.push(...arcPoints(-hw + tl, -hh + tl, tl, Math.PI, Math.PI * 1.5, arcSeg).slice(1))
-
-  if (pts.length === 0) {
-    return buildRoundedRectOutline(hw, hh, defaultCornerRadii(), segmentBudget)
+  for (let k = 0; k < count; k++) {
+    pts.push(pointOnRoundedRectPerimeter(k / count, hw, hh, corners))
   }
-  pts.push(new Point(pts[0].x, pts[0].y))
-  return resampleToCount(pts, Math.max(16, segmentBudget))
+  const first = pts[0]
+  pts.push(new Point(first.x, first.y))
+  return pts
 }
 
 export function isInsideRoundedRect(x: number, y: number, hw: number, hh: number, corners: CornerRadii): boolean {
@@ -127,60 +165,16 @@ export function isInsideRoundedRect(x: number, y: number, hw: number, hh: number
   if (x > hw - br && y > hh - br) return inCorner(hw - br, hh - br, br)
   if (x < -hw + bl && y > hh - bl) return inCorner(-hw + bl, hh - bl, bl)
 
-  return true
-}
-
-function outlineArcLength(pts: Point[]): number {
-  let total = 0
-  for (let i = 1; i < pts.length; i++) {
-    const dx = pts[i].x - pts[i - 1].x
-    const dy = pts[i].y - pts[i - 1].y
-    total += Math.sqrt(dx * dx + dy * dy)
-  }
-  return total
-}
-
-function pointAtArcLength(pts: Point[], dist: number): Point {
-  if (pts.length === 0) return new Point(0, 0)
-  if (pts.length === 1) return new Point(pts[0].x, pts[0].y)
-  let acc = 0
-  for (let i = 1; i < pts.length; i++) {
-    const dx = pts[i].x - pts[i - 1].x
-    const dy = pts[i].y - pts[i - 1].y
-    const len = Math.sqrt(dx * dx + dy * dy)
-    if (acc + len >= dist - 1e-8) {
-      const u = len > 1e-8 ? (dist - acc) / len : 0
-      return new Point(pts[i - 1].x + dx * u, pts[i - 1].y + dy * u)
-    }
-    acc += len
-  }
-  const last = pts[pts.length - 1]
-  return new Point(last.x, last.y)
-}
-
-const outlineCache = new Map<string, Point[]>()
-
-function getOutline(hw: number, hh: number, corners: CornerRadii): Point[] {
-  const c = clampCornerRadii(hw, hh, corners)
-  const key = `${hw}|${hh}|${c.topLeft}|${c.topRight}|${c.bottomRight}|${c.bottomLeft}`
-  let pts = outlineCache.get(key)
-  if (!pts) {
-    pts = buildRoundedRectOutline(hw, hh, c, 96)
-    outlineCache.set(key, pts)
-  }
-  return pts
+  return false
 }
 
 /** Point on perimeter; t in [0, 1), centered at origin. */
 export function pointOnRoundedRectPerimeter(t: number, hw: number, hh: number, corners: CornerRadii): Point {
-  const outline = getOutline(hw, hh, corners)
-  const closed = outline.length > 1 && outline[0].x === outline[outline.length - 1].x && outline[0].y === outline[outline.length - 1].y
-  const open = closed ? outline.slice(0, -1) : outline
-  const total = outlineArcLength(open)
+  const segments = getPerimeterSegments(hw, hh, corners)
+  const total = perimeterLength(segments)
   if (total < 1e-8) return new Point(0, 0)
   const wrapped = ((t % 1) + 1) % 1
-  const dist = wrapped * total
-  return pointAtArcLength(open, dist)
+  return pointAtPerimeterDistance(segments, wrapped * total)
 }
 
 /** Random point inside rounded rect; optional bias t in [0,1] shrinks toward center. */
