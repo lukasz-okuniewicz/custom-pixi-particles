@@ -3,6 +3,21 @@ import Behaviour from './Behaviour'
 import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 import { getSpawnTypeCapability } from './spawnTypeCapabilities'
+import {
+  normalizeCornerRadii,
+  pointOnRoundedRectPerimeter,
+  randomPointInsideRoundedRect,
+  randomPointOnRoundedRectPerimeter,
+} from '../util/roundedRectGeometry'
+import {
+  advanceImageFramePlayback,
+  buildImageMaskCacheKey,
+  decodeImageDataUrl,
+  ImageFramePlaybackState,
+  ImageMaskSampleOptions,
+  resolveImageSource,
+  sampleImageMaskPoints,
+} from '../util/imageBitmapSampling'
 
 let canvas: any = null
 let imageData: any = null
@@ -78,12 +93,30 @@ export default class SpawnBehaviour extends Behaviour {
       closedPath: false,
       pathInterpolation: 'linear',
       pathSampling: 'bySegment',
+      cornerRadius: { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 },
+      imageDataUrl: '',
+      imageDataUrls: [],
+      imageFrameRate: 12,
+      imageFrameLoop: true,
+      imageFramePingPong: false,
+      imageAlphaThreshold: 128,
+      imageMaskMode: 'luma',
+      imageInvertMask: false,
+      imageMaskLumaThreshold: 0.5,
+      imageMaskHueMin: 0,
+      imageMaskHueMax: 360,
+      imageFitMode: 'contain',
+      imageAutoDownscaleMax: 1024,
+      imageSamplingMode: 'fill',
+      imageSamplingDensity: 1,
     },
   ]
 
   lastWordSettings: any = {}
   private sequenceIndex: number = 0
   private sampleCache: Map<string, any> = new Map()
+  private imageMaskPlayback = new Map<number, ImageFramePlaybackState>()
+  private imageMaskDecodePending = new Set<string>()
 
   private random = () => {
     if (this.randomSeed === null || Number.isNaN(this.randomSeed)) {
@@ -127,6 +160,85 @@ export default class SpawnBehaviour extends Behaviour {
     const start = (startDeg * Math.PI) / 180
     const end = (endDeg * Math.PI) / 180
     return start + (end - start) * t
+  }
+
+  private getRoundedRectDims = (point: any) => {
+    const w = point.radiusX || 100
+    const h = point.radiusY || 100
+    return { hw: w / 2, hh: h / 2, w, h }
+  }
+
+  private getImageMaskOptions = (point: any): ImageMaskSampleOptions => ({
+    alphaThreshold: point.imageAlphaThreshold ?? 128,
+    fitMode: point.imageFitMode ?? 'contain',
+    autoDownscaleMax: point.imageAutoDownscaleMax ?? 1024,
+    maskMode: point.imageMaskMode ?? 'luma',
+    invertMask: point.imageInvertMask ?? false,
+    maskLumaThreshold: point.imageMaskLumaThreshold ?? 0.5,
+    maskHueMin: point.imageMaskHueMin ?? 0,
+    maskHueMax: point.imageMaskHueMax ?? 360,
+    samplingMode: point.imageSamplingMode ?? 'fill',
+    samplingDensity: point.imageSamplingDensity ?? 1,
+    edgeThickness: point.imageEdgeThickness ?? 1,
+    edgeDetector: point.imageEdgeDetector ?? 'alphaContour',
+  })
+
+  private getImageMaskFrameCount = (point: any) => {
+    const frames = (point.imageDataUrls || []).filter((s: string) => !!s?.trim())
+    if (frames.length > 1 || (frames.length === 1 && !point.imageDataUrl?.trim())) return frames.length
+    return 1
+  }
+
+  private getImageMaskPlayback = (pointIndex: number) =>
+    this.imageMaskPlayback.get(pointIndex) ?? { elapsedSec: 0, frameIndex: 0 }
+
+  private getImageMaskPoolKey = (point: any, pointIndex: number) => {
+    const playback = this.getImageMaskPlayback(pointIndex)
+    const source = resolveImageSource(point.imageDataUrl || '', point.imageDataUrls || [], playback.frameIndex)
+    const maxCount = Math.max(100, Math.floor(4000 * (point.particleDensity ?? 1)))
+    return buildImageMaskCacheKey(source, playback.frameIndex, maxCount, this.getImageMaskOptions(point))
+  }
+
+  private ensureImageMaskPool = (point: any, pointIndex: number) => {
+    const cacheKey = this.getImageMaskPoolKey(point, pointIndex)
+    const cached = this.sampleCache.get(cacheKey)
+    if (cached?.pixelPositions) return cached
+    const source = resolveImageSource(
+      point.imageDataUrl || '',
+      point.imageDataUrls || [],
+      this.getImageMaskPlayback(pointIndex).frameIndex,
+    )
+    if (!source.trim() || this.imageMaskDecodePending.has(cacheKey)) return null
+    this.imageMaskDecodePending.add(cacheKey)
+    const opts = this.getImageMaskOptions(point)
+    const maxCount = Math.max(100, Math.floor(4000 * (point.particleDensity ?? 1)))
+    decodeImageDataUrl(source, opts).then((imageData) => {
+      this.imageMaskDecodePending.delete(cacheKey)
+      if (!imageData) return
+      const sampled = sampleImageMaskPoints(imageData, maxCount, opts)
+      const density = Math.max(0, Math.min(1, point.particleDensity ?? 1))
+      const count = Math.max(0, Math.floor(sampled.points.length * density))
+      this.sampleCache.set(cacheKey, {
+        pixelPositions: sampled.points,
+        particleCount: count,
+      })
+    })
+    return null
+  }
+
+  private updateImageMaskFrames = (deltaTime: number) => {
+    this.customPoints.forEach((point, idx) => {
+      if (point.spawnType !== 'ImageMask') return
+      const frameCount = this.getImageMaskFrameCount(point)
+      if (frameCount <= 1) return
+      const prev = this.getImageMaskPlayback(idx)
+      const next = advanceImageFramePlayback(prev, deltaTime, frameCount, {
+        frameRate: point.imageFrameRate ?? 12,
+        loop: point.imageFrameLoop !== false,
+        pingPong: point.imageFramePingPong ?? false,
+      })
+      this.imageMaskPlayback.set(idx, next)
+    })
   }
 
   private nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
@@ -398,6 +510,30 @@ export default class SpawnBehaviour extends Behaviour {
         // Add a bit of random jitter to make the word more dynamic
         particle.movement.x += this.random() * point.positionVariance.x - point.positionVariance.x / 2
         particle.movement.y += this.random() * point.positionVariance.y - point.positionVariance.y / 2
+      }
+    } else if (point.spawnType === 'RoundedRectangle') {
+      const { hw, hh } = this.getRoundedRectDims(point)
+      const corners = normalizeCornerRadii(point.cornerRadius)
+      const cx = this.calculate(point.position.x, point.positionVariance.x)
+      const cy = this.calculate(point.position.y, point.positionVariance.y)
+      const local =
+        areaMode === 'fill'
+          ? randomPointInsideRoundedRect(hw, hh, corners, this.random, this.distributionT(point))
+          : randomPointOnRoundedRectPerimeter(hw, hh, corners, this.random)
+      particle.movement.x = cx + local.x
+      particle.movement.y = cy + local.y
+    } else if (point.spawnType === 'ImageMask') {
+      const pointIndex = Math.max(0, this.customPoints.indexOf(point))
+      const pool = this.ensureImageMaskPool(point, pointIndex) ?? this.sampleCache.get(this.getImageMaskPoolKey(point, pointIndex))
+      if (pool?.pixelPositions?.length > 0 && pool.particleCount > 0) {
+        const selectedPixel = pool.pixelPositions[Math.floor(this.random() * pool.particleCount)]
+        particle.movement.x = point.position.x + selectedPixel.x
+        particle.movement.y = point.position.y + selectedPixel.y
+        particle.movement.x += this.random() * point.positionVariance.x - point.positionVariance.x / 2
+        particle.movement.y += this.random() * point.positionVariance.y - point.positionVariance.y / 2
+      } else {
+        particle.movement.x = this.calculate(point.position.x, point.positionVariance.x)
+        particle.movement.y = this.calculate(point.position.y, point.positionVariance.y)
       }
     } else if (point.spawnType === 'Lissajous') {
       const a = point.frequency.x // Frequency in x-axis
@@ -852,6 +988,17 @@ export default class SpawnBehaviour extends Behaviour {
         return { x, y, z: 0 }
       }
 
+      case 'RoundedRectangle': {
+        const { hw, hh } = this.getRoundedRectDims(point)
+        const corners = normalizeCornerRadii(point.cornerRadius)
+        const local = pointOnRoundedRectPerimeter(progress, hw, hh, corners)
+        return {
+          x: point.position.x + local.x,
+          y: point.position.y + local.y,
+          z: 0,
+        }
+      }
+
       case 'Oval': {
         const angle = progress * Math.PI * 2 // Progress determines angle
         const radiusX = point.radiusX || 100
@@ -968,7 +1115,8 @@ export default class SpawnBehaviour extends Behaviour {
    * @param {number} deltaTime - Time since the last frame
    */
   update = (deltaTime: number) => {
-    this.updateTrailProgress(deltaTime) // Update trail once per frame
+    this.updateTrailProgress(deltaTime)
+    this.updateImageMaskFrames(deltaTime)
   }
 
   /**

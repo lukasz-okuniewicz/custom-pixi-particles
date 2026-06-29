@@ -24,6 +24,8 @@ export const spawnTypeCapabilities: Record<string, SpawnTypeCapability> = {
   Polygon: { supportsTrail: true, supportsFill: true, supports3D: false },
   Arc: { supportsTrail: true, supportsFill: true, supports3D: false },
   Sector: { supportsTrail: true, supportsFill: true, supports3D: false },
+  RoundedRectangle: { supportsTrail: true, supportsFill: true, supports3D: false },
+  ImageMask: { supportsTrail: false, supportsFill: true, supports3D: false },
 }
 
 export const getSpawnTypeCapability = (spawnType: string | undefined): SpawnTypeCapability => {

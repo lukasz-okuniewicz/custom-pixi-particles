@@ -1014,6 +1014,8 @@ Defines where and how particles spawn. Supports multiple spawn types.
 - `Spring` - Spring-like patterns with coiled loops
 - `Path` - Custom path defined by points
 - `Oval` - Elliptical distributions
+- `RoundedRectangle` - Rectangle with per-corner radii (fill, edge, trail)
+- `ImageMask` - Spawn from B&W/luma mask image(s); supports PNG frame sequences
 
 **Additional behaviours** (see the [editor](https://particle-editor.okuniewicz.eu/) for full documentation): Aizawa Attractor, Beat Phase Lock, Bezier Flow Tube, Boids Flocking, Bounce, Color Cycle, Constrain To Shape, Conversion Cascade, Curvature Flow, Damage Flash Ripple, Emitter Attractor Link, Flicker, Float Up, Form Pattern, Gravity Well, Homing, Jacobian Curl-Field, Kelvin Wake, Lissajous Harmonic Lattice, Limit Cycle, Magnet, Near Miss Dispersion, Obstacle SDF Steer, Orbit, Phase Coherence, Phase Field Flow, Proximity State, Proximity Triggered Phase, Pulse, Ripple, RVO Avoidance, Screen Space Flow Map, Shear Flow, Toroidal Wrap, Trail, Toroidal Flow, Vortex, Wobble.
 
