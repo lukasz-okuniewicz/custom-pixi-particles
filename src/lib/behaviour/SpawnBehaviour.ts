@@ -226,6 +226,21 @@ export default class SpawnBehaviour extends Behaviour {
     return null
   }
 
+  private getImageMaskPool = (point: any, pointIndex: number) => {
+    this.ensureImageMaskPool(point, pointIndex)
+    const pool = this.sampleCache.get(this.getImageMaskPoolKey(point, pointIndex))
+    if (pool?.pixelPositions?.length > 0 && pool.particleCount > 0) return pool
+    return null
+  }
+
+  private prewarmImageMaskPools = () => {
+    this.customPoints.forEach((point, idx) => {
+      if (point.spawnType === 'ImageMask') {
+        this.ensureImageMaskPool(point, idx)
+      }
+    })
+  }
+
   private updateImageMaskFrames = (deltaTime: number) => {
     this.customPoints.forEach((point, idx) => {
       if (point.spawnType !== 'ImageMask') return
@@ -279,7 +294,11 @@ export default class SpawnBehaviour extends Behaviour {
     } else {
       const start = this.nowMs()
       this.spawnParticleAtPoint(particle, point)
-      if (this.maxSpawnCalcMs > 0 && this.nowMs() - start > this.maxSpawnCalcMs) {
+      if (
+        point.spawnType !== 'ImageMask' &&
+        this.maxSpawnCalcMs > 0 &&
+        this.nowMs() - start > this.maxSpawnCalcMs
+      ) {
         particle.movement.x = this.calculate(point.position.x, point.positionVariance.x)
         particle.movement.y = this.calculate(point.position.y, point.positionVariance.y)
       }
@@ -524,17 +543,17 @@ export default class SpawnBehaviour extends Behaviour {
       particle.movement.y = cy + local.y
     } else if (point.spawnType === 'ImageMask') {
       const pointIndex = Math.max(0, this.customPoints.indexOf(point))
-      const pool = this.ensureImageMaskPool(point, pointIndex) ?? this.sampleCache.get(this.getImageMaskPoolKey(point, pointIndex))
-      if (pool?.pixelPositions?.length > 0 && pool.particleCount > 0) {
-        const selectedPixel = pool.pixelPositions[Math.floor(this.random() * pool.particleCount)]
-        particle.movement.x = point.position.x + selectedPixel.x
-        particle.movement.y = point.position.y + selectedPixel.y
-        particle.movement.x += this.random() * point.positionVariance.x - point.positionVariance.x / 2
-        particle.movement.y += this.random() * point.positionVariance.y - point.positionVariance.y / 2
-      } else {
-        particle.movement.x = this.calculate(point.position.x, point.positionVariance.x)
-        particle.movement.y = this.calculate(point.position.y, point.positionVariance.y)
+      const pool = this.getImageMaskPool(point, pointIndex)
+      if (!pool) {
+        // Mask pixels are decoded asynchronously; skip spawn instead of falling back to emitter center.
+        particle.maxLifeTime = 0
+        return
       }
+      const selectedPixel = pool.pixelPositions[Math.floor(this.random() * pool.particleCount)]
+      particle.movement.x = point.position.x + selectedPixel.x
+      particle.movement.y = point.position.y + selectedPixel.y
+      particle.movement.x += this.random() * point.positionVariance.x - point.positionVariance.x / 2
+      particle.movement.y += this.random() * point.positionVariance.y - point.positionVariance.y / 2
     } else if (point.spawnType === 'Lissajous') {
       const a = point.frequency.x // Frequency in x-axis
       const b = point.frequency.y // Frequency in y-axis
@@ -1117,6 +1136,7 @@ export default class SpawnBehaviour extends Behaviour {
   update = (deltaTime: number) => {
     this.updateTrailProgress(deltaTime)
     this.updateImageMaskFrames(deltaTime)
+    this.prewarmImageMaskPools()
   }
 
   /**
