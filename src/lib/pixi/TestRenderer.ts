@@ -344,6 +344,13 @@ export default class TestRenderer extends Container {
       const id = pick()
       this.unusedStaticSprites[i].texture = resolveTextureByAssetId(id)
     }
+
+    for (let i = 0; i < this.children.length; ++i) {
+      const ch = this.children[i] as Sprite
+      if (ch && (ch as any).texture) {
+        ch.texture = resolveTextureByAssetId(pick())
+      }
+    }
   }
 
   /**

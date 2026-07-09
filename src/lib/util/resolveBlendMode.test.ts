@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BLEND_MODES } from 'pixi.js-legacy'
+import { BLEND_MODES } from 'pixi.js'
 import { resolveBlendMode } from './resolveBlendMode'
 
 describe('resolveBlendMode', () => {
