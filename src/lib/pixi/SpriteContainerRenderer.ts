@@ -157,7 +157,7 @@ export default class SpriteContainerRenderer extends Container {
       if (merged.enabled) {
         this._particleLinkSettings = merged
         const linkG = new Graphics()
-        if (merged.blendMode != null) {
+        if (merged.blendMode != null && merged.blendMode !== '') {
           linkG.blendMode = resolveBlendMode(merged.blendMode) as typeof linkG.blendMode
         }
         this.particleLinkGraphics = linkG
@@ -327,12 +327,12 @@ export default class SpriteContainerRenderer extends Container {
     if (merged.enabled) {
       if (!this.particleLinkGraphics) {
         const linkG = new Graphics()
-        if (merged.blendMode != null) {
+        if (merged.blendMode != null && merged.blendMode !== '') {
           linkG.blendMode = resolveBlendMode(merged.blendMode) as typeof linkG.blendMode
         }
         this.particleLinkGraphics = linkG
         ;(this as any).addChildAt(linkG, 0)
-      } else if (merged.blendMode != null) {
+      } else if (merged.blendMode != null && merged.blendMode !== '') {
         this.particleLinkGraphics.blendMode = resolveBlendMode(merged.blendMode) as typeof this.particleLinkGraphics.blendMode
       }
     } else if (this.particleLinkGraphics) {
@@ -350,13 +350,13 @@ export default class SpriteContainerRenderer extends Container {
     const pick = () => ids[Math.floor(Math.random() * Math.max(1, ids.length))] || this.getRandomLegacyTexture()
     for (let i = 0; i < this.unusedStaticSprites.length; ++i) {
       const id = pick()
-      this.unusedStaticSprites[i].texture = Texture.from(id)
+      this.unusedStaticSprites[i].texture = resolveTextureByAssetId(id)
     }
 
     for (let i = 0; i < this.children.length; ++i) {
       const ch = this.children[i] as Sprite
       if (ch && (ch as any).texture) {
-        ch.texture = Texture.from(pick())
+        ch.texture = resolveTextureByAssetId(pick())
       }
     }
   }
@@ -574,7 +574,7 @@ export default class SpriteContainerRenderer extends Container {
     this.removeChildren()
     if (hadLinks && linkSettings?.enabled) {
       const linkG = new Graphics()
-      if (linkSettings.blendMode != null) {
+      if (linkSettings.blendMode != null && linkSettings.blendMode !== '') {
         linkG.blendMode = resolveBlendMode(linkSettings.blendMode) as typeof linkG.blendMode
       }
       this.particleLinkGraphics = linkG

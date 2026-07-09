@@ -10,6 +10,7 @@ import { EmitterParser } from '../parser'
 import {
   AnimatedSprite,
   Assets,
+  BLEND_MODES,
   Container,
   Graphics,
   ParticleContainer,
@@ -133,7 +134,7 @@ export default class Renderer extends Container {
     }
 
     if (typeof emitterConfig.blendMode !== 'undefined') {
-      this.blendMode = emitterConfig.blendMode
+      this.blendMode = resolveBlendMode(emitterConfig.blendMode) as BLEND_MODES
     }
 
     if (typeof emitterConfig.anchor !== 'undefined') {
@@ -159,8 +160,8 @@ export default class Renderer extends Container {
       if (merged.enabled) {
         this._particleLinkSettings = merged
         const linkG = new Graphics()
-        if (merged.blendMode != null) {
-          linkG.blendMode = merged.blendMode
+        if (merged.blendMode != null && merged.blendMode !== '') {
+          linkG.blendMode = resolveBlendMode(merged.blendMode) as typeof linkG.blendMode
         }
         this.particleLinkGraphics = linkG
         this.addChildAt(linkG, 0)
@@ -328,13 +329,13 @@ export default class Renderer extends Container {
     if (merged.enabled) {
       if (!this.particleLinkGraphics) {
         const linkG = new Graphics()
-        if (merged.blendMode != null) {
-          linkG.blendMode = merged.blendMode
+        if (merged.blendMode != null && merged.blendMode !== '') {
+          linkG.blendMode = resolveBlendMode(merged.blendMode) as typeof linkG.blendMode
         }
         this.particleLinkGraphics = linkG
         this.addChildAt(linkG, 0)
-      } else if (merged.blendMode != null) {
-        this.particleLinkGraphics.blendMode = merged.blendMode
+      } else if (merged.blendMode != null && merged.blendMode !== '') {
+        this.particleLinkGraphics.blendMode = resolveBlendMode(merged.blendMode) as typeof this.particleLinkGraphics.blendMode
       }
     } else if (this.particleLinkGraphics) {
       this.particleLinkGraphics.clear()
@@ -352,6 +353,13 @@ export default class Renderer extends Container {
     for (let i = 0; i < this.unusedStaticSprites.length; ++i) {
       const id = pick()
       this.unusedStaticSprites[i].texture = resolveTextureByAssetId(id)
+    }
+
+    for (let i = 0; i < this.children.length; ++i) {
+      const ch = this.children[i] as Sprite
+      if (ch && (ch as any).texture) {
+        ch.texture = resolveTextureByAssetId(pick())
+      }
     }
   }
 
@@ -479,7 +487,7 @@ export default class Renderer extends Container {
       this.alpha = config.alpha
     }
     if (typeof config.blendMode !== 'undefined') {
-      this.blendMode = config.blendMode
+      this.blendMode = resolveBlendMode(config.blendMode) as BLEND_MODES
     }
     if (typeof config.anchor !== 'undefined') {
       this.anchor = config.anchor
@@ -568,8 +576,8 @@ export default class Renderer extends Container {
     this.removeChildren()
     if (hadLinks && linkSettings?.enabled) {
       const linkG = new Graphics()
-      if (linkSettings.blendMode != null) {
-        linkG.blendMode = linkSettings.blendMode
+      if (linkSettings.blendMode != null && linkSettings.blendMode !== '') {
+        linkG.blendMode = resolveBlendMode(linkSettings.blendMode) as typeof linkG.blendMode
       }
       this.particleLinkGraphics = linkG
       this.addChildAt(linkG, 0)

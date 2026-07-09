@@ -33,7 +33,7 @@ export default class Emitter extends eventemitter3 {
    * Used when FormPatternBehaviour.followEmitterWorldPosition is true.
    */
   worldPosition: { x: number; y: number } | null = null
-  blendMode: BLEND_MODES = 'normal'
+  blendMode: BLEND_MODES = 'normal' as BLEND_MODES
   behaviours: EmitterBehaviours = new EmitterBehaviours()
   emitController: any
   turbulencePool: TurbulencePool = new TurbulencePool()

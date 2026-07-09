@@ -25,7 +25,7 @@ export interface IParticleLinkSettings {
   /** 1 = every frame; 2 = half rate (lower CPU) */
   updateEveryNFrames: number
   /** Blend mode for the link Graphics (e.g. 'screen', 'add', 'normal') */
-  blendMode?: BLEND_MODES
+  blendMode?: BLEND_MODES | string
 }
 
 export const PARTICLE_LINK_DEFAULTS: IParticleLinkSettings = {

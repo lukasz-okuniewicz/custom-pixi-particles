@@ -3,12 +3,15 @@ import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 import type Model from '../Model'
 import type TurbulencePool from '../util/turbulencePool'
+import { getToroidalEdgeExtents, wrapToroidalAxis } from '../util/toroidalWrapExtents'
 
 /**
- * Toroidal screen/world wrap: particles that leave an axis-aligned rectangle
- * re-enter on the opposite side. Runs after {@link PositionBehaviour} (lower priority).
- * Syncs {@link Particle.movement} with wrapped {@link Particle.x}/{@link Particle.y}
- * (same pattern as {@link BounceBehaviour}). Do not combine with bounce on the same axis.
+ * Toroidal screen/world wrap: particles that fully leave an axis-aligned rectangle
+ * re-enter on the opposite side while still fully outside the view (no visible jump).
+ * Uses sprite bounds when available; falls back to particle size. Runs after
+ * {@link PositionBehaviour} (lower priority). Syncs {@link Particle.movement} with
+ * wrapped {@link Particle.x}/{@link Particle.y} (same pattern as {@link BounceBehaviour}).
+ * Do not combine with bounce on the same axis.
  */
 export default class ToroidalWrapBehaviour extends Behaviour {
   enabled = true
@@ -46,37 +49,38 @@ export default class ToroidalWrapBehaviour extends Behaviour {
     const minY = base.minY + this.inset
     const maxY = base.maxY - this.inset
 
+    const extents = getToroidalEdgeExtents(particle)
     let x = particle.x
     let y = particle.y
     let mx = particle.movement.x
     let my = particle.movement.y
 
-    if (this.wrapX) {
-      const w = maxX - minX
-      if (w > 0) {
-        while (x < minX) {
-          x += w
-          mx += w
-        }
-        while (x > maxX) {
-          x -= w
-          mx -= w
-        }
-      }
+    if (this.wrapX && maxX > minX) {
+      const wrapped = wrapToroidalAxis(
+        x,
+        mx,
+        minX,
+        maxX,
+        extents.left,
+        extents.right,
+        particle.velocity.x,
+      )
+      x = wrapped.position
+      mx = wrapped.movement
     }
 
-    if (this.wrapY) {
-      const h = maxY - minY
-      if (h > 0) {
-        while (y < minY) {
-          y += h
-          my += h
-        }
-        while (y > maxY) {
-          y -= h
-          my -= h
-        }
-      }
+    if (this.wrapY && maxY > minY) {
+      const wrapped = wrapToroidalAxis(
+        y,
+        my,
+        minY,
+        maxY,
+        extents.top,
+        extents.bottom,
+        particle.velocity.y,
+      )
+      y = wrapped.position
+      my = wrapped.movement
     }
 
     particle.x = x
