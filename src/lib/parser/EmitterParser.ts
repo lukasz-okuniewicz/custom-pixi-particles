@@ -8,6 +8,8 @@ import BehaviourNames from '../behaviour/BehaviourNames'
 import { EmissionRegistry } from '../emission/EmissionRegistry'
 import type Emitter from '../emitter/Emitter'
 import Model from '../Model'
+import { BLEND_MODES } from 'pixi.js'
+import { resolveBlendMode } from '../util/resolveBlendMode'
 
 /**
  * @class EmitterParser
@@ -105,7 +107,7 @@ export default class EmitterParser {
       this.emitter.anchor = config.anchor
     }
     if (typeof config.blendMode !== 'undefined') {
-      this.emitter.blendMode = config.blendMode
+      this.emitter.blendMode = resolveBlendMode(config.blendMode) as BLEND_MODES
     }
     if (typeof config.animatedSprite !== 'undefined') {
       this.emitter.animatedSprite = config.animatedSprite
@@ -170,7 +172,7 @@ export default class EmitterParser {
       this.emitter.anchor = config.anchor
     }
     if (typeof config.blendMode !== 'undefined') {
-      this.emitter.blendMode = config.blendMode
+      this.emitter.blendMode = resolveBlendMode(config.blendMode) as BLEND_MODES
     }
     if (typeof config.animatedSprite !== 'undefined') {
       this.emitter.animatedSprite = config.animatedSprite

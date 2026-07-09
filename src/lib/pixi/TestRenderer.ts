@@ -7,7 +7,7 @@ import List from '../util/List'
 import ParticlePool from '../ParticlePool'
 import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInterface'
 import { EmitterParser } from '../parser'
-import { AnimatedSprite, Assets, Container, Graphics, Sprite, Texture, Ticker } from 'pixi.js'
+import { AnimatedSprite, Assets, BLEND_MODES, Container, Graphics, Sprite, Texture, Ticker } from 'pixi.js'
 import Model from '../Model'
 import {
   pickVariantIndex,
@@ -22,6 +22,8 @@ import {
 import { resolveBlendMode } from '../util/resolveBlendMode'
 import { resolveLoaderAssetId } from '../util/resolveLoaderAssetId'
 import { resolveTextureByAssetId } from '../util/resolveTextureByAssetId'
+import { isToroidalParticleVisible } from '../util/toroidalWrapVisibility'
+import type ToroidalWrapBehaviour from '../behaviour/ToroidalWrapBehaviour'
 
 /**
  * Editor preview only: plain Pixi `Container` + `Sprite` draw path (correct with mixed textures).
@@ -31,6 +33,8 @@ export default class TestRenderer extends Container {
   emitter: Emitter
   turbulenceEmitter: Emitter | undefined
   private static readonly BASE_TICKER_SPEED = 0.02
+  /** Cap ticker delta so a background tab cannot advance simulation by seconds in one frame. */
+  private static readonly MAX_FRAME_DELTA = 4
   private _paused: boolean = false
   private _internalPaused: boolean = false
   private textures: string[]
@@ -56,10 +60,7 @@ export default class TestRenderer extends Container {
   private _particleLinkSettings: IParticleLinkSettings | null = null
   private _particleLinkFrameCounter = 0
   private _cachedBehavioursRevision = -1
-  private _cachedToroidalWrapBehaviour: {
-    enabled?: boolean
-    useCanvasBounds?: boolean
-  } | null = null
+  private _cachedToroidalWrapBehaviour: ToroidalWrapBehaviour | null = null
   private _cachedFormPatternBehaviour: {
     enabled?: boolean
     active?: boolean
@@ -125,7 +126,7 @@ export default class TestRenderer extends Container {
     }
 
     if (typeof emitterConfig.blendMode !== 'undefined') {
-      this.blendMode = emitterConfig.blendMode
+      this.blendMode = resolveBlendMode(emitterConfig.blendMode) as BLEND_MODES
     }
 
     if (typeof emitterConfig.anchor !== 'undefined') {
@@ -151,8 +152,8 @@ export default class TestRenderer extends Container {
       if (merged.enabled) {
         this._particleLinkSettings = merged
         const linkG = new Graphics()
-        if (merged.blendMode != null) {
-          linkG.blendMode = merged.blendMode
+        if (merged.blendMode != null && merged.blendMode !== '') {
+          linkG.blendMode = resolveBlendMode(merged.blendMode) as typeof linkG.blendMode
         }
         this.particleLinkGraphics = linkG
         ;(this as any).addChildAt(linkG, 0)
@@ -225,16 +226,16 @@ export default class TestRenderer extends Container {
     }
     if (this._cachedBehavioursRevision === eb.structureRevision) return
     this._cachedBehavioursRevision = eb.structureRevision
-    this._cachedToroidalWrapBehaviour = eb.getByName(BehaviourNames.TOROIDAL_WRAP_BEHAVIOUR) as typeof this._cachedToroidalWrapBehaviour
+    this._cachedToroidalWrapBehaviour = eb.getByName(BehaviourNames.TOROIDAL_WRAP_BEHAVIOUR) as ToroidalWrapBehaviour | null
     this._cachedFormPatternBehaviour = eb.getByName(BehaviourNames.FORM_PATTERN_BEHAVIOUR) as typeof this._cachedFormPatternBehaviour
   }
 
   /**
-   * Feeds {@link Model.toroidalCanvasBounds} when ToroidalWrapBehaviour.useCanvasBounds is on.
+   * Feeds {@link Model.toroidalCanvasBounds} from the render buffer when toroidal wrap is enabled.
    */
   private syncToroidalCanvasBoundsOnModel(): void {
     const wrap = this._cachedToroidalWrapBehaviour
-    if (!wrap?.enabled || !wrap.useCanvasBounds) {
+    if (!wrap?.enabled) {
       this._model.clearToroidalCanvasBounds()
       return
     }
@@ -256,15 +257,17 @@ export default class TestRenderer extends Container {
    * Updates transforms and emitters (editor `Container` + sprites path).
    */
   _updateTransform(ticker: Ticker): void {
-    if (this._paused) return
+    if (this._paused || this._internalPaused) return
+
+    const dt = Math.min(Math.max(0, ticker.deltaTime), TestRenderer.MAX_FRAME_DELTA)
 
     this.syncRendererBehaviourLookupsCache()
     this.syncToroidalCanvasBoundsOnModel()
 
-    this.emitter?.update(ticker.deltaTime)
+    this.emitter?.update(dt)
     this.syncEmitterSpritesAfterUpdate(this.emitter, false)
     if (this.turbulenceEmitter) {
-      this.turbulenceEmitter.update(ticker.deltaTime)
+      this.turbulenceEmitter.update(dt)
       this.syncEmitterSpritesAfterUpdate(this.turbulenceEmitter, true)
     }
     const formPatternBehaviour = this._cachedFormPatternBehaviour
@@ -317,12 +320,12 @@ export default class TestRenderer extends Container {
     if (merged.enabled) {
       if (!this.particleLinkGraphics) {
         const linkG = new Graphics()
-        if (merged.blendMode != null) {
+        if (merged.blendMode != null && merged.blendMode !== '') {
           linkG.blendMode = resolveBlendMode(merged.blendMode) as typeof linkG.blendMode
         }
         this.particleLinkGraphics = linkG
-        this.addChildAt(linkG, 0)
-      } else if (merged.blendMode != null) {
+        ;(this as any).addChildAt(linkG, 0)
+      } else if (merged.blendMode != null && merged.blendMode !== '') {
         this.particleLinkGraphics.blendMode = resolveBlendMode(merged.blendMode) as typeof this.particleLinkGraphics.blendMode
       }
     } else if (this.particleLinkGraphics) {
@@ -341,6 +344,13 @@ export default class TestRenderer extends Container {
     for (let i = 0; i < this.unusedStaticSprites.length; ++i) {
       const id = pick()
       this.unusedStaticSprites[i].texture = resolveTextureByAssetId(id)
+    }
+
+    for (let i = 0; i < this.children.length; ++i) {
+      const ch = this.children[i] as Sprite
+      if (ch && (ch as any).texture) {
+        ch.texture = resolveTextureByAssetId(pick())
+      }
     }
   }
 
@@ -469,7 +479,7 @@ export default class TestRenderer extends Container {
       this.alpha = config.alpha
     }
     if (typeof config.blendMode !== 'undefined') {
-      this.blendMode = config.blendMode
+      this.blendMode = resolveBlendMode(config.blendMode) as BLEND_MODES
     }
     if (typeof config.anchor !== 'undefined') {
       this.anchor = config.anchor
@@ -558,8 +568,8 @@ export default class TestRenderer extends Container {
     this.removeChildren()
     if (hadLinks && linkSettings?.enabled) {
       const linkG = new Graphics()
-      if (linkSettings.blendMode != null) {
-        linkG.blendMode = linkSettings.blendMode
+      if (linkSettings.blendMode != null && linkSettings.blendMode !== '') {
+        linkG.blendMode = resolveBlendMode(linkSettings.blendMode) as typeof linkG.blendMode
       }
       this.particleLinkGraphics = linkG
       ;(this as any).addChildAt(linkG, 0)
@@ -815,7 +825,9 @@ export default class TestRenderer extends Container {
     sprite.scale.y = particle.size.y
 
     sprite.tint = particle.color.hex
-    sprite.alpha = particle.color.alpha
+    const show = isToroidalParticleVisible(particle, this._cachedToroidalWrapBehaviour, this._model)
+    sprite.visible = show
+    sprite.alpha = show ? particle.color.alpha : 0
     sprite.rotation = particle.rotation
   }
 
@@ -913,10 +925,20 @@ export default class TestRenderer extends Container {
     }
   }
 
-  private internalPause(paused: boolean) {
+  private internalPause(hidden: boolean) {
     if (this._paused) return
-    if (paused === this._internalPaused) return
-    this._internalPaused = paused
+    if (hidden === this._internalPaused) return
+    this._internalPaused = hidden
+    if (hidden) {
+      this._ticker?.stop()
+      return
+    }
+
+    if (this._ticker) {
+      this._ticker.lastTime = performance.now()
+      this._ticker.start()
+    }
+    this._model.signalVisibilityResume()
   }
 
   private getConfigIndexByName(name: string, config: any) {
