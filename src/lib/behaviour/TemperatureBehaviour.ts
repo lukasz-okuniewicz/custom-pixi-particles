@@ -1,5 +1,6 @@
 import Behaviour from './Behaviour'
 import Particle from '../Particle'
+import type Model from '../Model'
 import { Color, Point } from '../util'
 import behaviourNames from './BehaviourNames'
 
@@ -18,6 +19,7 @@ type TemperatureParticleState = Particle & {
   _temperatureBlend?: number
   _temperatureOutsideColor?: StoredTemperatureColor | null
   _temperatureLastZoneColor?: StoredTemperatureColor | null
+  _toroidalJustWrapped?: boolean
 }
 
 export type TemperatureZone = {
@@ -35,19 +37,21 @@ export type TemperatureZone = {
  * TemperatureBehaviour adjusts particle velocity and color
  * based on whether they are in a hot or cold zone.
  *
- * Gradual color mode is designed to run after ColorBehaviour (lower priority):
- * ColorBehaviour sets the natural particle color first, then this behaviour
- * blends zone tint on top and eases back to the live natural color on exit.
+ * Runs after ColorBehaviour and ToroidalWrapBehaviour (lower priority):
+ * base color and final position are known before zone tinting is applied.
  */
 export default class TemperatureBehaviour extends Behaviour {
   enabled = true
-  priority = 50
+  /** Below ToroidalWrapBehaviour (45) so zone checks use post-wrap positions. */
+  priority = 40
 
   zones: TemperatureZone[] = []
   /** When true, particle color eases toward zone / outside colors instead of snapping. */
   gradualColorTransition = false
   /** Blend speed toward the target color (higher = faster). */
   colorTransitionSpeed = 6
+
+  private _reconciledVisibilityResumeGeneration = -1
 
   init(particle: Particle) {
     const p = particle as TemperatureParticleState
@@ -56,29 +60,54 @@ export default class TemperatureBehaviour extends Behaviour {
     p._temperatureBlend = 0
     p._temperatureOutsideColor = null
     p._temperatureLastZoneColor = null
+    p._toroidalJustWrapped = false
+    particle.skipColorBehaviour = false
   }
 
-  apply(particle: Particle, deltaTime = 1 / 60) {
+  apply(particle: Particle, deltaTime = 1 / 60, model?: Model) {
     if (!this.enabled || !this.zones || !this.zones.length) return
 
     const p = particle as TemperatureParticleState
+    const justWrapped = p._toroidalJustWrapped === true
+    if (justWrapped) {
+      p._toroidalJustWrapped = false
+    }
+
     const activeZone = this.findActiveZone(particle)
     const naturalColor = this.copyColor(particle)
     const wasInZone = p._temperatureInZone === true
+    const visibilityResume =
+      (model?.visibilityResumeGeneration ?? 0) > this._reconciledVisibilityResumeGeneration
+    let residualTint =
+      !activeZone && this.hasResidualZoneTint(particle, p, wasInZone, justWrapped)
+    if (
+      !activeZone &&
+      visibilityResume &&
+      (wasInZone || this.matchesAnyZoneColorValue(naturalColor, 12))
+    ) {
+      residualTint = true
+    }
 
     if (!activeZone) {
       if (this.gradualColorTransition) {
-        if (wasInZone) {
+        if (residualTint) {
           p._temperatureTransitioningOut = true
         }
         this.applyGradualOutsideColor(particle, p, naturalColor, deltaTime)
-      } else if (wasInZone && p._temperatureOutsideColor && this.matchesAnyZoneColor(particle)) {
-        this.writeColor(particle, p._temperatureOutsideColor)
-      } else if (!wasInZone) {
+      } else if (residualTint) {
+        const restoreColor = this.getRestoreOutsideColor(p, naturalColor)
+        if (
+          restoreColor &&
+          (justWrapped && wasInZone || this.shouldInstantRestore(particle, naturalColor))
+        ) {
+          this.writeColor(particle, restoreColor)
+        }
+      } else if (!wasInZone && !residualTint && !this.matchesAnyZoneColorValue(naturalColor)) {
         p._temperatureOutsideColor = naturalColor
       }
 
       p._temperatureInZone = false
+      this.syncColorSkip(particle, p, false)
       if (!this.gradualColorTransition) {
         this.clearGradualColorState(particle, p)
       }
@@ -87,13 +116,18 @@ export default class TemperatureBehaviour extends Behaviour {
 
     if (this.gradualColorTransition) {
       p._temperatureTransitioningOut = false
-      if (!wasInZone || !p._temperatureOutsideColor) {
+      if (!wasInZone) {
+        p._temperatureOutsideColor = naturalColor
+        if ((p._temperatureBlend ?? 0) <= 0) {
+          p._temperatureBlend = 0
+        }
+      } else if (!p._temperatureOutsideColor) {
         p._temperatureOutsideColor = naturalColor
       }
-      if (!wasInZone && (p._temperatureBlend ?? 0) <= 0) {
-        p._temperatureBlend = 0
-      }
     } else if (!wasInZone) {
+      p._temperatureOutsideColor = naturalColor
+    } else if (justWrapped && !this.matchesAnyZoneColorValue(naturalColor, 12)) {
+      // Wrapped into a zone from a non-tinted color — refresh outside reference.
       p._temperatureOutsideColor = naturalColor
     }
 
@@ -110,10 +144,17 @@ export default class TemperatureBehaviour extends Behaviour {
       this.writeColor(particle, this.mixColors(outside, zoneColor, blend))
     } else {
       this.writeColor(particle, zoneColor)
-      p._temperatureBlend = 1
     }
 
     p._temperatureInZone = true
+    this.syncColorSkip(particle, p, true)
+  }
+
+  onParticlesUpdated(model?: Model) {
+    const resumeGeneration = model?.visibilityResumeGeneration ?? 0
+    if (resumeGeneration > this._reconciledVisibilityResumeGeneration) {
+      this._reconciledVisibilityResumeGeneration = resumeGeneration
+    }
   }
 
   private applyGradualOutsideColor(
@@ -125,7 +166,11 @@ export default class TemperatureBehaviour extends Behaviour {
     const transitioningOut = p._temperatureTransitioningOut === true
     const startBlend = transitioningOut ? (p._temperatureBlend ?? 1) : (p._temperatureBlend ?? 0)
 
-    if (!transitioningOut && !this.matchesAnyZoneColorValue(naturalColor)) {
+    if (
+      !transitioningOut &&
+      !this.matchesAnyZoneColorValue(naturalColor) &&
+      !this.hasResidualZoneTint(particle, p, false, false)
+    ) {
       p._temperatureOutsideColor = naturalColor
     }
 
@@ -136,12 +181,11 @@ export default class TemperatureBehaviour extends Behaviour {
       p._temperatureBlend = 0
       p._temperatureTransitioningOut = false
       p._temperatureLastZoneColor = null
+      this.syncColorSkip(particle, p, false)
       return
     }
 
-    const outside = transitioningOut
-      ? naturalColor
-      : (p._temperatureOutsideColor ?? naturalColor)
+    const outside = this.getOutsideTarget(p, naturalColor)
     const zone = p._temperatureLastZoneColor ?? outside
     this.writeColor(particle, this.mixColors(outside, zone, blend))
 
@@ -149,12 +193,103 @@ export default class TemperatureBehaviour extends Behaviour {
       p._temperatureBlend = 0
       p._temperatureTransitioningOut = false
       p._temperatureLastZoneColor = null
+      this.syncColorSkip(particle, p, false)
+      return
     }
+
+    this.syncColorSkip(particle, p, false)
+  }
+
+  private getOutsideTarget(
+    p: TemperatureParticleState,
+    naturalColor: StoredTemperatureColor,
+  ): StoredTemperatureColor {
+    if (p._temperatureTransitioningOut === true) {
+      return this.getRestoreOutsideColor(p, naturalColor) ?? naturalColor
+    }
+    return p._temperatureOutsideColor ?? naturalColor
+  }
+
+  private getRestoreOutsideColor(
+    p: TemperatureParticleState,
+    naturalColor: StoredTemperatureColor,
+  ): StoredTemperatureColor | null {
+    const outside = p._temperatureOutsideColor
+    if (!outside) return null
+    if (!this.matchesAnyZoneColorValue(outside, 12)) return outside
+    // Outside reference was corrupted (e.g. saved while zone-tinted after a wrap).
+    if (!this.matchesAnyZoneColorValue(naturalColor, 12)) return naturalColor
+    return null
+  }
+
+  /**
+   * True when the particle is outside all zones but still carries zone tint
+   * (state desync, toroidal wrap, or mid-blend).
+   */
+  private shouldInstantRestore(
+    particle: Particle,
+    naturalColor: StoredTemperatureColor,
+  ): boolean {
+    if (this.matchesAnyZoneColorValue(naturalColor, 12)) return true
+
+    const p = particle as TemperatureParticleState
+    const outside = p._temperatureOutsideColor
+    const zone = p._temperatureLastZoneColor
+    if (!outside || !zone) return false
+    if (this.colorsNear(naturalColor, outside)) return false
+    if (this.colorsNear(naturalColor, zone, 12)) return true
+
+    const distToZone = this.colorDistSq(naturalColor, zone)
+    const distToOutside = this.colorDistSq(naturalColor, outside)
+    return distToZone < distToOutside * 0.35 && distToZone <= 3600
+  }
+
+  private hasResidualZoneTint(
+    particle: Particle,
+    p: TemperatureParticleState,
+    wasInZone: boolean,
+    justWrapped: boolean,
+  ): boolean {
+    if (justWrapped) return true
+    if (p._temperatureTransitioningOut === true) return true
+    if (this.gradualColorTransition && (p._temperatureBlend ?? 0) > 0.001) return true
+    if (this.matchesAnyZoneColorValue(this.copyColor(particle), 12)) return true
+
+    const outside = p._temperatureOutsideColor
+    const zone = p._temperatureLastZoneColor
+    if (!outside || !zone) {
+      return wasInZone && this.matchesAnyZoneColorValue(this.copyColor(particle), 12)
+    }
+
+    const current = this.copyColor(particle)
+    if (this.colorsNear(current, outside)) return false
+    if (this.colorsNear(current, zone, 12)) return true
+
+    const distToZone = this.colorDistSq(current, zone)
+    const distToOutside = this.colorDistSq(current, outside)
+    return distToZone < distToOutside * 0.35 && distToZone <= 3600
+  }
+
+  private syncColorSkip(
+    particle: Particle,
+    p: TemperatureParticleState,
+    inZone: boolean,
+  ) {
+    if (!this.gradualColorTransition) {
+      particle.skipColorBehaviour = inZone
+      return
+    }
+
+    const blend = p._temperatureBlend ?? 0
+    particle.skipColorBehaviour =
+      inZone || p._temperatureTransitioningOut === true || blend > 0.001
   }
 
   private clearGradualColorState(particle: Particle, p: TemperatureParticleState) {
     p._temperatureBlend = 0
-    p._temperatureLastZoneColor = null
+    if (!this.hasResidualZoneTint(particle, p, false, false)) {
+      p._temperatureLastZoneColor = null
+    }
   }
 
   private findActiveZone(particle: Particle): TemperatureZone | null {
@@ -219,14 +354,31 @@ export default class TemperatureBehaviour extends Behaviour {
     return start + (end - start) * t
   }
 
-  private matchesAnyZoneColor(particle: Particle): boolean {
-    return this.matchesAnyZoneColorValue(this.copyColor(particle))
+  private colorsNear(a: StoredTemperatureColor, b: StoredTemperatureColor, tolerance = 2): boolean {
+    return (
+      Math.abs(a.r - b.r) <= tolerance &&
+      Math.abs(a.g - b.g) <= tolerance &&
+      Math.abs(a.b - b.b) <= tolerance &&
+      Math.abs(a.alpha - b.alpha) <= 0.02
+    )
   }
 
-  private matchesAnyZoneColorValue(color: StoredTemperatureColor): boolean {
+  private colorDistSq(a: StoredTemperatureColor, b: StoredTemperatureColor): number {
+    const dr = a.r - b.r
+    const dg = a.g - b.g
+    const db = a.b - b.b
+    const da = (a.alpha - b.alpha) * 255
+    return dr * dr + dg * dg + db * db + da * da
+  }
+
+  private matchesAnyZoneColor(particle: Particle, tolerance = 2): boolean {
+    return this.matchesAnyZoneColorValue(this.copyColor(particle), tolerance)
+  }
+
+  private matchesAnyZoneColorValue(color: StoredTemperatureColor, tolerance = 2): boolean {
     for (const zone of this.zones) {
       const zoneColor = this.zoneColor(zone)
-      if (color.r === zoneColor.r && color.g === zoneColor.g && color.b === zoneColor.b) {
+      if (this.colorsNear(color, zoneColor, tolerance)) {
         return true
       }
     }
