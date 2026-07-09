@@ -22,6 +22,8 @@ import {
 import { resolveBlendMode } from '../util/resolveBlendMode'
 import { resolveLoaderAssetId } from '../util/resolveLoaderAssetId'
 import { resolveTextureByAssetId } from '../util/resolveTextureByAssetId'
+import { isToroidalParticleVisible } from '../util/toroidalWrapVisibility'
+import type ToroidalWrapBehaviour from '../behaviour/ToroidalWrapBehaviour'
 
 /**
  * `Container` + `Sprite` path for emitters with multiple unrelated textures (mixed base textures).
@@ -33,6 +35,8 @@ export default class SpriteContainerRenderer extends Container {
   emitter: Emitter
   turbulenceEmitter: Emitter | undefined
   private static readonly BASE_TICKER_SPEED = 0.02
+  /** Cap ticker delta so a background tab cannot advance simulation by seconds in one frame. */
+  private static readonly MAX_FRAME_DELTA = 4
   private _paused: boolean = false
   private _internalPaused: boolean = false
   private textures: string[]
@@ -60,10 +64,7 @@ export default class SpriteContainerRenderer extends Container {
   private _particleLinkSettings: IParticleLinkSettings | null = null
   private _particleLinkFrameCounter = 0
   private _cachedBehavioursRevision = -1
-  private _cachedToroidalWrapBehaviour: {
-    enabled?: boolean
-    useCanvasBounds?: boolean
-  } | null = null
+  private _cachedToroidalWrapBehaviour: ToroidalWrapBehaviour | null = null
   private _cachedFormPatternBehaviour: {
     enabled?: boolean
     active?: boolean
@@ -231,16 +232,16 @@ export default class SpriteContainerRenderer extends Container {
     }
     if (this._cachedBehavioursRevision === eb.structureRevision) return
     this._cachedBehavioursRevision = eb.structureRevision
-    this._cachedToroidalWrapBehaviour = eb.getByName(BehaviourNames.TOROIDAL_WRAP_BEHAVIOUR) as typeof this._cachedToroidalWrapBehaviour
+    this._cachedToroidalWrapBehaviour = eb.getByName(BehaviourNames.TOROIDAL_WRAP_BEHAVIOUR) as ToroidalWrapBehaviour | null
     this._cachedFormPatternBehaviour = eb.getByName(BehaviourNames.FORM_PATTERN_BEHAVIOUR) as typeof this._cachedFormPatternBehaviour
   }
 
   /**
-   * Feeds {@link Model.toroidalCanvasBounds} when ToroidalWrapBehaviour.useCanvasBounds is on.
+   * Feeds {@link Model.toroidalCanvasBounds} from the render buffer when toroidal wrap is enabled.
    */
   private syncToroidalCanvasBoundsOnModel(): void {
     const wrap = this._cachedToroidalWrapBehaviour
-    if (!wrap?.enabled || !wrap.useCanvasBounds) {
+    if (!wrap?.enabled) {
       this._model.clearToroidalCanvasBounds()
       return
     }
@@ -262,15 +263,17 @@ export default class SpriteContainerRenderer extends Container {
    * Updates transforms and emitters (Container-backed sprite path).
    */
   _updateTransform(deltaTime: number) {
-    if (this._paused) return
+    if (this._paused || this._internalPaused) return
+
+    const dt = Math.min(Math.max(0, deltaTime), SpriteContainerRenderer.MAX_FRAME_DELTA)
 
     this.syncRendererBehaviourLookupsCache()
     this.syncToroidalCanvasBoundsOnModel()
 
-    this.emitter?.update(deltaTime)
+    this.emitter?.update(dt)
     this.syncEmitterSpritesAfterUpdate(this.emitter, false)
     if (this.turbulenceEmitter) {
-      this.turbulenceEmitter.update(deltaTime)
+      this.turbulenceEmitter.update(dt)
       this.syncEmitterSpritesAfterUpdate(this.turbulenceEmitter, true)
     }
 
@@ -832,7 +835,9 @@ export default class SpriteContainerRenderer extends Container {
     sprite.scale.y = particle.size.y
 
     sprite.tint = particle.color.hex
-    sprite.alpha = particle.color.alpha
+    const show = isToroidalParticleVisible(particle, this._cachedToroidalWrapBehaviour, this._model)
+    sprite.visible = show
+    sprite.alpha = show ? particle.color.alpha : 0
     sprite.rotation = particle.rotation
   }
 
@@ -929,10 +934,20 @@ export default class SpriteContainerRenderer extends Container {
     }
   }
 
-  private internalPause(paused: boolean) {
+  private internalPause(hidden: boolean) {
     if (this._paused) return
-    if (paused === this._internalPaused) return
-    this._internalPaused = paused
+    if (hidden === this._internalPaused) return
+    this._internalPaused = hidden
+    if (hidden) {
+      this._ticker?.stop()
+      return
+    }
+
+    if (this._ticker) {
+      this._ticker.lastTime = performance.now()
+      this._ticker.start()
+    }
+    this._model.signalVisibilityResume()
   }
 
   private getConfigIndexByName(name: string, config: any) {

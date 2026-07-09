@@ -2,16 +2,16 @@ import Behaviour from './Behaviour'
 import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 import type Model from '../Model'
-import type TurbulencePool from '../util/turbulencePool'
-import { getToroidalEdgeExtents, wrapToroidalAxis } from '../util/toroidalWrapExtents'
+import {
+  getToroidalEdgeExtents,
+  resolveToroidalBounds,
+  wrapToroidalAxis,
+} from '../util/toroidalWrapExtents'
 
 /**
  * Toroidal screen/world wrap: particles that fully leave an axis-aligned rectangle
  * re-enter on the opposite side while still fully outside the view (no visible jump).
- * Uses sprite bounds when available; falls back to particle size. Runs after
- * {@link PositionBehaviour} (lower priority). Syncs {@link Particle.movement} with
- * wrapped {@link Particle.x}/{@link Particle.y} (same pattern as {@link BounceBehaviour}).
- * Do not combine with bounce on the same axis.
+ * Renderers hide sprites that do not overlap the viewport so teleports are never seen.
  */
 export default class ToroidalWrapBehaviour extends Behaviour {
   enabled = true
@@ -19,74 +19,89 @@ export default class ToroidalWrapBehaviour extends Behaviour {
 
   wrapX = true
   wrapY = true
-
-  /**
-   * When true, bounds come from {@link Model.toroidalCanvasBounds} (set each frame from
-   * `canvasSizeProvider` / renderer size). Manual min/max are ignored until turned off.
-   */
   useCanvasBounds = false
 
   minX = -400
   maxX = 400
   minY = -300
   maxY = 300
-
-  /** Shrinks the effective wrap rect inward (helps large sprites). */
   inset = 0
 
-  init = (_particle: Particle, _model: Model, _turbulencePool: TurbulencePool) => {
-    //
+  private _insideX = new Map<number, boolean>()
+  private _insideY = new Map<number, boolean>()
+  private _handledVisibilityResumeGeneration = -1
+
+  init = (particle: Particle, _model: Model, _turbulencePool: unknown) => {
+    this._insideX.delete(particle.uid)
+    this._insideY.delete(particle.uid)
+  }
+
+  onParticleRemoved = (particle: Particle) => {
+    this._insideX.delete(particle.uid)
+    this._insideY.delete(particle.uid)
   }
 
   apply = (particle: Particle, _deltaTime: number, model: Model) => {
     if (!this.enabled) return
 
-    const fromCanvas = this.useCanvasBounds && model.toroidalCanvasBounds
-    const base = fromCanvas ? model.toroidalCanvasBounds! : { minX: this.minX, maxX: this.maxX, minY: this.minY, maxY: this.maxY }
+    const resumeGeneration = model.visibilityResumeGeneration ?? 0
+    if (resumeGeneration > this._handledVisibilityResumeGeneration) {
+      this._handledVisibilityResumeGeneration = resumeGeneration
+      this._insideX.clear()
+      this._insideY.clear()
+    }
 
-    const minX = base.minX + this.inset
-    const maxX = base.maxX - this.inset
-    const minY = base.minY + this.inset
-    const maxY = base.maxY - this.inset
+    const bounds = resolveToroidalBounds(this, model.toroidalCanvasBounds)
+    if (!bounds) return
 
     const extents = getToroidalEdgeExtents(particle)
-    let x = particle.x
-    let y = particle.y
+    const renderOffsetX = particle.x - particle.movement.x
+    const renderOffsetY = particle.y - particle.movement.y
+    let visualX = particle.movement.x + renderOffsetX
+    let visualY = particle.movement.y + renderOffsetY
     let mx = particle.movement.x
     let my = particle.movement.y
 
-    if (this.wrapX && maxX > minX) {
+    if (this.wrapX) {
       const wrapped = wrapToroidalAxis(
-        x,
+        visualX,
         mx,
-        minX,
-        maxX,
+        bounds.minX,
+        bounds.maxX,
         extents.left,
         extents.right,
-        particle.velocity.x,
+        this._insideX.get(particle.uid),
       )
-      x = wrapped.position
+      visualX = wrapped.position
       mx = wrapped.movement
+      this._insideX.set(particle.uid, wrapped.inside)
+      if (wrapped.didWrap) {
+        ;(particle as { _toroidalJustWrapped?: boolean })._toroidalJustWrapped = true
+      }
     }
 
-    if (this.wrapY && maxY > minY) {
+    if (this.wrapY) {
       const wrapped = wrapToroidalAxis(
-        y,
+        visualY,
         my,
-        minY,
-        maxY,
+        bounds.minY,
+        bounds.maxY,
         extents.top,
         extents.bottom,
-        particle.velocity.y,
+        this._insideY.get(particle.uid),
       )
-      y = wrapped.position
+      visualY = wrapped.position
       my = wrapped.movement
+      this._insideY.set(particle.uid, wrapped.inside)
+      if (wrapped.didWrap) {
+        ;(particle as { _toroidalJustWrapped?: boolean })._toroidalJustWrapped = true
+      }
     }
 
-    particle.x = x
-    particle.y = y
     particle.movement.x = mx
     particle.movement.y = my
+    particle.x = visualX
+    particle.y = visualY
   }
 
   getName() {
