@@ -79,6 +79,10 @@ export default class Emitter extends eventemitter3 {
     this.emitParticles(deltaTime)
     this.behaviours.update(deltaTime, this._model)
     this.updateParticles(deltaTime)
+    const temperature = this.behaviours.getByName('TemperatureBehaviour') as {
+      onParticlesUpdated?: (model: Model) => void
+    } | null
+    temperature?.onParticlesUpdated?.(this._model)
     this.duration.update(deltaTime)
 
     if (this.duration.isTimeElapsed() && this.list.isEmpty()) {

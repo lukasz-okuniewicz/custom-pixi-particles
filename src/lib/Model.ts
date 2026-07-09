@@ -64,6 +64,16 @@ export default class Model {
    */
   pointerWorld: { x: number; y: number } | null = null
 
+  /**
+   * Incremented when the host tab becomes visible again after being hidden.
+   * Behaviours use this to resync state after a pause (avoids delta spikes / stale wrap tracking).
+   */
+  visibilityResumeGeneration = 0
+
+  signalVisibilityResume() {
+    this.visibilityResumeGeneration += 1
+  }
+
   /** Sets {@link toroidalCanvasBounds} from render buffer size (centered rect). */
   setToroidalCanvasBoundsFromSize(width: number, height: number) {
     const hw = width / 2
