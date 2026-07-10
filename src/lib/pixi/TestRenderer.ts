@@ -9,16 +9,8 @@ import { ICustomPixiParticlesSettings } from '../customPixiParticlesSettingsInte
 import { EmitterParser } from '../parser'
 import { AnimatedSprite, Container, Graphics, Loader, Sprite, Texture, Ticker } from 'pixi.js-legacy'
 import Model from '../Model'
-import {
-  pickVariantIndex,
-  resolveTextureVariants,
-  type TextureVariantFrames,
-} from '../textureVariants'
-import {
-  drawParticleLinks,
-  mergeParticleLinkSettings,
-  type IParticleLinkSettings,
-} from './particleLinkLayer'
+import { pickVariantIndex, resolveTextureVariants, type TextureVariantFrames } from '../textureVariants'
+import { drawParticleLinks, type IParticleLinkSettings, mergeParticleLinkSettings } from './particleLinkLayer'
 import { resolveBlendMode } from '../util/resolveBlendMode'
 import { resolveLoaderAssetId } from '../util/resolveLoaderAssetId'
 import { getToroidalSpriteDisplay } from '../util/toroidalWrapVisibility'
@@ -217,7 +209,8 @@ export default class TestRenderer extends Container {
   }
 
   private syncRendererBehaviourLookupsCache(): void {
-    const eb = this.emitter?.behaviours as { structureRevision?: number; getByName?: (n: string) => unknown } | undefined
+    const eb = this.emitter?.behaviours as
+      { structureRevision?: number; getByName?: (n: string) => unknown } | undefined
     if (!eb || typeof eb.structureRevision !== 'number' || typeof eb.getByName !== 'function') {
       this._cachedBehavioursRevision = -1
       this._cachedToroidalWrapBehaviour = null
@@ -226,8 +219,12 @@ export default class TestRenderer extends Container {
     }
     if (this._cachedBehavioursRevision === eb.structureRevision) return
     this._cachedBehavioursRevision = eb.structureRevision
-    this._cachedToroidalWrapBehaviour = eb.getByName(BehaviourNames.TOROIDAL_WRAP_BEHAVIOUR) as ToroidalWrapBehaviour | null
-    this._cachedFormPatternBehaviour = eb.getByName(BehaviourNames.FORM_PATTERN_BEHAVIOUR) as typeof this._cachedFormPatternBehaviour
+    this._cachedToroidalWrapBehaviour = eb.getByName(
+      BehaviourNames.TOROIDAL_WRAP_BEHAVIOUR,
+    ) as ToroidalWrapBehaviour | null
+    this._cachedFormPatternBehaviour = eb.getByName(
+      BehaviourNames.FORM_PATTERN_BEHAVIOUR,
+    ) as typeof this._cachedFormPatternBehaviour
   }
 
   /**
@@ -640,11 +637,7 @@ export default class TestRenderer extends Container {
     return this.addChild(sprite)
   }
 
-  private acquireAnimatedSprite(
-    frameTextures: Texture[],
-    loop: boolean,
-    frameRate: number,
-  ): AnimatedSprite {
+  private acquireAnimatedSprite(frameTextures: Texture[], loop: boolean, frameRate: number): AnimatedSprite {
     let anim = this.unusedAnimatedSprites.pop()
     if (anim && frameTextures.length) {
       anim.textures = frameTextures
@@ -848,15 +841,9 @@ export default class TestRenderer extends Container {
     sprite.scale.y = particle.size.y
 
     sprite.tint = particle.color.hex
-    const toroidalDisplay = getToroidalSpriteDisplay(
-      particle,
-      this._cachedToroidalWrapBehaviour,
-      this._model,
-    )
+    const toroidalDisplay = getToroidalSpriteDisplay(particle, this._cachedToroidalWrapBehaviour, this._model)
     sprite.visible = toroidalDisplay.visible
-    sprite.alpha = toroidalDisplay.visible
-      ? particle.color.alpha * toroidalDisplay.alphaMultiplier
-      : 0
+    sprite.alpha = toroidalDisplay.visible ? particle.color.alpha * toroidalDisplay.alphaMultiplier : 0
     sprite.rotation = particle.rotation
   }
 
@@ -933,8 +920,7 @@ export default class TestRenderer extends Container {
   }
 
   private getRandomFinishingTexture(): string {
-    const raw =
-      this.finishingTextureNames[Math.floor(Math.random() * this.finishingTextureNames.length)]
+    const raw = this.finishingTextureNames[Math.floor(Math.random() * this.finishingTextureNames.length)]
     return resolveLoaderAssetId(raw)
   }
 
@@ -954,20 +940,10 @@ export default class TestRenderer extends Container {
     }
   }
 
-  private internalPause(hidden: boolean) {
+  private internalPause(paused: boolean) {
     if (this._paused) return
-    if (hidden === this._internalPaused) return
-    this._internalPaused = hidden
-    if (hidden) {
-      this._ticker?.stop()
-      return
-    }
-
-    if (this._ticker) {
-      this._ticker.lastTime = performance.now()
-      this._ticker.start()
-    }
-    this._model.signalVisibilityResume()
+    if (paused === this._internalPaused) return
+    this._internalPaused = paused
   }
 
   private getConfigIndexByName(name: string, config: any) {
