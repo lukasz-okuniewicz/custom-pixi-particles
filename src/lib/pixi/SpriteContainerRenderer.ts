@@ -21,7 +21,7 @@ import {
 } from './particleLinkLayer'
 import { resolveBlendMode } from '../util/resolveBlendMode'
 import { resolveLoaderAssetId } from '../util/resolveLoaderAssetId'
-import { isToroidalParticleVisible } from '../util/toroidalWrapVisibility'
+import { getToroidalSpriteDisplay } from '../util/toroidalWrapVisibility'
 import type ToroidalWrapBehaviour from '../behaviour/ToroidalWrapBehaviour'
 
 /**
@@ -854,9 +854,15 @@ export default class SpriteContainerRenderer extends Container {
     sprite.scale.y = particle.size.y
 
     sprite.tint = particle.color.hex
-    const show = isToroidalParticleVisible(particle, this._cachedToroidalWrapBehaviour, this._model)
-    sprite.visible = show
-    sprite.alpha = show ? particle.color.alpha : 0
+    const toroidalDisplay = getToroidalSpriteDisplay(
+      particle,
+      this._cachedToroidalWrapBehaviour,
+      this._model,
+    )
+    sprite.visible = toroidalDisplay.visible
+    sprite.alpha = toroidalDisplay.visible
+      ? particle.color.alpha * toroidalDisplay.alphaMultiplier
+      : 0
     sprite.rotation = particle.rotation
   }
 
