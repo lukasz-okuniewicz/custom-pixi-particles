@@ -132,7 +132,20 @@ export default class ToroidalWrapBehaviour extends Behaviour {
     insideMap: Map<number, boolean>,
     spanMap: Map<number, number>,
   ): { visual: number; movement: number; relocated: boolean } {
-    if (!this.needsAxisReseed(uid, leading, trailing, spanMap, insideMap)) {
+    const currentSpan = getToroidalAxisExtentSpan(leading, trailing)
+    const isFirstSeed = !insideMap.has(uid)
+
+    if (!isFirstSeed && !this.needsAxisReseed(uid, leading, trailing, spanMap, insideMap)) {
+      return { visual, movement, relocated: false }
+    }
+
+    // Sprite grew after spawn: refresh extent tracking only — do not yank live particles off the edge.
+    if (
+      !isFirstSeed &&
+      isToroidalAxisViewportVisible(visual, leading, trailing, min, max)
+    ) {
+      insideMap.set(uid, true)
+      spanMap.set(uid, currentSpan)
       return { visual, movement, relocated: false }
     }
 
@@ -141,7 +154,7 @@ export default class ToroidalWrapBehaviour extends Behaviour {
       uid,
       isToroidalAxisViewportVisible(relocated.position, leading, trailing, min, max),
     )
-    spanMap.set(uid, getToroidalAxisExtentSpan(leading, trailing))
+    spanMap.set(uid, currentSpan)
     return {
       visual: relocated.position,
       movement: relocated.movement,
@@ -269,7 +282,11 @@ export default class ToroidalWrapBehaviour extends Behaviour {
       }
     }
 
-    const deferWrap = this.wrapFadeEnabled && phase === 'out' && fadeMult > 0
+    const deferWrap =
+      this.wrapFadeEnabled &&
+      phase === 'out' &&
+      fadeMult > 0 &&
+      isToroidalViewportVisible(visualX, visualY, extents, bounds, this.wrapX, this.wrapY)
 
     if (this.wrapX) {
       const wrapped = wrapToroidalAxis(
