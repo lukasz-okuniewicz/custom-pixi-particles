@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import Particle from '../Particle'
-import { getToroidalEdgeExtents, isToroidalViewportVisible, wrapToroidalAxis } from './toroidalWrapExtents'
+import {
+  getToroidalEdgeExtents,
+  isToroidalAxisViewportVisible,
+  isToroidalViewportVisible,
+  relocateToroidalAxisIntoViewport,
+  wrapToroidalAxis,
+} from './toroidalWrapExtents'
 
 describe('isToroidalViewportVisible', () => {
   const bounds = { minX: 0, maxX: 100, minY: 0, maxY: 100 }
@@ -71,6 +77,32 @@ describe('wrapToroidalAxis', () => {
     const exitRight = wrapToroidalAxis(110, 110, 0, 100, 0, 20, true)
     expect(exitRight.position).toBe(-30)
     expect(exitRight.position + 20).toBeLessThan(0)
+  })
+})
+
+describe('relocateToroidalAxisIntoViewport', () => {
+  const min = -100
+  const max = 100
+  const leading = 10
+  const trailing = 10
+
+  it('leaves in-viewport positions unchanged', () => {
+    const result = relocateToroidalAxisIntoViewport(0, 0, min, max, leading, trailing)
+    expect(result).toEqual({ position: 0, movement: 0, relocated: false })
+  })
+
+  it('modulo-maps spawn-outside positions into the wrap band', () => {
+    const result = relocateToroidalAxisIntoViewport(-200, -200, min, max, leading, trailing)
+    expect(result.relocated).toBe(true)
+    expect(result.position).toBe(0)
+    expect(result.movement).toBe(0)
+    expect(isToroidalAxisViewportVisible(result.position, leading, trailing, min, max)).toBe(true)
+  })
+
+  it('maps positions above max into the wrap band', () => {
+    const result = relocateToroidalAxisIntoViewport(250, 250, min, max, leading, trailing)
+    expect(result.position).toBe(50)
+    expect(isToroidalAxisViewportVisible(result.position, leading, trailing, min, max)).toBe(true)
   })
 })
 

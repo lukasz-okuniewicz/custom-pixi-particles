@@ -131,6 +131,58 @@ export type ToroidalAxisWrapResult = {
   didWrap: boolean
 }
 
+export type ToroidalAxisRelocateResult = {
+  position: number
+  movement: number
+  relocated: boolean
+}
+
+/** True when any part of the particle overlaps the wrap band on one axis. */
+export function isToroidalAxisViewportVisible(
+  position: number,
+  leadingExtent: number,
+  trailingExtent: number,
+  min: number,
+  max: number,
+): boolean {
+  return position + trailingExtent >= min && position - leadingExtent <= max
+}
+
+/**
+ * Moves a spawn-outside particle into the toroidal viewport by modulo-mapping its
+ * position into the wrap band. Preserves movement offset so render/visual offsets stay aligned.
+ */
+export function relocateToroidalAxisIntoViewport(
+  position: number,
+  movement: number,
+  min: number,
+  max: number,
+  leadingExtent: number,
+  trailingExtent: number,
+): ToroidalAxisRelocateResult {
+  if (isToroidalAxisViewportVisible(position, leadingExtent, trailingExtent, min, max)) {
+    return { position, movement, relocated: false }
+  }
+
+  const period = max - min
+  if (period <= 0) {
+    return { position, movement, relocated: false }
+  }
+
+  let pos = min + ((((position - min) % period) + period) % period)
+  let mov = movement + (pos - position)
+
+  if (!isToroidalAxisViewportVisible(pos, leadingExtent, trailingExtent, min, max)) {
+    const minCenter = min - trailingExtent
+    const maxCenter = max + leadingExtent
+    const clamped = Math.min(maxCenter, Math.max(minCenter, pos))
+    mov += clamped - pos
+    pos = clamped
+  }
+
+  return { position: pos, movement: mov, relocated: true }
+}
+
 /**
  * Wraps one axis only when a particle transitions from inside to fully outside,
  * placing it fully outside on the opposite side to avoid visible jumps.

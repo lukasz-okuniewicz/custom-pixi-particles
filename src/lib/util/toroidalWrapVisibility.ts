@@ -46,9 +46,8 @@ export function getToroidalSpriteDisplay(
   }
 
   const fadeMultiplier = wrap.getWrapFadeMultiplier(particle)
-  const fadeActive = wrap.isWrapFadeActive(particle)
   return {
-    visible: viewportVisible || fadeActive,
-    alphaMultiplier: fadeMultiplier,
+    visible: viewportVisible,
+    alphaMultiplier: viewportVisible ? fadeMultiplier : 1,
   }
 }

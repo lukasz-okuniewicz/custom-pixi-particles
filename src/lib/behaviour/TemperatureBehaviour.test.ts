@@ -492,6 +492,71 @@ describe('TemperatureBehaviour zone shapes', () => {
     expect((particle as any)._temperatureBlend).toBeLessThan(0.5)
   })
 
+  it('eases between zone colors when moving directly from one zone to another', () => {
+    const b = new TemperatureBehaviour()
+    b.gradualColorTransition = true
+    b.colorTransitionSpeed = 2
+    b.zones = [
+      baseZone({
+        shapeType: 'rectangle',
+        halfWidth: 50,
+        halfHeight: 50,
+        color: { r: 100, g: 0, b: 0, alpha: 1 },
+      }),
+      baseZone({
+        shapeType: 'rectangle',
+        halfWidth: 50,
+        halfHeight: 50,
+        center: { x: 200, y: 0 },
+        color: { r: 0, g: 0, b: 200, alpha: 1 },
+      }),
+    ]
+
+    const particle = particleAt(0, 0)
+    particle.color.r = 100
+    particle.color.g = 0
+    particle.color.b = 0
+    b.init(particle)
+    ;(particle as any)._temperatureInZone = true
+    ;(particle as any)._temperatureActiveZoneIndex = 0
+    ;(particle as any)._temperatureBlend = 1
+    ;(particle as any)._temperatureOutsideColor = { r: 0, g: 0, b: 0, alpha: 1 }
+    ;(particle as any)._temperatureLastZoneColor = { r: 100, g: 0, b: 0, alpha: 1 }
+
+    particle.movement.x = 200
+    b.apply(particle, 0.25)
+    expect(particle.color.r).toBeGreaterThan(0)
+    expect(particle.color.r).toBeLessThan(100)
+    expect(particle.color.b).toBeGreaterThan(0)
+    expect(particle.color.b).toBeLessThan(200)
+  })
+
+  it('does not flash zone tint after toroidal wrap while outside all zones', () => {
+    const b = new TemperatureBehaviour()
+    b.gradualColorTransition = true
+    b.colorTransitionSpeed = 3
+    b.zones = [
+      baseZone({
+        shapeType: 'circle',
+        radius: 10,
+        color: { r: 255, g: 0, b: 0, alpha: 1 },
+      }),
+    ]
+
+    const particle = particleAt(500, 0)
+    particle.color.r = 0
+    particle.color.g = 200
+    particle.color.b = 200
+    b.init(particle)
+    ;(particle as any)._toroidalJustWrapped = true
+
+    b.apply(particle, 1 / 60)
+    expect(particle.color.r).toBe(0)
+    expect(particle.color.g).toBe(200)
+    expect(particle.color.b).toBe(200)
+    expect((particle as any)._temperatureTransitioningOut).toBeFalsy()
+  })
+
   it('reconciles zone tint after a visibility resume when outside all zones', () => {
     const b = new TemperatureBehaviour()
     const model = new Model()

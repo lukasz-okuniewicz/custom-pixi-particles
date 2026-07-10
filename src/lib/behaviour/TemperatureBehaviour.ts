@@ -19,6 +19,7 @@ type TemperatureParticleState = Particle & {
   _temperatureBlend?: number
   _temperatureOutsideColor?: StoredTemperatureColor | null
   _temperatureLastZoneColor?: StoredTemperatureColor | null
+  _temperatureActiveZoneIndex?: number
   _toroidalJustWrapped?: boolean
 }
 
@@ -60,6 +61,7 @@ export default class TemperatureBehaviour extends Behaviour {
     p._temperatureBlend = 0
     p._temperatureOutsideColor = null
     p._temperatureLastZoneColor = null
+    p._temperatureActiveZoneIndex = -1
     p._toroidalJustWrapped = false
     particle.skipColorBehaviour = false
   }
@@ -73,9 +75,16 @@ export default class TemperatureBehaviour extends Behaviour {
       p._toroidalJustWrapped = false
     }
 
-    const activeZone = this.findActiveZone(particle)
+    const activeZoneIndex = this.findActiveZoneIndex(particle)
+    const activeZone = activeZoneIndex >= 0 ? this.zones[activeZoneIndex] : null
     const naturalColor = this.copyColor(particle)
     const wasInZone = p._temperatureInZone === true
+    const previousZoneIndex = p._temperatureActiveZoneIndex ?? -1
+    const zoneChanged =
+      wasInZone &&
+      activeZone !== null &&
+      previousZoneIndex >= 0 &&
+      activeZoneIndex !== previousZoneIndex
     const visibilityResume =
       (model?.visibilityResumeGeneration ?? 0) > this._reconciledVisibilityResumeGeneration
     let residualTint =
@@ -107,6 +116,7 @@ export default class TemperatureBehaviour extends Behaviour {
       }
 
       p._temperatureInZone = false
+      p._temperatureActiveZoneIndex = -1
       this.syncColorSkip(particle, p, false)
       if (!this.gradualColorTransition) {
         this.clearGradualColorState(particle, p)
@@ -121,6 +131,10 @@ export default class TemperatureBehaviour extends Behaviour {
         if ((p._temperatureBlend ?? 0) <= 0) {
           p._temperatureBlend = 0
         }
+      } else if (zoneChanged) {
+        // Ease from the current zone tint into the new zone instead of snapping.
+        p._temperatureOutsideColor = naturalColor
+        p._temperatureBlend = 0
       } else if (!p._temperatureOutsideColor) {
         p._temperatureOutsideColor = naturalColor
       }
@@ -147,6 +161,7 @@ export default class TemperatureBehaviour extends Behaviour {
     }
 
     p._temperatureInZone = true
+    p._temperatureActiveZoneIndex = activeZoneIndex
     this.syncColorSkip(particle, p, true)
   }
 
@@ -250,7 +265,10 @@ export default class TemperatureBehaviour extends Behaviour {
     wasInZone: boolean,
     justWrapped: boolean,
   ): boolean {
-    if (justWrapped) return true
+    if (justWrapped) {
+      if (wasInZone || (p._temperatureBlend ?? 0) > 0.001) return true
+      return this.matchesAnyZoneColorValue(this.copyColor(particle), 12)
+    }
     if (p._temperatureTransitioningOut === true) return true
     if (this.gradualColorTransition && (p._temperatureBlend ?? 0) > 0.001) return true
     if (this.matchesAnyZoneColorValue(this.copyColor(particle), 12)) return true
@@ -292,13 +310,13 @@ export default class TemperatureBehaviour extends Behaviour {
     }
   }
 
-  private findActiveZone(particle: Particle): TemperatureZone | null {
-    for (const zone of this.zones) {
-      if (this.isInZone(particle, zone)) {
-        return zone
+  private findActiveZoneIndex(particle: Particle): number {
+    for (let i = 0; i < this.zones.length; i++) {
+      if (this.isInZone(particle, this.zones[i])) {
+        return i
       }
     }
-    return null
+    return -1
   }
 
   private zoneColor(zone: TemperatureZone): StoredTemperatureColor {
