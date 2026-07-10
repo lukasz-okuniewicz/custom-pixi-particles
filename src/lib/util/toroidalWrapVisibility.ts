@@ -28,3 +28,27 @@ export function isToroidalParticleVisible(
     wrap.wrapY,
   )
 }
+
+export type ToroidalSpriteDisplay = {
+  visible: boolean
+  alphaMultiplier: number
+}
+
+/** Resolves sprite visibility and alpha multiplier for toroidal wrap (including optional fade). */
+export function getToroidalSpriteDisplay(
+  particle: Particle,
+  wrap: ToroidalWrapBehaviour | null | undefined,
+  model: Model,
+): ToroidalSpriteDisplay {
+  const viewportVisible = isToroidalParticleVisible(particle, wrap, model)
+  if (!wrap?.enabled || !wrap.wrapFadeEnabled) {
+    return { visible: viewportVisible, alphaMultiplier: 1 }
+  }
+
+  const fadeMultiplier = wrap.getWrapFadeMultiplier(particle)
+  const fadeActive = wrap.isWrapFadeActive(particle)
+  return {
+    visible: viewportVisible || fadeActive,
+    alphaMultiplier: fadeMultiplier,
+  }
+}
