@@ -148,9 +148,53 @@ export function isToroidalAxisViewportVisible(
   return position + trailingExtent >= min && position - leadingExtent <= max
 }
 
+/** True when the full particle bbox fits inside the wrap band on one axis. */
+export function isToroidalAxisFullyContained(
+  position: number,
+  leadingExtent: number,
+  trailingExtent: number,
+  min: number,
+  max: number,
+): boolean {
+  return position - leadingExtent >= min && position + trailingExtent <= max
+}
+
+/** Combined leading+trailing span on one axis (used to detect sprite extent growth). */
+export function getToroidalAxisExtentSpan(leadingExtent: number, trailingExtent: number): number {
+  return leadingExtent + trailingExtent
+}
+
+/** Center range where the full particle bbox fits inside the wrap band. */
+export function getToroidalAxisSafeCenterRange(
+  min: number,
+  max: number,
+  leadingExtent: number,
+  trailingExtent: number,
+): { min: number; max: number } {
+  const safeMin = min + leadingExtent
+  const safeMax = max - trailingExtent
+  if (safeMin <= safeMax) {
+    return { min: safeMin, max: safeMax }
+  }
+  const center = (min + max) * 0.5
+  return { min: center, max: center }
+}
+
+export function clampToroidalAxisCenterToSafeRange(
+  position: number,
+  min: number,
+  max: number,
+  leadingExtent: number,
+  trailingExtent: number,
+): number {
+  const safe = getToroidalAxisSafeCenterRange(min, max, leadingExtent, trailingExtent)
+  return Math.min(safe.max, Math.max(safe.min, position))
+}
+
 /**
  * Moves a spawn-outside particle into the toroidal viewport by modulo-mapping its
- * position into the wrap band. Preserves movement offset so render/visual offsets stay aligned.
+ * position into the wrap band, then clamping to a center range that fits the sprite extents.
+ * Preserves movement offset so render/visual offsets stay aligned.
  */
 export function relocateToroidalAxisIntoViewport(
   position: number,
@@ -160,27 +204,34 @@ export function relocateToroidalAxisIntoViewport(
   leadingExtent: number,
   trailingExtent: number,
 ): ToroidalAxisRelocateResult {
-  if (isToroidalAxisViewportVisible(position, leadingExtent, trailingExtent, min, max)) {
+  if (isToroidalAxisFullyContained(position, leadingExtent, trailingExtent, min, max)) {
     return { position, movement, relocated: false }
   }
 
-  const period = max - min
-  if (period <= 0) {
-    return { position, movement, relocated: false }
+  let pos = position
+  let mov = movement
+  let relocated = false
+
+  if (!isToroidalAxisViewportVisible(position, leadingExtent, trailingExtent, min, max)) {
+    const period = max - min
+    if (period <= 0) {
+      return { position, movement, relocated: false }
+    }
+    pos = min + ((((position - min) % period) + period) % period)
+    mov = movement + (pos - position)
+    relocated = true
   }
 
-  let pos = min + ((((position - min) % period) + period) % period)
-  let mov = movement + (pos - position)
-
-  if (!isToroidalAxisViewportVisible(pos, leadingExtent, trailingExtent, min, max)) {
-    const minCenter = min - trailingExtent
-    const maxCenter = max + leadingExtent
-    const clamped = Math.min(maxCenter, Math.max(minCenter, pos))
+  const clamped = clampToroidalAxisCenterToSafeRange(pos, min, max, leadingExtent, trailingExtent)
+  if (clamped !== pos) {
     mov += clamped - pos
     pos = clamped
+    relocated = true
+  } else if (clamped !== position) {
+    relocated = true
   }
 
-  return { position: pos, movement: mov, relocated: true }
+  return { position: pos, movement: mov, relocated }
 }
 
 /**

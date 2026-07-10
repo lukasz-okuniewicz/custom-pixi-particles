@@ -3,14 +3,15 @@ import BehaviourNames from './BehaviourNames'
 import Particle from '../Particle'
 import type Model from '../Model'
 import {
+  getToroidalAxisExtentSpan,
   getToroidalEdgeExtents,
   isToroidalAxisViewportVisible,
+  isToroidalViewportVisible,
   relocateToroidalAxisIntoViewport,
   resolveToroidalBounds,
   wrapToroidalAxis,
 } from '../util/toroidalWrapExtents'
 import {
-  shouldContinueToroidalFadeOnAxis,
   shouldStartToroidalFadeOnAxis,
   toroidalFadeDelta,
   type ToroidalWrapFadePhase,
@@ -47,6 +48,10 @@ export default class ToroidalWrapBehaviour extends Behaviour {
   private _handledVisibilityResumeGeneration = -1
   private _fadePhase = new Map<number, ToroidalWrapFadePhase>()
   private _fadeMult = new Map<number, number>()
+  private _seedExtentSpanX = new Map<number, number>()
+  private _seedExtentSpanY = new Map<number, number>()
+  private _blockExitFade = new Set<number>()
+  private _hasSpawnSeeded = new Set<number>()
 
   init = (particle: Particle, _model: Model, _turbulencePool: unknown) => {
     this.clearParticleState(particle.uid)
@@ -66,21 +71,54 @@ export default class ToroidalWrapBehaviour extends Behaviour {
     return (this._fadePhase.get(particle.uid) ?? 'idle') !== 'idle'
   }
 
+  getWrapFadePhase(particle: Particle): ToroidalWrapFadePhase {
+    if (!this.wrapFadeEnabled) return 'idle'
+    return this._fadePhase.get(particle.uid) ?? 'idle'
+  }
+
   private clearParticleState(uid: number) {
     this._insideX.delete(uid)
     this._insideY.delete(uid)
     this._fadePhase.delete(uid)
     this._fadeMult.delete(uid)
+    this._seedExtentSpanX.delete(uid)
+    this._seedExtentSpanY.delete(uid)
+    this._blockExitFade.delete(uid)
+    this._hasSpawnSeeded.delete(uid)
   }
 
   private clearFadeState() {
     this._fadePhase.clear()
     this._fadeMult.clear()
+    this._blockExitFade.clear()
+    this._hasSpawnSeeded.clear()
+  }
+
+  private clearSpawnSeedState() {
+    this._insideX.clear()
+    this._insideY.clear()
+    this._seedExtentSpanX.clear()
+    this._seedExtentSpanY.clear()
+    this._blockExitFade.clear()
+    this._hasSpawnSeeded.clear()
   }
 
   private startWrapFadeIn(uid: number) {
     this._fadePhase.set(uid, 'in')
     this._fadeMult.set(uid, 0)
+  }
+
+  private needsAxisReseed(
+    uid: number,
+    leading: number,
+    trailing: number,
+    spanMap: Map<number, number>,
+    insideMap: Map<number, boolean>,
+  ): boolean {
+    if (!insideMap.has(uid)) return true
+    const currentSpan = getToroidalAxisExtentSpan(leading, trailing)
+    const seededSpan = spanMap.get(uid) ?? 0
+    return currentSpan > seededSpan + 1
   }
 
   private seedSpawnPositionIntoViewport(
@@ -92,9 +130,10 @@ export default class ToroidalWrapBehaviour extends Behaviour {
     leading: number,
     trailing: number,
     insideMap: Map<number, boolean>,
-  ): { visual: number; movement: number } {
-    if (insideMap.has(uid)) {
-      return { visual, movement }
+    spanMap: Map<number, number>,
+  ): { visual: number; movement: number; relocated: boolean } {
+    if (!this.needsAxisReseed(uid, leading, trailing, spanMap, insideMap)) {
+      return { visual, movement, relocated: false }
     }
 
     const relocated = relocateToroidalAxisIntoViewport(visual, movement, min, max, leading, trailing)
@@ -102,7 +141,17 @@ export default class ToroidalWrapBehaviour extends Behaviour {
       uid,
       isToroidalAxisViewportVisible(relocated.position, leading, trailing, min, max),
     )
-    return { visual: relocated.position, movement: relocated.movement }
+    spanMap.set(uid, getToroidalAxisExtentSpan(leading, trailing))
+    return {
+      visual: relocated.position,
+      movement: relocated.movement,
+      relocated: relocated.relocated,
+    }
+  }
+
+  private startSpawnFadeIn(uid: number) {
+    this.startWrapFadeIn(uid)
+    this._blockExitFade.add(uid)
   }
 
   apply = (particle: Particle, deltaTime: number, model: Model) => {
@@ -111,8 +160,7 @@ export default class ToroidalWrapBehaviour extends Behaviour {
     const resumeGeneration = model.visibilityResumeGeneration ?? 0
     if (resumeGeneration > this._handledVisibilityResumeGeneration) {
       this._handledVisibilityResumeGeneration = resumeGeneration
-      this._insideX.clear()
-      this._insideY.clear()
+      this.clearSpawnSeedState()
       this.clearFadeState()
     }
 
@@ -131,6 +179,8 @@ export default class ToroidalWrapBehaviour extends Behaviour {
     let phase = this._fadePhase.get(uid) ?? 'idle'
     let fadeMult = this._fadeMult.get(uid) ?? 1
     let didWrap = false
+    let spawnRelocated = false
+    const isFirstSpawnSeed = !this._hasSpawnSeeded.has(uid)
 
     if (this.wrapX) {
       const seeded = this.seedSpawnPositionIntoViewport(
@@ -142,9 +192,11 @@ export default class ToroidalWrapBehaviour extends Behaviour {
         extents.left,
         extents.right,
         this._insideX,
+        this._seedExtentSpanX,
       )
       visualX = seeded.visual
       mx = seeded.movement
+      if (seeded.relocated) spawnRelocated = true
     }
     if (this.wrapY) {
       const seeded = this.seedSpawnPositionIntoViewport(
@@ -156,15 +208,28 @@ export default class ToroidalWrapBehaviour extends Behaviour {
         extents.top,
         extents.bottom,
         this._insideY,
+        this._seedExtentSpanY,
       )
       visualY = seeded.visual
       my = seeded.movement
+      if (seeded.relocated) spawnRelocated = true
+    }
+
+    if (isFirstSpawnSeed && (this._insideX.has(uid) || this._insideY.has(uid) || spawnRelocated)) {
+      this._hasSpawnSeeded.add(uid)
+    }
+
+    if (spawnRelocated && this.wrapFadeEnabled && phase === 'idle' && isFirstSpawnSeed) {
+      this.startSpawnFadeIn(uid)
+      phase = 'in'
+      fadeMult = 0
     }
 
     if (this.wrapFadeEnabled) {
       const fadeStep = toroidalFadeDelta(deltaTime, this.wrapFadeDuration)
+      const blockExitFade = this._blockExitFade.has(uid)
 
-      if (phase === 'idle') {
+      if (phase === 'idle' && !blockExitFade) {
         const startX =
           this.wrapX &&
           shouldStartToroidalFadeOnAxis(
@@ -198,46 +263,9 @@ export default class ToroidalWrapBehaviour extends Behaviour {
       }
 
       if (phase === 'out') {
-        const approachingX =
-          this.wrapX &&
-          shouldContinueToroidalFadeOnAxis(
-            visualX,
-            particle.velocity.x,
-            bounds.minX,
-            bounds.maxX,
-            extents.left,
-            extents.right,
-            this.wrapFadeDuration,
-          )
-        const approachingY =
-          this.wrapY &&
-          shouldContinueToroidalFadeOnAxis(
-            visualY,
-            particle.velocity.y,
-            bounds.minY,
-            bounds.maxY,
-            extents.top,
-            extents.bottom,
-            this.wrapFadeDuration,
-          )
-        if (!approachingX && !approachingY) {
-          phase = 'idle'
-          fadeMult = 1
-          this._fadePhase.set(uid, 'idle')
-          this._fadeMult.set(uid, 1)
-        } else {
-          fadeMult = Math.max(0, fadeMult - fadeStep)
-          this._fadeMult.set(uid, fadeMult)
-        }
-      } else if (phase === 'in') {
-        fadeMult = Math.min(1, fadeMult + fadeStep)
+        fadeMult = Math.max(0, fadeMult - fadeStep)
         this._fadeMult.set(uid, fadeMult)
-        if (fadeMult >= 1) {
-          phase = 'idle'
-          fadeMult = 1
-          this._fadePhase.set(uid, 'idle')
-          this._fadeMult.set(uid, 1)
-        }
+        this._fadePhase.set(uid, 'out')
       }
     }
 
@@ -259,7 +287,7 @@ export default class ToroidalWrapBehaviour extends Behaviour {
       } else {
         if (wrapped.didWrap) {
           didWrap = true
-          if (this.wrapFadeEnabled && phase === 'out') {
+          if (this.wrapFadeEnabled && phase !== 'in') {
             phase = 'in'
             fadeMult = 0
             this.startWrapFadeIn(uid)
@@ -287,7 +315,7 @@ export default class ToroidalWrapBehaviour extends Behaviour {
       } else {
         if (wrapped.didWrap) {
           didWrap = true
-          if (this.wrapFadeEnabled && phase === 'out') {
+          if (this.wrapFadeEnabled && phase !== 'in') {
             phase = 'in'
             fadeMult = 0
             this.startWrapFadeIn(uid)
@@ -301,6 +329,31 @@ export default class ToroidalWrapBehaviour extends Behaviour {
 
     if (didWrap) {
       ;(particle as { _toroidalJustWrapped?: boolean })._toroidalJustWrapped = true
+    }
+
+    if (this.wrapFadeEnabled && phase === 'in') {
+      const fadeStep = toroidalFadeDelta(deltaTime, this.wrapFadeDuration)
+      const viewportVisible = isToroidalViewportVisible(
+        visualX,
+        visualY,
+        extents,
+        bounds,
+        this.wrapX,
+        this.wrapY,
+      )
+      if (viewportVisible) {
+        fadeMult = Math.min(1, fadeMult + fadeStep)
+        this._fadeMult.set(uid, fadeMult)
+        if (fadeMult >= 1) {
+          phase = 'idle'
+          fadeMult = 1
+          this._fadePhase.set(uid, 'idle')
+          this._fadeMult.set(uid, 1)
+          this._blockExitFade.delete(uid)
+        }
+      } else {
+        this._fadeMult.set(uid, fadeMult)
+      }
     }
 
     particle.movement.x = mx

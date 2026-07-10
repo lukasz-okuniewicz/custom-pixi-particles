@@ -45,7 +45,21 @@ export function getToroidalSpriteDisplay(
     return { visible: viewportVisible, alphaMultiplier: 1 }
   }
 
+  const fadePhase = wrap.getWrapFadePhase(particle)
   const fadeMultiplier = wrap.getWrapFadeMultiplier(particle)
+
+  if (fadePhase === 'idle') {
+    return { visible: viewportVisible, alphaMultiplier: 1 }
+  }
+
+  if (fadePhase === 'out') {
+    return {
+      visible: viewportVisible,
+      alphaMultiplier: viewportVisible ? fadeMultiplier : 1,
+    }
+  }
+
+  // Fade-in only draws once the particle overlaps the viewport again.
   return {
     visible: viewportVisible,
     alphaMultiplier: viewportVisible ? fadeMultiplier : 1,

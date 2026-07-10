@@ -100,6 +100,9 @@ describe('ToroidalWrapBehaviour', () => {
     expect((particle as any)._toroidalJustWrapped).toBe(true)
     expect(behaviour.getWrapFadeMultiplier(particle)).toBe(0)
 
+    particle.movement.y = -50
+    particle.y = -50
+
     frames = 0
     while (behaviour.isWrapFadeActive(particle) && frames < 120) {
       behaviour.apply(particle, 1 / 60, model)
@@ -132,12 +135,19 @@ describe('ToroidalWrapBehaviour', () => {
     behaviour.init(particle, model, null as any)
     behaviour.apply(particle, 1 / 60, model)
 
-    expect(behaviour.isWrapFadeActive(particle)).toBe(false)
+    expect(behaviour.isWrapFadeActive(particle)).toBe(true)
+    expect(behaviour.getWrapFadeMultiplier(particle)).toBeLessThan(0.02)
     expect((particle as any)._toroidalJustWrapped).toBeFalsy()
     expect(particle.y).toBe(0)
     expect(particle.movement.y).toBe(0)
 
     behaviour.apply(particle, 1 / 60, model)
+
+    let frames = 0
+    while (behaviour.isWrapFadeActive(particle) && frames < 240) {
+      behaviour.apply(particle, 1 / 60, model)
+      frames++
+    }
 
     expect(behaviour.isWrapFadeActive(particle)).toBe(false)
     expect(behaviour.getWrapFadeMultiplier(particle)).toBe(1)
@@ -145,7 +155,7 @@ describe('ToroidalWrapBehaviour', () => {
     expect(particle.y).toBeLessThan(100)
   })
 
-  it('cancels fade-out when velocity reverses before wrap', () => {
+  it('completes fade-out even when velocity reverses before wrap', () => {
     const behaviour = new ToroidalWrapBehaviour()
     behaviour.enabled = true
     behaviour.useCanvasBounds = true
@@ -158,22 +168,67 @@ describe('ToroidalWrapBehaviour', () => {
 
     const particle = new Particle()
     particle.movement.x = 0
-    particle.movement.y = 150
+    particle.movement.y = 0
     particle.x = 0
-    particle.y = 160
+    particle.y = 0
     particle.velocity.y = 60
     particle.size.set(4, 4)
 
     behaviour.init(particle, model, null as any)
     behaviour.apply(particle, 1 / 60, model)
 
-    expect(behaviour.isWrapFadeActive(particle)).toBe(true)
+    particle.movement.y = 150
+    particle.y = 160
+    particle.velocity.y = 60
+    behaviour.apply(particle, 1 / 60, model)
+
+    expect(behaviour.getWrapFadePhase(particle)).toBe('out')
 
     particle.velocity.y = -60
     behaviour.apply(particle, 1 / 60, model)
 
-    expect(behaviour.isWrapFadeActive(particle)).toBe(false)
-    expect(behaviour.getWrapFadeMultiplier(particle)).toBe(1)
-    expect((particle as any)._toroidalJustWrapped).toBeFalsy()
+    expect(behaviour.getWrapFadePhase(particle)).toBe('out')
+    expect(behaviour.getWrapFadeMultiplier(particle)).toBeLessThan(1)
+  })
+
+  it('holds fade-in until the particle overlaps the viewport after wrap', () => {
+    const behaviour = new ToroidalWrapBehaviour()
+    behaviour.enabled = true
+    behaviour.useCanvasBounds = true
+    behaviour.wrapFadeEnabled = true
+    behaviour.wrapFadeDuration = 0.5
+    behaviour.inset = 0
+
+    const model = new Model()
+    model.setToroidalCanvasBoundsFromSize(200, 200)
+
+    const particle = new Particle()
+    particle.movement.x = 0
+    particle.movement.y = 0
+    particle.x = 0
+    particle.y = 0
+    particle.velocity.y = 60
+    particle.size.set(4, 4)
+
+    behaviour.init(particle, model, null as any)
+    behaviour.apply(particle, 1 / 60, model)
+
+    particle.movement.y = 170
+    particle.y = 180
+    particle.velocity.y = 60
+
+    let frames = 0
+    while (behaviour.getWrapFadePhase(particle) !== 'in' && frames < 120) {
+      behaviour.apply(particle, 1 / 60, model)
+      frames++
+    }
+
+    expect(behaviour.getWrapFadeMultiplier(particle)).toBe(0)
+
+    for (let i = 0; i < 30; i++) {
+      behaviour.apply(particle, 1 / 60, model)
+    }
+
+    expect(behaviour.getWrapFadeMultiplier(particle)).toBe(0)
   })
 })

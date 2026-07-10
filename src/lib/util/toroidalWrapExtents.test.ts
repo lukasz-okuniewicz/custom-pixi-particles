@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import Particle from '../Particle'
 import {
   getToroidalEdgeExtents,
+  isToroidalAxisFullyContained,
   isToroidalAxisViewportVisible,
   isToroidalViewportVisible,
   relocateToroidalAxisIntoViewport,
@@ -103,6 +104,20 @@ describe('relocateToroidalAxisIntoViewport', () => {
     const result = relocateToroidalAxisIntoViewport(250, 250, min, max, leading, trailing)
     expect(result.position).toBe(50)
     expect(isToroidalAxisViewportVisible(result.position, leading, trailing, min, max)).toBe(true)
+  })
+
+  it('re-clamps partially overlapping positions that are not fully contained', () => {
+    const result = relocateToroidalAxisIntoViewport(80, 80, min, max, 60, 60)
+    expect(result.relocated).toBe(true)
+    expect(result.position).toBe(40)
+    expect(isToroidalAxisFullyContained(result.position, 60, 60, min, max)).toBe(true)
+  })
+
+  it('centers oversized particles that cannot fully fit the band', () => {
+    const result = relocateToroidalAxisIntoViewport(-200, -200, min, max, 120, 120)
+    expect(result.relocated).toBe(true)
+    expect(result.position).toBe(0)
+    expect(isToroidalAxisViewportVisible(result.position, 120, 120, min, max)).toBe(true)
   })
 })
 

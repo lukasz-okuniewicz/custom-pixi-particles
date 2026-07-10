@@ -33,8 +33,9 @@ export function getToroidalFadeLead(
 ): number {
   const axisSpan = Math.max(0, max - min)
   const velocityLead = Math.abs(axisVelocity) * fadeDuration
-  const minLead = (leadingExtent + trailingExtent) * 0.25
+  const extentLead = (leadingExtent + trailingExtent) * 0.25
   const spanCap = axisSpan > 0 ? axisSpan * 0.5 : 0
+  const minLead = axisSpan > 0 ? Math.min(extentLead, axisSpan * 0.15) : extentLead
   return Math.min(Math.max(velocityLead, minLead), spanCap)
 }
 
